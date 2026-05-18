@@ -1,0 +1,143 @@
+@extends('layouts.master')
+@section('title', 'Edit User')
+@section('content')
+    <div class="max-w-4xl mx-auto space-y-6">
+        <div class="flex items-center space-x-3">
+            <a href="{{ route('super-admin.users.index') }}"
+                class="p-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 text-gray-400 dark:text-blue-400 hover:text-navy-900 dark:hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18">
+                    </path>
+                </svg>
+            </a>
+            <h1 class="text-2xl font-bold text-navy-900 dark:text-white">Edit Pengguna: {{ $user->name }}</h1>
+        </div>
+
+        <form action="{{ route('super-admin.users.update', $user) }}" method="POST"
+            class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+            @csrf
+            @method('PUT')
+            <div class="p-8 space-y-6">
+                <!-- Profile Preview Section -->
+                <div class="flex items-center space-x-6 pb-6 border-b border-gray-50 dark:border-slate-700">
+                    <div
+                        class="w-20 h-20 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-blue-900 dark:text-blue-100 text-3xl font-black border-2 border-white dark:border-slate-700 shadow-lg overflow-hidden">
+                        @if($user->avatar)
+                            <img src="{{ asset('storage/' . $user->avatar) }}" class="w-full h-full object-cover">
+                        @else
+                            <span>{{ substr($user->name, 0, 1) }}</span>
+                        @endif
+                    </div>
+                    <div>
+                        <p
+                            class="text-[10px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-widest leading-none mb-2">
+                            Avatar Saat Ini</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Avatar dapat diperbarui oleh
+                            karyawan melalui portal biodata mandiri.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Basic Info -->
+                    <div class="space-y-4">
+                        <h2 class="text-sm font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">Informasi
+                            Dasar</h2>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nama
+                                Lengkap</label>
+                            <input type="text" name="name" value="{{ $user->name }}" required
+                                class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nama Pengguna
+                                (Username)</label>
+                            <input type="text" name="username" value="{{ $user->username }}" required
+                                class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Alamat Email
+                                (Opsional)</label>
+                            <input type="email" name="email" value="{{ $user->email }}"
+                                class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Kata Sandi
+                                (Password)</label>
+                            <input type="password" name="password"
+                                class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white"
+                                placeholder="Biarkan kosong jika tidak ingin mengubah">
+                        </div>
+                    </div>
+
+                    <!-- Workplace Info -->
+                    <div class="space-y-4">
+                        <h2 class="text-sm font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">Detail
+                            Pekerjaan</h2>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">ID
+                                Karyawan</label>
+                            <input type="text" name="employee_id" value="{{ $user->employee_id }}"
+                                class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Peran
+                                (Role)</label>
+                            <select name="role_id" required
+                                class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white cursor-pointer">
+                                @foreach($roles as $role)
+                                    <option value="{{ $role->id }}" {{ $user->role_id == $role->id ? 'selected' : '' }}
+                                        class="dark:bg-slate-900">{{ $role->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Divisi</label>
+                            <select name="division_id"
+                                class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white cursor-pointer">
+                                <option value="" class="dark:bg-slate-900">Pilih Divisi</option>
+                                @foreach($divisions as $division)
+                                    <option value="{{ $division->id }}" {{ $user->division_id == $division->id ? 'selected' : '' }} class="dark:bg-slate-900">{{ $division->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Info -->
+                <div class="space-y-4 pt-4 border-t border-gray-50 dark:border-slate-700">
+                    <h2 class="text-sm font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">Informasi
+                        Tambahan</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Jabatan
+                                (Posisi)</label>
+                            <input type="text" name="position" value="{{ $user->position }}"
+                                class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nomor
+                                Telepon</label>
+                            <input type="text" name="phone" value="{{ $user->phone }}"
+                                class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Alamat Rumah</label>
+                        <textarea name="address" rows="3"
+                            class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white">{{ $user->address }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="bg-gray-50 dark:bg-slate-900/50 p-6 flex justify-end space-x-3 border-t border-gray-100 dark:border-slate-700">
+                <a href="{{ route('super-admin.users.index') }}"
+                    class="px-6 py-2.5 text-sm font-bold text-gray-500 dark:text-slate-400 hover:text-navy-900 dark:hover:text-white transition-colors">Batal</a>
+                <button type="submit"
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98]">
+                    Simpan Pembaruan
+                </button>
+            </div>
+        </form>
+    </div>
+@endsection
