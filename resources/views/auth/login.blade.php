@@ -68,6 +68,8 @@
                         <input type="checkbox" name="remember"
                             class="w-4 h-4 rounded border-slate-800 bg-slate-900 text-blue-600 focus:ring-offset-slate-900">
                         <span class="ml-2 group-hover:text-slate-300">Ingat Saya</span>
+                    </label>
+                    <a href="#" class="text-blue-500 hover:text-blue-400 font-semibold">Lupa Kata Sandi?</a>
                 </div>
 
                 <button type="submit"
