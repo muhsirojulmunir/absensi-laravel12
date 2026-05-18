@@ -22,8 +22,8 @@
             "dest": "/public/favicon.ico"
         },
         {
-            "src": "/robots.txt",
-            "dest": "/public/robots.txt"
+            "src": "/api/(.*)",
+            "dest": "/api/$1"
         },
         {
             "src": "/(.*)",
