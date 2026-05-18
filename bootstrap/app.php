@@ -11,7 +11,7 @@ if ($storagePath = env('APP_STORAGE')) {
     $app->useStoragePath($storagePath);
 }
 
-$app->withRouting(
+return $app->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
