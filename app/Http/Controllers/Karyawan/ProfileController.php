@@ -21,6 +21,7 @@ class ProfileController extends Controller
         
         $rules = [
             'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255|unique:users,email,' . $user->id,
             'phone' => 'nullable|string|max:20',
             'emergency_name' => 'nullable|string|max:255',
             'emergency_phone' => 'nullable|string|max:20',
@@ -50,6 +51,7 @@ class ProfileController extends Controller
 
         $data = [
             'name' => $request->name,
+            'email' => $request->email,
             'phone' => $request->phone,
             'emergency_name' => $request->emergency_name,
             'emergency_phone' => $request->emergency_phone,

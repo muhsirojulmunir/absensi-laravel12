@@ -129,6 +129,11 @@
                                        class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-blue-950 dark:text-blue-100 text-sm font-bold focus:ring-2 focus:ring-blue-600 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 shadow-inner focus:bg-white dark:focus:bg-slate-950 text-shadow-sm">
                             </div>
                         </div>
+                        <div class="space-y-3">
+                            <label class="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">Alamat Email <span class="text-slate-400 normal-case font-normal">(Digunakan untuk Lupa Password)</span></label>
+                            <input type="email" name="email" value="{{ $user->email }}" placeholder="contoh: karyawan@perusahaan.com"
+                                   class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-blue-950 dark:text-blue-100 text-sm font-bold focus:ring-2 focus:ring-blue-600 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 shadow-inner focus:bg-white dark:focus:bg-slate-950 text-shadow-sm">
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-3">
                                 <label class="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">Tempat Lahir</label>

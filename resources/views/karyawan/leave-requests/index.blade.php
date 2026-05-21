@@ -111,8 +111,8 @@
                                 <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-[0.2em] ml-2">Pilih
                                     Kategori <span class="text-rose-500">*</span></label>
                                 <input type="hidden" name="type" x-model="selectedType" required>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    <template x-for="item in ['Sakit', 'Izin', 'Libur', 'Lainnya']">
+                                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                    <template x-for="item in ['Sakit', 'Izin Tidak Masuk', 'Izin Masuk Siang', 'Libur', 'Lainnya']">
                                         <button type="button" @click="selectedType = item"
                                             :class="selectedType === item ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20 -translate-y-0.5' : 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/50 dark:hover:bg-slate-800/50'"
                                             class="p-3 md:p-4 rounded-3xl border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 group">
@@ -124,11 +124,17 @@
                                                             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
                                                 </template>
-                                                <template x-if="item === 'Izin'">
+                                                <template x-if="item === 'Izin Tidak Masuk'">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
                                                         </path>
+                                                    </svg>
+                                                </template>
+                                                <template x-if="item === 'Izin Masuk Siang'">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
                                                 </template>
                                                 <template x-if="item === 'Libur'">
@@ -146,7 +152,7 @@
                                                     </svg>
                                                 </template>
                                             </div>
-                                            <span class="text-[10px] font-black tracking-widest uppercase italic"
+                                            <span class="text-[9px] font-black tracking-widest uppercase italic text-center leading-tight"
                                                 x-text="item"></span>
                                         </button>
                                     </template>
@@ -197,7 +203,8 @@
             <div x-show="activeTab === 'riwayat'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
                 
                 <!-- Filter Section -->
-                <div class="mb-6 flex flex-col md:flex-row items-end justify-between gap-4 px-2"                     <form action="{{ route('karyawan.leave-requests.index') }}" method="GET" class="flex flex-col md:flex-row items-end gap-3 w-full md:w-auto">
+                <div class="mb-6 flex flex-col md:flex-row items-end justify-between gap-4 px-2">
+                    <form action="{{ route('karyawan.leave-requests.index') }}" method="GET" class="flex flex-col md:flex-row items-end gap-3 w-full md:w-auto">
                         <div class="flex items-center gap-3 w-full md:w-auto">
                             <div class="flex-1 md:w-44">
                                 <label class="block text-[9px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-widest ml-2 mb-1.5">Dari Tanggal</label>
@@ -210,9 +217,8 @@
                                        class="w-full bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-2xl px-4 py-2.5 text-xs font-bold text-blue-900 dark:text-blue-100 focus:ring-2 focus:ring-blue-500 transition-all shadow-sm outline-none">
                             </div>
                         </div>
->
                         <div class="flex gap-2 w-full md:w-auto">
-                            <button type="submit" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2 active:scale-95">
+                            <button type="submit" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-blue-200 flex items-center justify-center gap-2 active:scale-95">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                                 <span>Filter</span>
                             </button>
@@ -254,7 +260,7 @@
                                             <div class="flex items-center space-x-4">
                                                 <div
                                                     class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-slate-900 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg shadow-sm border border-blue-100 dark:border-slate-700 group-hover:rotate-12 transition-transform">
-                                                    @if($leave->type == 'Sakit') 🤒 @elseif($leave->type == 'Libur') 🏝️ @elseif($leave->type == 'Izin') 📝 @else ✨ @endif
+                                                    @if($leave->type == 'Sakit') 🤒 @elseif($leave->type == 'Libur') 🏝️ @elseif($leave->type == 'Izin Tidak Masuk') 📝 @elseif($leave->type == 'Izin Masuk Siang') 🌅 @else ✨ @endif
                                                 </div>
                                                 <div>
                                                     <p class="text-xs md:text-sm font-black text-blue-950 dark:text-blue-100 uppercase tracking-tighter">

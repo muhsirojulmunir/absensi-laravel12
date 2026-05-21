@@ -35,6 +35,8 @@ class User extends Authenticatable
         'avatar',
         'birth_place',
         'birth_date',
+        'otp_code',
+        'otp_expires_at',
     ];
 
     public function role()
@@ -85,6 +87,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'last_login_at' => 'datetime',
+            'otp_expires_at' => 'datetime',
         ];
     }
 

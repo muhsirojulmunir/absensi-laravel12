@@ -25,6 +25,7 @@ class AttendanceMonitoringController extends Controller
     public function recap(Request $request)
     {
         $period = $request->get('period', 'month');
+        $divisionId = $request->get('division_id');
         $startDate = Carbon::now()->startOfMonth();
         $endDate = Carbon::now()->endOfMonth();
 
@@ -44,7 +45,7 @@ class AttendanceMonitoringController extends Controller
             $endDate = Carbon::parse($request->get('end_date', Carbon::today()->toDateString()))->endOfDay();
         }
 
-        $users = User::withRole('karyawan')
+        $query = User::withRole('karyawan')
             ->with(['division', 'attendances' => function($q) use ($startDate, $endDate) {
                 $q->whereBetween('date', [$startDate, $endDate]);
             }, 'leaveRequests' => function($q) use ($startDate, $endDate) {
@@ -57,8 +58,20 @@ class AttendanceMonitoringController extends Controller
                                     ->where('end_date', '>=', $endDate);
                             });
                   });
-            }])
-            ->get();
+            }]);
+
+        if ($divisionId) {
+            $query->where('division_id', $divisionId);
+        }
+
+        $users = $query->get();
+        $divisions = \App\Models\Division::all();
+
+        // Get all holidays in this period to determine off days
+        // We get holidays for the whole month/period + some buffer for weekly calculation
+        $startWeek = $startDate->copy()->startOfWeek();
+        $endWeek = $endDate->copy()->endOfWeek();
+        $holidays = \App\Models\Holiday::whereBetween('date', [$startWeek, $endWeek])->get();
 
         foreach ($users as $user) {
             $user->hadir_count = $user->attendances->where('status', 'Hadir')->count();
@@ -70,66 +83,76 @@ class AttendanceMonitoringController extends Controller
             foreach ($user->leaveRequests as $lr) {
                 $current = $lr->start_date->copy();
                 while ($current->lte($lr->end_date)) {
-                    if ($current->between($startDate, $endDate)) {
-                        $excuseDates[$current->toDateString()] = $lr->type;
-                    }
+                    $excuseDates[$current->toDateString()] = $lr->type;
                     $current->addDay();
                 }
             }
             
             // Map attendances for quick lookup
             $attendanceDates = $user->attendances->pluck('status', 'date')->toArray();
-            $user->izin_count = count(array_filter($attendanceDates, fn($s) => in_array($s, ['Izin', 'Sakit']))) + count(array_filter($excuseDates, fn($t) => in_array($t, ['Izin Penting', 'Sakit', 'Lainnya'])));
-            $user->libur_count = count(array_filter($attendanceDates, fn($s) => $s == 'Libur')) + count(array_filter($excuseDates, fn($t) => $t == 'Libur'));
+            
+            $user->izin_count = count(array_filter($attendanceDates, fn($s) => in_array($s, ['Izin', 'Sakit']))) + count(array_filter($excuseDates, fn($t) => in_array($t, ['Izin Tidak Masuk', 'Izin Tdk Masuk', 'Sakit', 'Lainnya'])));
+            $user->libur_count = count(array_filter($attendanceDates, fn($s) => $s == 'Libur')) + count(array_filter($excuseDates, fn($t) => in_array($t, ['Libur', 'Libur (Day Off)'])));
 
             // Calculate Meal Allowance Weekly
             $totalAllowance = 0;
             $currentPointer = $startDate->copy()->startOfDay();
+            $isLiveStreaming = str_contains(strtolower($user->division->name ?? ''), 'live streaming');
             
             while ($currentPointer->lte($endDate)) {
                 $weekStart = $currentPointer->copy()->startOfWeek();
                 $weekEnd = $currentPointer->copy()->endOfWeek();
                 
-                // Segment of the week that falls within our range
                 $segStart = $weekStart->max($startDate);
                 $segEnd = $weekEnd->min($endDate);
                 
-                // 1. Identify Penalty for this week segment
+                // 1. Identify Penalty for this week (Mon-Sun)
                 $hasPenalty = false;
-                $pPointer = $segStart->copy();
-                while ($pPointer->lte($segEnd)) {
+                $pPointer = $weekStart->copy();
+                
+                while ($pPointer->lte($weekEnd)) {
                     $dateStr = $pPointer->toDateString();
                     $status = $attendanceDates[$dateStr] ?? null;
                     $excuseType = $excuseDates[$dateStr] ?? null;
                     
-                    // Alpha = No attendance record AND no approved leave request
-                    $isAlpha = (!$status && !$excuseType);
-                    $isIzinSakit = (in_array($status, ['Izin', 'Sakit']) || in_array($excuseType, ['Izin Penting', 'Sakit', 'Lainnya']));
+                    // Check if it's a holiday
+                    $isHoliday = $holidays->filter(function($h) use ($pPointer, $user) {
+                        return $h->date->isSameDay($pPointer) && (is_null($h->division_id) || $h->division_id == $user->division_id);
+                    })->isNotEmpty();
                     
-                    if ($isAlpha || $isIzinSakit) {
-                        $hasPenalty = true;
-                        break;
+                    $isWeekend = $pPointer->isWeekend();
+                    $isStaffKantor = !$isLiveStreaming;
+                    
+                    $isLibur = $isHoliday || ($isStaffKantor && $isWeekend) || in_array($excuseType, ['Libur', 'Libur (Day Off)']) || $status === 'Libur';
+                    
+                    if (!$isLibur) {
+                        // Working day penalty checks
+                        if (!$status && !$excuseType) {
+                            $hasPenalty = true; // Alpha
+                        } elseif (in_array($excuseType, ['Izin Tidak Masuk', 'Izin Tdk Masuk', 'Sakit'])) {
+                            $hasPenalty = true; // Sick or Absent Leave
+                        } elseif (in_array($status, ['Izin', 'Sakit'])) {
+                            $hasPenalty = true;
+                        }
                     }
                     $pPointer->addDay();
                 }
                 
                 // 2. Calculate allowance for this week segment
+                $rate = $hasPenalty ? 20000 : 35000;
                 $calcPointer = $segStart->copy();
-                $isLiveStreaming = ($user->division->name ?? '') === 'Live Streaming';
-                $rate = ($isLiveStreaming || !$hasPenalty) ? 35000 : 20000;
                 
                 while ($calcPointer->lte($segEnd)) {
                     $dateStr = $calcPointer->toDateString();
                     $status = $attendanceDates[$dateStr] ?? null;
                     
-                    // Allowance only for Hadir/Terlambat
+                    // Allowance only given if present
                     if (in_array($status, ['Hadir', 'Terlambat'])) {
                         $totalAllowance += $rate;
                     }
                     $calcPointer->addDay();
                 }
                 
-                // Move pointer to next week
                 $currentPointer = $weekEnd->addDay();
             }
             
@@ -138,6 +161,8 @@ class AttendanceMonitoringController extends Controller
 
         return view('hrd.attendance.recap', [
             'users' => $users,
+            'divisions' => $divisions,
+            'divisionId' => $divisionId,
             'period' => $period,
             'startDate' => $startDate->toDateString(),
             'endDate' => $endDate->toDateString(),

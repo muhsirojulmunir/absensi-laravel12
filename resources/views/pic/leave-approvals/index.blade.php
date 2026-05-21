@@ -80,7 +80,7 @@
                             @endif
                         </div>
                         <div class="absolute -bottom-2 -right-2 bg-white dark:bg-slate-800 p-1.5 rounded-xl shadow-sm border border-blue-50 dark:border-slate-700">
-                            @if($leave->type == 'Sakit') 🤒 @elseif($leave->type == 'Libur' || $leave->type == 'Cuti Tahunan') 🏝️ @elseif($leave->type == 'Izin') 📝 @else ✨ @endif
+                            @if($leave->type == 'Sakit') 🤒 @elseif($leave->type == 'Libur' || $leave->type == 'Cuti Tahunan') 🏝️ @elseif($leave->type == 'Izin Tidak Masuk') 📝 @elseif($leave->type == 'Izin Masuk Siang') 🌅 @else ✨ @endif
                         </div>
                     </div>
                     

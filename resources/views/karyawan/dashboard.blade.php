@@ -103,13 +103,14 @@
 
                 <!-- Timer Pulang Cepat (Tiny) -->
                 <div x-show="hasCheckedIn && !hasCheckedOut" style="display:none;"
-                    class="text-center mb-6 px-4 py-2 rounded-full bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/50">
+                    class="text-center mb-6 px-4 py-2.5 rounded-2xl bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/50 flex flex-col items-center justify-center gap-1">
                     <div class="flex items-center justify-center gap-2">
                         <span class="w-1.5 h-1.5 rounded-full"
                             :class="isEarlyLeave ? 'bg-orange-500' : 'bg-emerald-500'"></span>
                         <span class="text-[10px] font-black uppercase tracking-[0.1em]"
                             :class="isEarlyLeave ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-500'" x-text="timeLeftText"></span>
                     </div>
+                    <span class="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest" x-show="isEarlyLeave" x-text="estimatedOutText"></span>
                 </div>
 
                 <!-- Distance Info (Pill Style) -->
@@ -161,7 +162,7 @@
                         
                         <!-- Early (Yellow/Amber) -->
                         <div class="bg-amber-50/50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-900/50 rounded-full p-5 flex flex-col items-center justify-center transition-all hover:scale-[1.05] hover:border-amber-400 group/s3 shadow-sm">
-                            <p class="text-[10px] font-black text-amber-500 dark:text-amber-400 uppercase tracking-widest mb-1 group-hover/s3:translate-y-[-2px] transition-transform font-mono">Cepat</p>
+                            <p class="text-center text-[10px] font-black text-amber-500 dark:text-amber-400 uppercase tracking-widest mb-1 group-hover/s3:translate-y-[-2px] transition-transform font-mono">Pulang Cepat</p>
                             <p class="text-3xl font-black text-amber-600 dark:text-amber-300 leading-none">
                                 {{ Auth::user()->attendances()->whereMonth('date', now()->month)->whereYear('date', now()->year)->where('is_pulang_cepat', true)->count() }}
                             </p>
@@ -294,10 +295,10 @@
                     @csrf
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-2">
-                            <template x-for="item in ['Sakit', 'Izin Penting', 'Libur', 'Lainnya']">
+                            <template x-for="item in ['Sakit', 'Izin Tidak Masuk', 'Izin Masuk Siang', 'Libur', 'Lainnya']">
                                 <button type="button" @click="selectedLeaveType = item"
                                     :class="selectedLeaveType === item ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-slate-50 dark:bg-slate-900 text-blue-600 dark:text-blue-400 border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700'"
-                                    class="p-2.5 rounded-2xl border-2 text-[10px] font-black uppercase transition-all tracking-tighter">
+                                    class="p-2.5 rounded-2xl border-2 text-[9px] font-black uppercase transition-all tracking-tighter">
                                     <span x-text="item"></span>
                                 </button>
                             </template>
@@ -363,6 +364,7 @@
 
                 isEarlyLeave: false,
                 timeLeftText: '',
+                estimatedOutText: '',
 
                 init() {
                     this.trackLocation();
@@ -371,10 +373,17 @@
 
                 startTimer() {
                     if (!this.checkInTime || this.hasCheckedOut) return;
+                    
+                    const [h, m, s] = this.checkInTime.split(':');
+                    const checkInDate = new Date();
+                    checkInDate.setHours(h, m, s, 0);
+                    const estDate = new Date(checkInDate.getTime() + (8 * 60 * 60 * 1000));
+                    const estH = String(estDate.getHours()).padStart(2, '0');
+                    const estM = String(estDate.getMinutes()).padStart(2, '0');
+                    this.estimatedOutText = `Estimasi jam pulang: ${estH}:${estM}`;
+
                     const updateTime = () => {
                         const now = new Date();
-                        const [h, m, s] = this.checkInTime.split(':');
-                        const checkInDate = new Date();
                         checkInDate.setHours(h, m, s, 0);
 
                         const diffMs = now - checkInDate;
@@ -386,14 +395,15 @@
                             // Format remaining time
                             const remH = Math.floor(remainingMs / (1000 * 60 * 60));
                             const remM = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
-                            this.timeLeftText = `Sisa ${remH} Jam ${remM} Menit Lagi`;
+                            const remS = Math.floor((remainingMs % (1000 * 60)) / 1000);
+                            this.timeLeftText = `Sisa ${remH} Jam ${remM} Menit ${remS} Detik Lagi`;
                         } else {
                             this.isEarlyLeave = false;
-                            this.timeLeftText = '8 Jam Kerja Terpenuhi ✨';
+                            this.timeLeftText = '8 Jam Terpenuhi ✨ (Luar Biasa, Tetap Semangat {{ explode(' ', Auth::user()->name)[0] }}! 💪)';
                         }
                     };
                     updateTime();
-                    setInterval(updateTime, 60000); // update every minute
+                    setInterval(updateTime, 1000); // update every second
                 },
 
                 trackLocation() {

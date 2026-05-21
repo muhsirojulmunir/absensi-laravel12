@@ -10,6 +10,14 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Forgot Password / OTP Flow
+Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
+Route::post('/forgot-password', [AuthController::class, 'sendOtp'])->name('password.email');
+Route::get('/verify-otp', [AuthController::class, 'showVerifyOtpForm'])->name('password.verify-otp-form');
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->name('password.verify-otp');
+Route::get('/reset-password', [AuthController::class, 'showResetPasswordForm'])->name('password.reset-form');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
+
 // Dashboards
 Route::middleware(['auth'])->group(function () {
     Route::prefix('super-admin')->name('super-admin.')->group(function () {
@@ -22,6 +30,9 @@ Route::middleware(['auth'])->group(function () {
         // User Management
         Route::get('users/generate-id/{role}', [App\Http\Controllers\SuperAdmin\UserController::class, 'generateNextId'])->name('users.generate-id');
         Route::resource('users', App\Http\Controllers\SuperAdmin\UserController::class);
+
+        // Holiday Management
+        Route::resource('holidays', App\Http\Controllers\SuperAdmin\HolidayController::class)->only(['index', 'store', 'destroy']);
     });
 
     Route::prefix('pic')->name('pic.')->group(function () {
@@ -35,6 +46,7 @@ Route::middleware(['auth'])->group(function () {
         // Divisional Employees
         Route::get('/employees', [App\Http\Controllers\PIC\EmployeeController::class, 'index'])->name('employees.index');
         Route::get('/employees/{user}', [App\Http\Controllers\PIC\EmployeeController::class, 'show'])->name('employees.show');
+        Route::get('/reports', [App\Http\Controllers\PIC\ReportController::class, 'index'])->name('reports.index');
     });
 
     Route::prefix('hrd')->name('hrd.')->group(function () {
@@ -63,4 +75,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'update'])->name('profile.update');
     });
+});
+
+// API Route for Database Sync (Exempted from CSRF)
+Route::post('/api/sync-users', [\App\Http\Controllers\Api\SyncController::class, 'syncUsers']);
+
+// Temporary route to run migrations on live server
+Route::get('/run-migrations', function () {
+    \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+    return 'Migrations completed successfully!';
 });

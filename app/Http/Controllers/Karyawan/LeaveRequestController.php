@@ -47,7 +47,7 @@ class LeaveRequestController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'type' => 'required|in:Libur,Sakit,Izin Penting,Lainnya',
+            'type' => 'required|in:Sakit,Izin Tidak Masuk,Izin Masuk Siang,Libur,Lainnya',
             'start_date' => 'required|date|after_or_equal:today',
             'end_date' => 'required|date|after_or_equal:start_date',
             'reason' => 'required|string|max:500',

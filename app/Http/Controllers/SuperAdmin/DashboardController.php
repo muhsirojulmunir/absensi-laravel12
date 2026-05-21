@@ -18,6 +18,8 @@ class DashboardController extends Controller
         $roleCounts = $rolesData->pluck('users_count');
         $roleLastLogins = $rolesData->pluck('users_max_last_login_at');
 
-        return view('super-admin.dashboard', compact('totalUsers', 'roleNames', 'roleCounts', 'roleLastLogins'));
+        $usersList = User::with('role')->orderBy('name', 'asc')->get();
+
+        return view('super-admin.dashboard', compact('totalUsers', 'roleNames', 'roleCounts', 'roleLastLogins', 'usersList'));
     }
 }
