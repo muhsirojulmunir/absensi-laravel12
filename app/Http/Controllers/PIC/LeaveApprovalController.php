@@ -11,7 +11,9 @@ class LeaveApprovalController extends Controller
 {
     public function index()
     {
-        $leaveRequests = LeaveRequest::with('user')->latest()->paginate(10);
+        $leaveRequests = LeaveRequest::with('user')
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
+            ->latest()->paginate(10);
 
         // Calculate monthly stats globally
         $statsQuery = LeaveRequest::whereMonth('created_at', now()->month)

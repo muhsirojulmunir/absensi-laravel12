@@ -74,13 +74,13 @@ function Sync-Directory {
         
         if ($item.PSIsContainer) {
             # Folder yang di-blacklist (jangan di-sync!)
-            if ($name -eq ".git" -or $name -eq "vendor" -or $name -eq "node_modules" -or $name -eq "storage" -or $name -eq "database" -or $name -eq "database_backups") {
+            if ($name -eq ".git" -or $name -eq "vendor" -or $name -eq "node_modules" -or $name -eq "storage" -or $name -eq "database_backups" -or $name -eq "bootstrap") {
                 continue
             }
             Sync-Directory -CurrentLocalDir $item.FullName -CurrentRemoteDir "$CurrentRemoteDir/$name"
         } else {
             # File yang di-blacklist
-            if ($name -eq "vendor.zip" -or $name -match "\.ps1$" -or $name -eq "extract.php" -or $name -eq "sync_state.json") {
+            if ($name -eq "vendor.zip" -or $name -match "\.ps1$" -or $name -eq "extract.php" -or $name -eq "sync_state.json" -or $name -match "\.sqlite$") {
                 continue
             }
             

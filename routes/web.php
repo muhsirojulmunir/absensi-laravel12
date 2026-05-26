@@ -29,10 +29,20 @@ Route::middleware(['auth'])->group(function () {
 
         // User Management
         Route::get('users/generate-id/{role}', [App\Http\Controllers\SuperAdmin\UserController::class, 'generateNextId'])->name('users.generate-id');
+        Route::post('users/{user}/toggle-status', [App\Http\Controllers\SuperAdmin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
         Route::resource('users', App\Http\Controllers\SuperAdmin\UserController::class);
 
         // Holiday Management
         Route::resource('holidays', App\Http\Controllers\SuperAdmin\HolidayController::class)->only(['index', 'store', 'destroy']);
+
+        // Attendance Monitoring (hapus + backup)
+        Route::get('/attendance/deleted-backups', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'deletedBackups'])->name('attendance.deleted-backups');
+        Route::post('/attendance/deleted-backups/{deletedBackup}/restore', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'restore'])->name('attendance.restore');
+        Route::get('/attendance/recap', fn () => redirect()->route('super-admin.attendance.index'))->name('attendance.recap');
+        Route::get('/attendance', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'index'])->name('attendance.index');
+        Route::post('/attendance/{attendance}/delete', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'destroy'])
+            ->whereNumber('attendance')
+            ->name('attendance.destroy');
     });
 
     Route::prefix('pic')->name('pic.')->group(function () {
@@ -55,6 +65,7 @@ Route::middleware(['auth'])->group(function () {
         // Attendance Monitoring
         Route::get('/attendance', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'index'])->name('attendance.index');
         Route::get('/attendance/recap', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'recap'])->name('attendance.recap');
+        Route::post('/attendance/recap/pay', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'payMealAllowance'])->name('attendance.pay-meal-allowance');
     });
 
     Route::prefix('karyawan')->name('karyawan.')->group(function () {
@@ -75,6 +86,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'update'])->name('profile.update');
     });
+
+    // Save FCM Token (untuk semua user yang login)
+    Route::post('/save-fcm-token', function (\Illuminate\Http\Request $request) {
+        $request->validate(['token' => 'required|string']);
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $user->update(['fcm_token' => $request->token]);
+        return response()->json(['success' => true]);
+    })->name('save-fcm-token');
 });
 
 // API Route for Database Sync (Exempted from CSRF)
@@ -84,4 +103,25 @@ Route::post('/api/sync-users', [\App\Http\Controllers\Api\SyncController::class,
 Route::get('/run-migrations', function () {
     \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
     return 'Migrations completed successfully!';
+});
+
+// Cron Trigger untuk Smart Notification (dipanggil oleh layanan cron eksternal)
+Route::get('/cron/smart-notification', function (\Illuminate\Http\Request $request) {
+    // Simple secret key protection
+    if ($request->query('key') !== env('SYNC_SECRET_KEY')) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+    
+    $options = [];
+    if ($request->query('test')) {
+        $options['--test'] = true;
+    }
+    
+    \Illuminate\Support\Facades\Artisan::call('notify:smart-attendance', $options);
+    
+    return response()->json([
+        'success' => true,
+        'output' => \Illuminate\Support\Facades\Artisan::output(),
+        'time' => now()->toDateTimeString(),
+    ]);
 });

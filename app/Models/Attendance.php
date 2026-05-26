@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class Attendance extends Model
 {
     protected $fillable = [
@@ -13,6 +16,10 @@ class Attendance extends Model
         'date',
         'status',
         'is_pulang_cepat',
+        'lat',
+        'long',
+        'photo',
+        'lateness_minutes',
     ];
 
     public function user()

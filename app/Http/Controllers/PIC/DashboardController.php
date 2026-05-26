@@ -14,15 +14,28 @@ class DashboardController extends Controller
         $divisionId = Auth::user()->division_id;
 
         $stats = [
+            // total active employees in the same division (excluding self)
             'total_employees' => User::withRole('karyawan')
+                ->where('is_active', true)
+                ->where('division_id', $divisionId)
                 ->where('id', '!=', Auth::id())
                 ->count(),
-            'pending_requests' => LeaveRequest::whereHas('user', function ($query) {
-                $query->withRole('karyawan');
+
+            // pending leave requests from active employees in this division
+            'pending_requests' => LeaveRequest::whereHas('user', function ($query) use ($divisionId) {
+                $query->withRole('karyawan')
+                    ->where('is_active', true)
+                    ->where('division_id', $divisionId);
             })->where('status', 'pending')->count(),
-            'approved_today' => LeaveRequest::whereHas('user', function ($query) {
-                $query->withRole('karyawan');
+
+            // approved today leave requests from active employees in this division
+            'approved_today' => LeaveRequest::whereHas('user', function ($query) use ($divisionId) {
+                $query->withRole('karyawan')
+                    ->where('is_active', true)
+                    ->where('division_id', $divisionId);
             })->where('status', 'approved')->whereDate('updated_at', now())->count(),
+
+            // fast exit today (any employee)
             'pulang_cepat_today' => \App\Models\Attendance::whereDate('date', now())
                 ->where('is_pulang_cepat', true)
                 ->count(),

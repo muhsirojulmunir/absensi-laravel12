@@ -11,7 +11,7 @@
                     {{ \Carbon\Carbon::parse($endDate)->translatedFormat('d M Y') }}</p>
             </div>
 
-            <form action="{{ route('hrd.attendance.recap') }}" method="GET"
+            <form action="{{ route($recapRouteName ?? 'hrd.attendance.recap') }}" method="GET"
                 class="flex flex-wrap items-center gap-3 bg-slate-50 dark:bg-slate-900 shadow-inner p-2 rounded-2xl border border-blue-100 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <select name="division_id"
                     class="bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-xl px-4 py-2 text-xs font-bold text-blue-950 dark:text-white focus:ring-2 focus:ring-blue-600 outline-none cursor-pointer">
@@ -109,8 +109,28 @@
             </div>
         </div>
 
-        <!-- Print Button -->
-        <div class="flex justify-end print-hide">
+        <!-- Print Button & Bayar Semua Button -->
+        <div class="flex flex-wrap items-center justify-end gap-3 print-hide">
+            @php
+                $hasUnpaid = $users->contains(fn($u) => $u->total_meal_allowance > 0 && !$u->is_meal_paid);
+            @endphp
+            @if($hasUnpaid)
+            <form action="{{ route('hrd.attendance.pay-meal-allowance') }}" method="POST" onsubmit="return confirm('Tandai LUNAS uang makan untuk SEMUA karyawan di periode ini?')">
+                @csrf
+                <input type="hidden" name="start_date" value="{{ $startDate }}">
+                <input type="hidden" name="end_date" value="{{ $endDate }}">
+                <!-- Untuk bayar semua, kita kirim array of user_id dan amount -->
+                @foreach($users as $u)
+                    @if($u->total_meal_allowance > 0 && !$u->is_meal_paid)
+                        <input type="hidden" name="bulk_pay[{{ $u->id }}]" value="{{ $u->total_meal_allowance }}">
+                    @endif
+                @endforeach
+                <button type="submit" class="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    Tandai Semua Lunas
+                </button>
+            </form>
+            @endif
             <button onclick="openPrintPreview()" class="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-blue-600/20 active:scale-95">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                 Cetak Laporan (PDF)
@@ -163,6 +183,25 @@
                                 </td>
                                 <td class="px-6 py-5 whitespace-nowrap text-center bg-blue-50/20 dark:bg-slate-900/50">
                                     <div class="text-sm font-black text-blue-600 dark:text-blue-400 tracking-tighter">Rp {{ number_format($user->total_meal_allowance, 0, ',', '.') }}</div>
+                                    @if($user->total_meal_allowance > 0)
+                                        @if($user->is_meal_paid)
+                                            <span class="inline-flex items-center space-x-1 mt-1 text-[10px] font-bold text-emerald-500 uppercase">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                <span>Lunas</span>
+                                            </span>
+                                        @else
+                                            <form action="{{ route('hrd.attendance.pay-meal-allowance') }}" method="POST" class="mt-1" onsubmit="return confirm('Tandai lunas untuk {{ $user->name }}?')">
+                                                @csrf
+                                                <input type="hidden" name="user_id" value="{{ $user->id }}">
+                                                <input type="hidden" name="start_date" value="{{ $startDate }}">
+                                                <input type="hidden" name="end_date" value="{{ $endDate }}">
+                                                <input type="hidden" name="amount" value="{{ $user->total_meal_allowance }}">
+                                                <button type="submit" class="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-2 py-1 rounded-md font-bold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">
+                                                    Tandai Lunas
+                                                </button>
+                                            </form>
+                                        @endif
+                                    @endif
                                 </td>
                                 <td class="px-8 py-5 whitespace-nowrap text-right">
                                     @php

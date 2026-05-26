@@ -27,6 +27,16 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
 
+            // Check if user is active
+            if (!Auth::user()->is_active) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                return back()->withErrors([
+                    'username' => 'Akun Anda telah dinonaktifkan. Silakan hubungi Admin.',
+                ])->onlyInput('username');
+            }
+
             // Update last login timestamp
             Auth::user()->update(['last_login_at' => now()]);
 

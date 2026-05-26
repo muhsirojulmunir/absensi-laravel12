@@ -19,7 +19,7 @@ class ReportController extends Controller
         // Get list of employees (users with role 'karyawan')
         $employees = User::whereHas('role', function ($q) {
             $q->where('slug', 'karyawan');
-        })->orderBy('name')->get();
+        })->where('is_active', true)->orderBy('name')->get();
 
         // Determine selected employee and month (default current month)
         $employeeId = $request->query('employee_id');

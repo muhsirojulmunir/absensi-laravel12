@@ -37,6 +37,8 @@ class User extends Authenticatable
         'birth_date',
         'otp_code',
         'otp_expires_at',
+        'fcm_token',
+        'is_active',
     ];
 
     public function role()

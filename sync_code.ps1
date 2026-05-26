@@ -68,7 +68,7 @@ function Sync-Directory {
         
         # Exclude directories we don't want to sync
         if ($item.PSIsContainer) {
-            if ($name -eq ".git" -or $name -eq "vendor" -or $name -eq "node_modules" -or $name -eq "storage" -or $name -eq "database" -or $name -eq "database_backups") {
+            if ($name -eq ".git" -or $name -eq "vendor" -or $name -eq "node_modules" -or $name -eq "storage" -or $name -eq "database" -or $name -eq "database_backups" -or $name -eq "bootstrap") {
                 continue
             }
             # Recursively sync subdirectories

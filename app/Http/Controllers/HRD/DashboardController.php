@@ -13,7 +13,7 @@ class DashboardController extends Controller
     public function index()
     {
         // 1. Basic Stats
-        $totalEmployees = User::withRole('karyawan')->count();
+        $totalEmployees = User::withRole('karyawan')->where('is_active', true)->count();
         $todayAttendance = Attendance::whereDate('date', Carbon::today())
             ->whereIn('status', ['Hadir', 'Terlambat'])
             ->count();

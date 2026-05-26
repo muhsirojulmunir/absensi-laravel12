@@ -12,6 +12,7 @@ class EmployeeController extends Controller
     public function index()
     {
         $employees = User::withRole('karyawan')
+            ->where('is_active', true)
             ->where('id', '!=', Auth::id())
             ->with(['role', 'attendances' => function ($query) {
                 $query->whereDate('date', now());

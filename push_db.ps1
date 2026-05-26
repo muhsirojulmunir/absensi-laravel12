@@ -35,7 +35,6 @@ try {
     
     Write-Host ""
     Write-Host "✅ SUKSES! Database berhasil diunggah ke server InfinityFree." -ForegroundColor Green
-    Write-Host "Error tabel 'holidays' seharusnya sudah hilang sekarang!" -ForegroundColor Green
 } catch {
     Write-Host ""
     Write-Error "❌ GAGAL mengunggah database. Error: $_"

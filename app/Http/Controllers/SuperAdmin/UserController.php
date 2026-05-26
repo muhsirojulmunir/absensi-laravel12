@@ -84,6 +84,19 @@ class UserController extends Controller
         return redirect()->route('super-admin.users.index')->with('success', 'User deleted successfully.');
     }
 
+    public function toggleStatus(User $user)
+    {
+        // Prevent super-admin from deactivating themselves
+        if (auth()->id() === $user->id) {
+            return redirect()->route('super-admin.users.index')->with('error', 'Anda tidak dapat menonaktifkan akun sendiri.');
+        }
+
+        $user->update(['is_active' => !$user->is_active]);
+        $status = $user->is_active ? 'diaktifkan' : 'dinonaktifkan';
+        
+        return redirect()->route('super-admin.users.index')->with('success', "Akun pengguna berhasil $status.");
+    }
+
     public function generateNextId(Role $role)
     {
         $nextId = User::generateNextEmployeeId($role->id);

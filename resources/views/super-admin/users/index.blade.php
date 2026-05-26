@@ -88,13 +88,32 @@
                                 </span>
                             </td>
                             <td class="px-6 py-5 whitespace-nowrap">
-                                <span class="inline-flex items-center space-x-2 text-[10px] font-bold text-emerald-500 uppercase">
-                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                                    <span>Aktif</span>
-                                </span>
+                                @if($user->is_active)
+                                    <span class="inline-flex items-center space-x-2 text-[10px] font-bold text-emerald-500 uppercase">
+                                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                                        <span>Aktif</span>
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center space-x-2 text-[10px] font-bold text-red-500 uppercase">
+                                        <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                                        <span>Nonaktif</span>
+                                    </span>
+                                @endif
                             </td>
                             <td class="px-8 py-5 whitespace-nowrap text-right">
                                 <div class="flex items-center justify-end space-x-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                                    @if(auth()->id() !== $user->id)
+                                    <form action="{{ route('super-admin.users.toggle-status', $user) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin {{ $user->is_active ? 'menonaktifkan' : 'mengaktifkan' }} pengguna ini?')" class="inline">
+                                        @csrf
+                                        <button type="submit" class="p-2 {{ $user->is_active ? 'text-red-500 hover:bg-red-500/10' : 'text-emerald-500 hover:bg-emerald-500/10' }} rounded-lg transition-all" title="{{ $user->is_active ? 'Nonaktifkan' : 'Aktifkan' }} Pengguna">
+                                            @if($user->is_active)
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                                            @else
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                            @endif
+                                        </button>
+                                    </form>
+                                    @endif
                                     <a href="{{ route('super-admin.users.edit', $user) }}" class="p-2 text-blue-600/80 dark:text-blue-400 hover:text-blue-950 dark:hover:text-white hover:bg-slate-700/50 rounded-lg transition-all" title="Edit Pengguna">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                     </a>

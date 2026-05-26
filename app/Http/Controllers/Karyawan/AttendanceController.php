@@ -68,7 +68,15 @@ class AttendanceController extends Controller
 
         $clockInTime = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $today->format('Y-m-d') . ' ' . $attendance->check_in);
         $hoursWorked = $clockInTime->diffInHours($now);
-        $isPulangCepat = $hoursWorked < 8;
+
+        $userDivision = $user->division ? strtolower(trim($user->division->name)) : '';
+        if (str_contains($userDivision, 'gudang')) {
+            // Khusus divisi gudang, pulang cepat dihitung jika checkout sebelum jam 18:00
+            $isPulangCepat = $now->format('H:i') < '18:00';
+        } else {
+            // Divisi lain, patokan 8 jam kerja
+            $isPulangCepat = $hoursWorked < 8;
+        }
 
         $attendance->update([
             'check_out' => $now->format('H:i:s'),

@@ -115,6 +115,13 @@
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Hari Libur</span>
                 </a>
+                <a href="{{ route('super-admin.attendance.index') }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.attendance.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
+                   title="Monitor Absensi">
+                    <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Monitor Absensi</span>
+                </a>
             @endif
 
             {{-- ============ HRD ============ --}}
@@ -270,6 +277,10 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     <span class="text-[10px] font-semibold mt-0.5">Hari Libur</span>
                 </a>
+                <a href="{{ route('super-admin.attendance.index') }}" class="flex flex-col items-center py-1.5 px-2 transition-colors {{ request()->routeIs('super-admin.attendance.*') ? 'text-blue-600' : 'text-blue-400 hover:text-blue-500' }}">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    <span class="text-[10px] font-semibold mt-0.5">Absensi</span>
+                </a>
             @endif
 
             @if(Auth::user()->role->slug == 'hrd')
@@ -339,6 +350,134 @@
         setInterval(updateClock, 1000);
         updateClock();
     </script>
+
+    {{-- ============================== FIREBASE CLOUD MESSAGING ============================== --}}
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+
+        const firebaseConfig = {
+            apiKey: "{{ env('FIREBASE_API_KEY') }}",
+            authDomain: "{{ env('FIREBASE_AUTH_DOMAIN') }}",
+            projectId: "{{ env('FIREBASE_PROJECT_ID') }}",
+            storageBucket: "{{ env('FIREBASE_STORAGE_BUCKET') }}",
+            messagingSenderId: "{{ env('FIREBASE_MESSAGING_SENDER_ID') }}",
+            appId: "{{ env('FIREBASE_APP_ID') }}",
+            measurementId: "{{ env('FIREBASE_MEASUREMENT_ID') }}"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app);
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                .then((registration) => {
+                    console.log('✅ Service Worker registered:', registration.scope);
+                    initFCM(registration);
+                })
+                .catch((err) => console.error('❌ Service Worker error:', err));
+        }
+
+        function initFCM(swRegistration) {
+            // Minta izin notifikasi dari user
+            Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    console.log('🔔 Notification permission granted.');
+
+                    getToken(messaging, {
+                        vapidKey: "{{ env('FCM_VAPID_KEY') }}",
+                        serviceWorkerRegistration: swRegistration
+                    }).then((currentToken) => {
+                        if (currentToken) {
+                            console.log('🔑 FCM Token:', currentToken.substring(0, 30) + '...');
+                            // Kirim token ke server
+                            saveFcmToken(currentToken);
+                        } else {
+                            console.warn('⚠️ No FCM token available.');
+                        }
+                    }).catch((err) => {
+                        console.error('❌ Error getting FCM token:', err);
+                    });
+                } else {
+                    console.warn('🔕 Notification permission denied.');
+                }
+            });
+        }
+
+        // Handle foreground messages (saat tab aktif)
+        onMessage(messaging, (payload) => {
+            console.log('📩 Foreground message:', payload);
+
+            const title = payload.notification?.title || '📢 Pengingat Absensi';
+            const body = payload.notification?.body || 'Jangan lupa absen!';
+
+            // Tampilkan notifikasi di browser
+            if (Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: body,
+                    icon: '/favicon.ico',
+                    vibrate: [200, 100, 200],
+                    requireInteraction: true
+                });
+            }
+
+            // Tampilkan juga sebagai toast/alert di halaman
+            showNotificationToast(title, body);
+        });
+
+        function saveFcmToken(token) {
+            fetch("{{ route('save-fcm-token') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ token: token })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ FCM token saved to server.');
+                }
+            })
+            .catch(err => console.error('❌ Error saving FCM token:', err));
+        }
+
+        function showNotificationToast(title, body) {
+            // Buat elemen toast
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 z-[99999] max-w-sm bg-white dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-2xl shadow-2xl p-4 flex items-start space-x-3 animate-slide-in';
+            toast.innerHTML = `
+                <div class="flex-shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-blue-900 dark:text-blue-100">${title}</p>
+                    <p class="text-xs text-blue-700 dark:text-blue-300 mt-0.5">${body}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="flex-shrink-0 text-blue-400 hover:text-blue-600 dark:text-slate-500 dark:hover:text-slate-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            `;
+            document.body.appendChild(toast);
+
+            // Auto-remove setelah 8 detik
+            setTimeout(() => { if (toast.parentElement) toast.remove(); }, 8000);
+        }
+    </script>
+
+    <style>
+        @keyframes slide-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .animate-slide-in {
+            animation: slide-in 0.4s ease-out;
+        }
+    </style>
+
     @stack('scripts')
 </body>
 </html>
+
