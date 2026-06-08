@@ -6,14 +6,13 @@ use Illuminate\Console\Command;
 use App\Models\User;
 use App\Models\Attendance;
 use App\Services\FirebaseService;
-use App\Services\GeminiService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class SendSmartNotification extends Command
 {
     protected $signature = 'notify:smart-attendance {--test}';
-    protected $description = 'Kirim notifikasi pengingat absen cerdas menggunakan Gemini AI via Firebase Cloud Messaging';
+    protected $description = 'Kirim notifikasi pengingat absen otomatis via Firebase Cloud Messaging';
 
     public function handle()
     {
@@ -22,7 +21,6 @@ class SendSmartNotification extends Command
         $today = Carbon::today();
 
         $firebase = new FirebaseService();
-        $gemini = new GeminiService();
 
         // Ambil semua karyawan yang punya fcm_token
         $users = User::whereNotNull('fcm_token')
@@ -59,11 +57,7 @@ class SendSmartNotification extends Command
                     if (!$todayAttendance) {
                         $this->info("📤 Mengirim pengingat Clock In ke {$user->name} (Staff Kantor)");
 
-                        $message = $gemini->generateAttendanceReminder(
-                            $user->name,
-                            $user->division->name ?? 'Kantor',
-                            'clock_in'
-                        );
+                        $message = "Halo {$user->name}, jangan lupa untuk melakukan absen masuk (Clock In) pagi ini. Selamat bekerja dan semoga harimu menyenangkan!";
 
                         if ($firebase->sendNotification($user->fcm_token, '⏰ Pengingat Absen Masuk', $message)) {
                             $sentCount++;
@@ -78,11 +72,7 @@ class SendSmartNotification extends Command
                     if ($todayAttendance && !$todayAttendance->check_out) {
                         $this->info("📤 Mengirim pengingat Clock Out ke {$user->name} (Staff Kantor)");
 
-                        $message = $gemini->generateAttendanceReminder(
-                            $user->name,
-                            $user->division->name ?? 'Kantor',
-                            'clock_out'
-                        );
+                        $message = "Halo {$user->name}, waktu kerja hari ini sudah selesai (17:00 WIB). Terima kasih atas kerja kerasnya dan jangan lupa absen pulang (Clock Out).";
 
                         if ($firebase->sendNotification($user->fcm_token, '🏠 Waktunya Pulang!', $message)) {
                             $sentCount++;
@@ -106,11 +96,7 @@ class SendSmartNotification extends Command
                     if (($hoursWorked >= 480 && $hoursWorked <= 510) || $this->option('test')) {
                         $this->info("📤 Mengirim pengingat 8 jam ke {$user->name} (Live Streaming)");
 
-                        $message = $gemini->generateAttendanceReminder(
-                            $user->name,
-                            $user->division->name ?? 'Live Streaming',
-                            'clock_out_8jam'
-                        );
+                        $message = "Halo {$user->name}, kamu sudah bekerja selama 8 jam lho! Waktunya istirahat dan jangan lupa untuk melakukan absen pulang (Clock Out) ya.";
 
                         if ($firebase->sendNotification($user->fcm_token, '⏰ Sudah 8 Jam Bekerja!', $message)) {
                             $sentCount++;

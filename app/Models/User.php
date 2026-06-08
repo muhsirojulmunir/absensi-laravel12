@@ -72,6 +72,11 @@ class User extends Authenticatable
         return $this->hasMany(SalesInput::class);
     }
 
+    public function performanceEvaluations()
+    {
+        return $this->hasMany(PerformanceEvaluation::class);
+    }
+
     public function scopeWithRole($query, $roleSlug)
     {
         return $query->whereHas('role', function ($query) use ($roleSlug) {

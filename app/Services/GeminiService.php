@@ -101,4 +101,81 @@ class GeminiService
                 return "Hai $name! Jangan lupa untuk melakukan absen. Terima kasih!";
         }
     }
+
+    /**
+     * Generate Laporan Kinerja Bulanan menggunakan Gemini AI
+     */
+    public function generatePerformanceReport($user, $month, $year, $attendance, $sales)
+    {
+        $division = $user->division->name ?? 'Kantor';
+        
+        $prompt = "Kamu adalah HR Manager & Analis Kinerja 'JMN Matrix AI'. Buatkan evaluasi kinerja bulanan untuk karyawan berikut:\n\n";
+        $prompt .= "- Nama: {$user->name}\n";
+        $prompt .= "- Divisi: {$division}\n";
+        $prompt .= "- Periode: Bulan {$month} Tahun {$year}\n\n";
+        
+        $prompt .= "DATA ABSENSI:\n";
+        $prompt .= "- Hadir Tepat Waktu: " . ($attendance['total_hadir'] - $attendance['total_telat']) . " hari\n";
+        $prompt .= "- Terlambat: {$attendance['total_telat']} hari\n";
+        $prompt .= "- Pulang Cepat: {$attendance['total_pulang_cepat']} hari\n";
+        $prompt .= "- Izin/Sakit: {$attendance['total_izin_sakit']} hari\n";
+        
+        if ($sales) {
+            $prompt .= "\nDATA PENJUALAN:\n";
+            $prompt .= "- Total Item Terjual: {$sales['total_items_sold']} pcs\n";
+            $prompt .= "- Total Omset Pendapatan: Rp " . number_format($sales['total_revenue'], 0, ',', '.') . "\n";
+            $prompt .= "- Total Transaksi: {$sales['total_transactions']}\n";
+        }
+        
+        $prompt .= "\nINSTRUKSI:\n";
+        $prompt .= "1. Tentukan PREDIKAT Kinerja secara tegas. Pilih HANYA SATU dari: 'Sangat Baik', 'Baik', 'Cukup', atau 'Kurang'.\n";
+        $prompt .= "2. Buat RANGKUMAN EVALUASI (Feedback) sebanyak 2-3 kalimat yang natural, menyoroti pola positif (misal konsisten hadir) dan pola negatif (misal sering telat/pulang cepat).\n";
+        $prompt .= "3. Berikan SARAN & REMINDER yang brilian, memotivasi, dan spesifik untuk perbaikan di bulan depan.\n";
+        $prompt .= "Format balasan MU HARUS persis seperti JSON berikut (TANPA blok kode ```json, langsung kembalikan raw JSON string):\n";
+        $prompt .= '{"predicate": "Pilih Predikat", "feedback": "Teks evaluasi", "recommendation": "Teks saran"}';
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post($this->apiUrl . '?key=' . $this->apiKey, [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.7,
+                    'maxOutputTokens' => 500,
+                ],
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+                
+                if ($text) {
+                    $text = trim($text);
+                    // Bersihkan backticks jika AI nakal mengirimkan format markdown
+                    $text = str_replace(['```json', '```'], '', $text);
+                    
+                    $json = json_decode(trim($text), true);
+                    if (json_last_error() === JSON_ERROR_NONE && isset($json['predicate'], $json['feedback'], $json['recommendation'])) {
+                        return $json;
+                    }
+                }
+            }
+            \Illuminate\Support\Facades\Log::error('Gemini Performance API error: ' . $response->body());
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Gemini Performance API exception: ' . $e->getMessage());
+        }
+
+        // Fallback jika gagal parse JSON atau API error
+        return [
+            'predicate' => 'Menunggu Evaluasi',
+            'feedback' => 'Gagal mengambil evaluasi otomatis. Silakan coba generate ulang.',
+            'recommendation' => '-',
+        ];
+    }
 }

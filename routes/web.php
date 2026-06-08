@@ -30,6 +30,10 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('
 
 // Dashboards
 Route::middleware(['auth'])->group(function () {
+    // Performance Evaluation (Accessible by multiple roles)
+    Route::get('/performance-evaluation', [App\Http\Controllers\PerformanceEvaluationController::class, 'index'])->name('performance.index');
+    Route::get('/performance-evaluation/{id}', [App\Http\Controllers\PerformanceEvaluationController::class, 'show'])->name('performance.show');
+
     Route::prefix('super-admin')->name('super-admin.')->group(function () {
         Route::get('/dashboard', [App\Http\Controllers\SuperAdmin\DashboardController::class, 'index'])->name('dashboard');
         
