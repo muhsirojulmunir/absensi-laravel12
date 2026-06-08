@@ -64,7 +64,7 @@
                         <select name="role_id" id="role_id" required class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white cursor-pointer">
                             <option value="" class="dark:bg-slate-900">Select Role</option>
                             @foreach($roles as $role)
-                                <option value="{{ $role->id }}" class="dark:bg-slate-900">{{ $role->name }}</option>
+                                <option value="{{ $role->id }}" data-slug="{{ $role->slug }}" class="dark:bg-slate-900">{{ $role->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -74,6 +74,15 @@
                             <option value="" class="dark:bg-slate-900">Select Division</option>
                             @foreach($divisions as $division)
                                 <option value="{{ $division->id }}" class="dark:bg-slate-900">{{ $division->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div id="location_wrapper" style="display: none;">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Lokasi Counter (Khusus Ramayana)</label>
+                        <select name="location_id" id="location_id" class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white cursor-pointer">
+                            <option value="" class="dark:bg-slate-900">Pilih Lokasi Counter</option>
+                            @foreach($locations as $location)
+                                <option value="{{ $location->id }}" class="dark:bg-slate-900">{{ $location->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -114,7 +123,17 @@
 <script>
     document.getElementById('role_id').addEventListener('change', function() {
         const roleId = this.value;
+        const selectedOption = this.options[this.selectedIndex];
+        const roleSlug = selectedOption ? selectedOption.getAttribute('data-slug') : '';
         const employeeIdInput = document.getElementById('employee_id');
+        const locationWrapper = document.getElementById('location_wrapper');
+        
+        if (roleSlug === 'karyawan_ramayana') {
+            locationWrapper.style.display = 'block';
+        } else {
+            locationWrapper.style.display = 'none';
+            document.getElementById('location_id').value = '';
+        }
         
         if (!roleId) {
             employeeIdInput.value = '';

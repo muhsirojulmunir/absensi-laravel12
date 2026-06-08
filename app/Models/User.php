@@ -39,6 +39,7 @@ class User extends Authenticatable
         'otp_expires_at',
         'fcm_token',
         'is_active',
+        'location_id',
     ];
 
     public function role()
@@ -59,6 +60,16 @@ class User extends Authenticatable
     public function attendances()
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(Location::class);
+    }
+
+    public function salesInputs()
+    {
+        return $this->hasMany(SalesInput::class);
     }
 
     public function scopeWithRole($query, $roleSlug)

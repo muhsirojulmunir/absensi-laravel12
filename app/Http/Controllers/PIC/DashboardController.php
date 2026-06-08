@@ -11,26 +11,28 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $divisionId = Auth::user()->division_id;
+        $user = Auth::user();
+        $divisionId = $user->division_id;
+        $targetRole = $user->role->slug === 'pic_ramayana' ? 'karyawan_ramayana' : 'karyawan';
 
         $stats = [
             // total active employees in the same division (excluding self)
-            'total_employees' => User::withRole('karyawan')
+            'total_employees' => User::withRole($targetRole)
                 ->where('is_active', true)
                 ->where('division_id', $divisionId)
                 ->where('id', '!=', Auth::id())
                 ->count(),
 
             // pending leave requests from active employees in this division
-            'pending_requests' => LeaveRequest::whereHas('user', function ($query) use ($divisionId) {
-                $query->withRole('karyawan')
+            'pending_requests' => LeaveRequest::whereHas('user', function ($query) use ($divisionId, $targetRole) {
+                $query->withRole($targetRole)
                     ->where('is_active', true)
                     ->where('division_id', $divisionId);
             })->where('status', 'pending')->count(),
 
             // approved today leave requests from active employees in this division
-            'approved_today' => LeaveRequest::whereHas('user', function ($query) use ($divisionId) {
-                $query->withRole('karyawan')
+            'approved_today' => LeaveRequest::whereHas('user', function ($query) use ($divisionId, $targetRole) {
+                $query->withRole($targetRole)
                     ->where('is_active', true)
                     ->where('division_id', $divisionId);
             })->where('status', 'approved')->whereDate('updated_at', now())->count(),

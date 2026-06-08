@@ -85,7 +85,7 @@
                             <select name="role_id" required
                                 class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white cursor-pointer">
                                 @foreach($roles as $role)
-                                    <option value="{{ $role->id }}" {{ $user->role_id == $role->id ? 'selected' : '' }}
+                                    <option value="{{ $role->id }}" data-slug="{{ $role->slug }}" {{ $user->role_id == $role->id ? 'selected' : '' }}
                                         class="dark:bg-slate-900">{{ $role->name }}</option>
                                 @endforeach
                             </select>
@@ -97,6 +97,15 @@
                                 <option value="" class="dark:bg-slate-900">Pilih Divisi</option>
                                 @foreach($divisions as $division)
                                     <option value="{{ $division->id }}" {{ $user->division_id == $division->id ? 'selected' : '' }} class="dark:bg-slate-900">{{ $division->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div id="location_wrapper" style="display: {{ $user->role->slug === 'karyawan_ramayana' ? 'block' : 'none' }};">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Lokasi Counter (Khusus Ramayana)</label>
+                            <select name="location_id" id="location_id" class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 dark:text-white cursor-pointer">
+                                <option value="" class="dark:bg-slate-900">Pilih Lokasi Counter</option>
+                                @foreach($locations as $location)
+                                    <option value="{{ $location->id }}" {{ $user->location_id == $location->id ? 'selected' : '' }} class="dark:bg-slate-900">{{ $location->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -141,3 +150,23 @@
         </form>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    const roleSelect = document.querySelector('select[name="role_id"]');
+    if(roleSelect) {
+        roleSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const roleSlug = selectedOption ? selectedOption.getAttribute('data-slug') : '';
+            const locationWrapper = document.getElementById('location_wrapper');
+            
+            if (roleSlug === 'karyawan_ramayana') {
+                locationWrapper.style.display = 'block';
+            } else {
+                locationWrapper.style.display = 'none';
+                document.getElementById('location_id').value = '';
+            }
+        });
+    }
+</script>
+@endpush

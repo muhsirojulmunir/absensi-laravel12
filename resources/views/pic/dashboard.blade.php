@@ -40,7 +40,7 @@
                 </div>
                 <h3 class="text-amber-100 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Menunggu Cuti</h3>
                 <p class="text-4xl font-black text-white tracking-tighter">{{ $stats['pending_requests'] }}</p>
-                <a href="{{ route('pic.leave-approvals.index') }}" class="mt-5 text-[10px] font-bold text-white uppercase tracking-widest bg-white/20 px-4 py-2 rounded-xl hover:bg-white/30 transition-all">Lihat Detail</a>
+                <a href="{{ route(Auth::user()->role->slug . '.leave-approvals.index') }}" class="mt-5 text-[10px] font-bold text-white uppercase tracking-widest bg-white/20 px-4 py-2 rounded-xl hover:bg-white/30 transition-all">Lihat Detail</a>
              </div>
         </div>
 
@@ -69,7 +69,7 @@
 
     <!-- Quick Actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <a href="{{ route('pic.leave-approvals.index') }}" class="group relative bg-blue-600 rounded-3xl p-10 overflow-hidden shadow-[0_20px_40px_-15px_rgba(37,99,235,0.5)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.6)]">
+        <a href="{{ route(Auth::user()->role->slug . '.leave-approvals.index') }}" class="group relative bg-blue-600 rounded-3xl p-10 overflow-hidden shadow-[0_20px_40px_-15px_rgba(37,99,235,0.5)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.6)]">
              <div class="relative z-10 space-y-5">
                 <h4 class="text-2xl font-extrabold text-white tracking-tight">Persetujuan Izin</h4>
                 <p class="text-blue-100 font-medium text-sm leading-relaxed max-w-xs">Tinjau dan proses permintaan cuti tim Anda dengan pelacakan data presisi secara real-time.</p>
@@ -80,7 +80,7 @@
              </div>
         </a>
 
-        <a href="{{ route('pic.employees.index') }}" class="group relative bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 rounded-3xl p-10 overflow-hidden transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 hover:border-blue-300 dark:hover:border-slate-500">
+        <a href="{{ route(Auth::user()->role->slug . '.employees.index') }}" class="group relative bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 rounded-3xl p-10 overflow-hidden transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 hover:border-blue-300 dark:hover:border-slate-500">
             <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-blue-50 dark:bg-blue-900/10 rounded-full blur-3xl group-hover:bg-blue-100 dark:group-hover:bg-blue-900/20 transition-all duration-500"></div>
             <div class="relative z-10 space-y-5">
                 <h4 class="text-2xl font-extrabold text-blue-950 dark:text-white tracking-tight">Monitoring Tim</h4>

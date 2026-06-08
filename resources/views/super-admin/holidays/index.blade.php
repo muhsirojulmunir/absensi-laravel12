@@ -27,16 +27,27 @@
         
         {{-- Form Tambah Libur --}}
         <div class="lg:col-span-1">
-            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-6">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-6" x-data="{ startDate: '', endDate: '' }">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Tambah Libur</h3>
                 <form action="{{ route('super-admin.holidays.store') }}" method="POST">
                     @csrf
                     
                     <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Tanggal</label>
-                            <input type="date" name="date" required
-                                class="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Tanggal Mulai</label>
+                                <input type="date" name="date" required x-model="startDate"
+                                    @change="if(endDate && endDate < startDate) { endDate = startDate; }"
+                                    class="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Tanggal Selesai</label>
+                                <input type="date" name="end_date" x-model="endDate"
+                                    :min="startDate"
+                                    :disabled="!startDate"
+                                    class="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <p class="text-[10px] text-gray-500 mt-1">Kosongkan jika hanya 1 hari.</p>
+                            </div>
                         </div>
 
                         <div>

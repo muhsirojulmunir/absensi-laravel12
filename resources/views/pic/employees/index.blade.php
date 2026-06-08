@@ -77,6 +77,11 @@
                                                 Pulang Cepat ⚡
                                             </span>
                                         @endif
+                                        @if($todayAtt->note === 'Absen Diluar')
+                                            <span class="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 border border-teal-100 dark:border-teal-900/30 w-max tracking-tighter">
+                                                📍 Absen Diluar
+                                            </span>
+                                        @endif
                                     </div>
                                 @endif
                             </td>

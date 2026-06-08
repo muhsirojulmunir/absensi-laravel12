@@ -50,12 +50,9 @@
                     </select>
                 </div>
 
-                <div x-show="period === 'custom'" class="flex items-center space-x-2">
-                    <input type="date" name="start_date" value="{{ $startDate }}"
-                        class="bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-xl px-4 py-2 text-xs font-bold text-blue-950 dark:text-white [color-scheme:dark] outline-none">
-                    <span class="text-blue-400 dark:text-blue-500 font-bold">-</span>
-                    <input type="date" name="end_date" value="{{ $endDate }}"
-                        class="bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-xl px-4 py-2 text-xs font-bold text-blue-950 dark:text-white [color-scheme:dark] outline-none">
+                <div x-show="period === 'custom'" class="flex items-center space-x-2" style="display: none;">
+                    <input type="text" name="custom_date_range" id="custom_date_range" placeholder="Pilih rentang tanggal"
+                        class="bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-xl px-4 py-2 text-xs font-bold text-blue-950 dark:text-white outline-none w-56 cursor-pointer">
                 </div>
 
                 <button type="submit"
@@ -92,27 +89,11 @@
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 rounded-[2rem] p-6 shadow-sm flex items-center justify-between group">
-                <div>
-                    <p class="text-[10px] font-black text-emerald-400 dark:text-emerald-500 uppercase tracking-[0.2em] mb-1">Kehadiran Rata-rata</p>
-                    @php
-                        $avgPercentage = $users->count() > 0 ? $users->avg(function($u) {
-                            $total = $u->hadir_count + $u->terlambat_count + $u->izin_count;
-                            return $total > 0 ? (($u->hadir_count - $u->pulang_cepat_count) / $total) * 100 : 0;
-                        }) : 0;
-                    @endphp
-                    <h3 class="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tighter">{{ round($avgPercentage) }}%</h3>
-                </div>
-                <div class="w-12 h-12 bg-emerald-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:rotate-12 transition-transform">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                </div>
-            </div>
         </div>
 
-        <!-- Print Button & Bayar Semua Button -->
         <div class="flex flex-wrap items-center justify-end gap-3 print-hide">
             @php
-                $hasUnpaid = $users->contains(fn($u) => $u->total_meal_allowance > 0 && !$u->is_meal_paid);
+                $hasUnpaid = $users->contains(fn($u) => $u->calculated_meal_allowance > 0 && !$u->is_meal_paid);
             @endphp
             @if($hasUnpaid)
             <form action="{{ route('hrd.attendance.pay-meal-allowance') }}" method="POST" onsubmit="return confirm('Tandai LUNAS uang makan untuk SEMUA karyawan di periode ini?')">
@@ -121,8 +102,8 @@
                 <input type="hidden" name="end_date" value="{{ $endDate }}">
                 <!-- Untuk bayar semua, kita kirim array of user_id dan amount -->
                 @foreach($users as $u)
-                    @if($u->total_meal_allowance > 0 && !$u->is_meal_paid)
-                        <input type="hidden" name="bulk_pay[{{ $u->id }}]" value="{{ $u->total_meal_allowance }}">
+                    @if($u->calculated_meal_allowance > 0 && !$u->is_meal_paid)
+                        <input type="hidden" name="bulk_pay[{{ $u->id }}]" value="{{ $u->calculated_meal_allowance }}">
                     @endif
                 @endforeach
                 <button type="submit" class="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
@@ -149,15 +130,14 @@
                                 Hadir</th>
                             <th class="px-6 py-5 text-[11px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider text-center">
                                 Terlambat</th>
-                            <th class="px-6 py-5 text-[11px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider text-center text-orange-500 dark:text-orange-400">
+                                <th class="px-6 py-5 text-[11px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider text-center text-orange-500 dark:text-orange-400">
                                 Pulang Cepat</th>
-                            <th
-                                class="px-6 py-5 text-[11px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider text-center text-blue-400 dark:text-blue-500">
-                                Izin/Sakit/Off</th>
+                            <th class="px-6 py-5 text-[11px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider text-center text-blue-400 dark:text-blue-500">
+                                Izin/Sakit</th>
+                            <th class="px-6 py-5 text-[11px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider text-center text-blue-400 dark:text-blue-500">
+                                Libur</th>
                             <th class="px-6 py-5 text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider text-center bg-blue-50/50 dark:bg-slate-900/80">
                                 Uang Makan</th>
-                            <th class="px-8 py-5 text-[11px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider text-right">
-                                Performa Kehadiran</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-blue-50 dark:divide-slate-700">
@@ -178,45 +158,41 @@
                                 <td class="px-6 py-5 whitespace-nowrap text-center text-orange-500 dark:text-orange-400 font-bold text-sm">
                                     {{ $user->pulang_cepat_count }}
                                 </td>
-                                <td class="px-6 py-5 whitespace-nowrap text-center text-blue-400 dark:text-blue-500 font-bold text-sm">
-                                    {{ $user->izin_count }}
+                                <td class="px-6 py-5 whitespace-nowrap text-center text-blue-400 dark:text-blue-500 font-bold text-sm" title="{{ $user->izin_details }}">
+                                    <span class="cursor-help border-b border-dashed border-blue-300 dark:border-blue-700">{{ $user->izin_count }}</span>
+                                </td>
+                                <td class="px-6 py-5 whitespace-nowrap text-center text-blue-400 dark:text-blue-500 font-bold text-sm" title="{{ $user->libur_details }}">
+                                    <span class="cursor-help border-b border-dashed border-blue-300 dark:border-blue-700">{{ $user->libur_count }}</span>
                                 </td>
                                 <td class="px-6 py-5 whitespace-nowrap text-center bg-blue-50/20 dark:bg-slate-900/50">
                                     <div class="text-sm font-black text-blue-600 dark:text-blue-400 tracking-tighter">Rp {{ number_format($user->total_meal_allowance, 0, ',', '.') }}</div>
-                                    @if($user->total_meal_allowance > 0)
+                                    @if($user->calculated_meal_allowance > 0)
                                         @if($user->is_meal_paid)
-                                            <span class="inline-flex items-center space-x-1 mt-1 text-[10px] font-bold text-emerald-500 uppercase">
-                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                                <span>Lunas</span>
-                                            </span>
-                                        @else
-                                            <form action="{{ route('hrd.attendance.pay-meal-allowance') }}" method="POST" class="mt-1" onsubmit="return confirm('Tandai lunas untuk {{ $user->name }}?')">
+                                            <form action="{{ route('hrd.attendance.toggle-payment') }}" method="POST" class="mt-1" onsubmit="return confirm('Batalkan status lunas untuk {{ $user->name }}?')">
                                                 @csrf
                                                 <input type="hidden" name="user_id" value="{{ $user->id }}">
                                                 <input type="hidden" name="start_date" value="{{ $startDate }}">
                                                 <input type="hidden" name="end_date" value="{{ $endDate }}">
-                                                <input type="hidden" name="amount" value="{{ $user->total_meal_allowance }}">
-                                                <button type="submit" class="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-2 py-1 rounded-md font-bold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">
-                                                    Tandai Lunas
+                                                <input type="hidden" name="amount" value="{{ $user->calculated_meal_allowance }}">
+                                                <button type="submit" class="inline-flex items-center space-x-1 mt-1 text-[10px] bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-md font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-800/40 transition-colors">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                    <span>Lunas</span>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <form action="{{ route('hrd.attendance.toggle-payment') }}" method="POST" class="mt-1" onsubmit="return confirm('Tandai lunas untuk {{ $user->name }}?')">
+                                                @csrf
+                                                <input type="hidden" name="user_id" value="{{ $user->id }}">
+                                                <input type="hidden" name="start_date" value="{{ $startDate }}">
+                                                <input type="hidden" name="end_date" value="{{ $endDate }}">
+                                                <input type="hidden" name="amount" value="{{ $user->calculated_meal_allowance }}">
+                                                <button type="submit" class="inline-flex items-center space-x-1 mt-1 text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md font-bold text-slate-500 dark:text-slate-400 hover:bg-blue-100 dark:hover:bg-blue-900 hover:text-blue-600 dark:hover:text-blue-300 transition-colors">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                    <span>Belum Lunas</span>
                                                 </button>
                                             </form>
                                         @endif
                                     @endif
-                                </td>
-                                <td class="px-8 py-5 whitespace-nowrap text-right">
-                                    @php
-                                        $totalDays = $user->hadir_count + $user->terlambat_count + $user->izin_count;
-                                        $percentage = $totalDays > 0 ? round((($user->hadir_count - $user->pulang_cepat_count) / $totalDays) * 100) : 0;
-                                        if ($percentage < 0) $percentage = 0;
-                                    @endphp
-                                    <div class="flex items-center justify-end space-x-3">
-                                        <div
-                                            class="w-32 bg-slate-50 dark:bg-slate-900 shadow-inner rounded-full h-1.5 overflow-hidden border border-blue-100 dark:border-slate-800 shadow-inner">
-                                            <div class="bg-blue-600 dark:bg-blue-500 h-full transition-all duration-700"
-                                                style="width: {{ $percentage }}%"></div>
-                                        </div>
-                                        <span class="text-xs font-bold text-blue-950 dark:text-white">{{ $percentage }}%</span>
-                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -557,6 +533,22 @@
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closePrintPreview();
+        });
+    </script>
+
+    <!-- Flatpickr for Custom Date Range -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/id.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            flatpickr("#custom_date_range", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                locale: "id",
+                maxDate: "today",
+                defaultDate: ["{{ $startDate }}", "{{ $endDate }}"]
+            });
         });
     </script>
 @endsection

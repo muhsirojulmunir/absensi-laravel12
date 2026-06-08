@@ -23,14 +23,58 @@
                         </path>
                     </svg>
                 </div>
-                <div class="pr-2">
-                    <p class="text-[9px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-tighter leading-none mb-1">Hari Ini</p>
-                    <p class="text-[11px] font-black text-blue-950 dark:text-blue-100 leading-none">
-                        {{ \Carbon\Carbon::now()->locale('id')->isoFormat('dddd, D MMMM Y') }}
+                <div>
+                    <p class="text-[10px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-widest leading-none mb-1">
+                        Hari Ini
+                    </p>
+                    <p class="text-sm font-bold text-blue-900 dark:text-blue-200 tracking-tight">
+                        {{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}
                     </p>
                 </div>
             </div>
         </div>
+
+        @php
+            $upcomingHolidays = \App\Models\Holiday::whereDate('date', '>=', \Carbon\Carbon::today())
+                ->where(function($q) {
+                    $q->whereNull('division_id')->orWhere('division_id', Auth::user()->division_id);
+                })
+                ->orderBy('date', 'asc')
+                ->get();
+        @endphp
+
+        @if($upcomingHolidays->count() > 0)
+        <!-- Holiday Announcement Banner -->
+        <div class="space-y-3">
+            @foreach($upcomingHolidays as $holiday)
+                @php
+                    $isToday = \Carbon\Carbon::parse($holiday->date)->isToday();
+                    $dateStr = \Carbon\Carbon::parse($holiday->date)->translatedFormat('d F Y');
+                    $bgStyle = $isToday ? 'background: linear-gradient(135deg, #8b5cf6 0%, #4f46e5 100%);' : 'background: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);';
+                    $shadowColor = $isToday ? 'rgba(139, 92, 246, 0.3)' : 'rgba(37, 99, 235, 0.3)';
+                @endphp
+                <div class="rounded-2xl p-4 md:p-5 text-white flex items-center justify-between animate-[fadeIn_0.5s_ease-out]" style="{{ $bgStyle }} box-shadow: 0 10px 25px -5px {{ $shadowColor }};">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-white/20 p-2.5 rounded-xl backdrop-blur-sm shadow-inner">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm md:text-base font-black uppercase tracking-widest text-white drop-shadow-md">Pengumuman Libur</h3>
+                            <p class="text-xs md:text-sm text-white/90 mt-1 font-medium tracking-wide">
+                                @if($isToday)
+                                    Hari ini ditetapkan sebagai hari libur: <strong class="text-white">{{ $holiday->description }}</strong>
+                                @else
+                                    Tanggal <strong class="text-white">{{ $dateStr }}</strong> ditetapkan sebagai <strong class="text-white">{{ $holiday->description }}</strong>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        @endif
 
         <!-- Main Grid (Refined) -->
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 lg:gap-6">
@@ -100,6 +144,8 @@
                         </div>
                     </button>
                 </div>
+
+
 
                 <!-- Timer Pulang Cepat (Tiny) -->
                 <div x-show="hasCheckedIn && !hasCheckedOut" style="display:none;"
@@ -183,7 +229,7 @@
                     class="bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
                     <div class="px-5 py-3 border-b border-blue-50/60 dark:border-slate-700/60 flex items-center justify-between bg-blue-50/20 dark:bg-slate-900/30">
                         <h2 class="text-[10px] font-black text-blue-900 dark:text-blue-200 uppercase tracking-[0.1em]">Log Terbaru</h2>
-                        <a href="{{ route('karyawan.attendance.index') }}"
+                        <a href="{{ route(Auth::user()->role->slug . '.attendance.index') }}"
                             class="text-[8px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-widest hover:text-blue-600 dark:hover:text-blue-300 transition-colors italic">Perbarui
                             Riwayat &rarr;</a>
                     </div>
@@ -200,7 +246,7 @@
                                                 </div>
                                                 <div>
                                                     <p class="text-[10px] font-black text-blue-950 dark:text-white uppercase tracking-tighter">
-                                                        {{ \Carbon\Carbon::parse($attendance->date)->format('d M') }}
+                                                        {{ \Carbon\Carbon::parse($attendance->date)->translatedFormat('d M') }}
                                                     </p>
                                                     <p class="text-[9px] text-blue-400 dark:text-blue-500 font-bold uppercase tracking-widest">
                                                         {{ substr($attendance->check_in, 0, 5) }} -
@@ -247,7 +293,7 @@
                         </div>
                     </button>
 
-                    <a href="{{ route('karyawan.leave-requests.index') }}"
+                    <a href="{{ route(Auth::user()->role->slug . '.leave-requests.index') }}"
                         class="group bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 rounded-full py-4 px-6 flex items-center justify-between transition-all hover:bg-blue-50 dark:hover:bg-slate-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 text-blue-900 dark:text-white">
                         <div class="flex flex-col">
                             <span class="text-[11px] font-black uppercase tracking-[0.1em]">List Pengajuan</span>
@@ -291,11 +337,11 @@
                     </button>
                 </div>
 
-                <form action="{{ route('karyawan.leave-requests.store') }}" method="POST" class="p-5">
+                <form action="{{ route(Auth::user()->role->slug . '.leave-requests.store') }}" method="POST" class="p-5">
                     @csrf
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-2">
-                            <template x-for="item in ['Sakit', 'Izin Tidak Masuk', 'Izin Masuk Siang', 'Libur', 'Lainnya']">
+                            <template x-for="item in ['Sakit', 'Izin Tidak Masuk', 'Izin Masuk Siang', 'Libur', 'Lupa Absen']">
                                 <button type="button" @click="selectedLeaveType = item"
                                     :class="selectedLeaveType === item ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-slate-50 dark:bg-slate-900 text-blue-600 dark:text-blue-400 border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700'"
                                     class="p-2.5 rounded-2xl border-2 text-[9px] font-black uppercase transition-all tracking-tighter">
@@ -304,6 +350,34 @@
                             </template>
                         </div>
                         <input type="hidden" name="type" x-model="selectedLeaveType" required>
+
+                        <template x-if="selectedLeaveType === 'Lupa Absen'">
+                            <div class="space-y-3 p-3 bg-blue-50/50 dark:bg-slate-900/50 rounded-2xl border border-blue-100 dark:border-slate-700">
+                                <label class="block font-black text-blue-900/40 dark:text-blue-500/40 text-[8px] uppercase tracking-widest ml-1">Jenis Lupa Absen</label>
+                                <input type="hidden" name="sub_type" x-model="subType" :required="selectedLeaveType === 'Lupa Absen'">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button type="button" @click="subType = 'Absen Masuk'" :class="subType === 'Absen Masuk' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-blue-600 border border-blue-100 dark:border-slate-700'" class="p-2 rounded-xl text-[9px] font-bold">Masuk</button>
+                                    <button type="button" @click="subType = 'Absen Pulang'" :class="subType === 'Absen Pulang' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-blue-600 border border-blue-100 dark:border-slate-700'" class="p-2 rounded-xl text-[9px] font-bold">Pulang</button>
+                                </div>
+                                <div class="space-y-1 mt-2" x-show="subType">
+                                    <label class="block font-black text-blue-900/40 dark:text-blue-500/40 text-[8px] uppercase tracking-widest ml-1">Jam</label>
+                                    <input type="time" name="time_start" :required="selectedLeaveType === 'Lupa Absen'" class="w-full bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-full px-4 py-2 text-[10px] font-bold focus:ring-2 focus:ring-blue-500 dark:text-white">
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedLeaveType === 'Izin Masuk Siang'">
+                            <div class="grid grid-cols-2 gap-2 p-3 bg-blue-50/50 dark:bg-slate-900/50 rounded-2xl border border-blue-100 dark:border-slate-700">
+                                <div class="space-y-1">
+                                    <label class="block font-black text-blue-900/40 dark:text-blue-500/40 text-[8px] uppercase tracking-widest ml-1">Mulai Jam</label>
+                                    <input type="time" name="time_start" :required="selectedLeaveType === 'Izin Masuk Siang'" class="w-full bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-full px-4 py-2 text-[10px] font-bold focus:ring-2 focus:ring-blue-500 dark:text-white">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block font-black text-blue-900/40 dark:text-blue-500/40 text-[8px] uppercase tracking-widest ml-1">Sampai Jam</label>
+                                    <input type="time" name="time_end" :required="selectedLeaveType === 'Izin Masuk Siang'" class="w-full bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-full px-4 py-2 text-[10px] font-bold focus:ring-2 focus:ring-blue-500 dark:text-white">
+                                </div>
+                            </div>
+                        </template>
 
                         <div class="grid grid-cols-2 gap-3">
                             <div class="space-y-1">
@@ -350,15 +424,43 @@
                 isSubmitting: false,
                 showLeaveModal: false,
                 selectedLeaveType: '',
+                subType: '',
                 @php
                     $todayAttendance = Auth::user()->attendances()->whereDate('date', \Carbon\Carbon::today())->first();
+                    
+                    $userDivision = Auth::user()->division ? strtolower(trim(Auth::user()->division->name)) : '';
+                    if (str_contains($userDivision, 'live streaming')) {
+                        if ((!$todayAttendance || !$todayAttendance->check_in) && \Carbon\Carbon::now()->format('H:i') <= '08:30') {
+                            $overnightAttendance = Auth::user()->attendances()
+                                ->whereDate('date', \Carbon\Carbon::yesterday())
+                                ->whereNotNull('check_in')
+                                ->whereNull('check_out')
+                                ->first();
+                            if ($overnightAttendance) {
+                                $todayAttendance = $overnightAttendance;
+                            }
+                        }
+                    }
+
+                    $todayLupaAbsen = Auth::user()->leaveRequests()
+                        ->where('type', 'Lupa Absen')
+                        ->whereIn('status', ['pending', 'approved'])
+                        ->whereDate('start_date', \Carbon\Carbon::today())
+                        ->latest()
+                        ->first();
                 @endphp
-                    hasCheckedIn: {{ $todayAttendance ? 'true' : 'false' }},
+                hasCheckedIn: {{ $todayAttendance ? 'true' : 'false' }},
                 hasCheckedOut: {{ ($todayAttendance && $todayAttendance->check_out) ? 'true' : 'false' }},
                 checkInTime: '{{ $todayAttendance ? $todayAttendance->check_in : '' }}',
+                @if(Auth::user()->role->slug == 'karyawan_ramayana' && Auth::user()->location_id)
+                officeLat: {{ Auth::user()->location->latitude ?? -7.232539 }},
+                officeLong: {{ Auth::user()->location->longitude ?? 112.776228 }},
+                officeRadius: {{ Auth::user()->location->radius ?? 50 }},
+                @else
                 officeLat: {{ $settings['office_latitude'] ?? -7.232539 }},
                 officeLong: {{ $settings['office_longitude'] ?? 112.776228 }},
                 officeRadius: {{ $settings['office_radius'] ?? 50 }},
+                @endif
                 userLat: null,
                 userLong: null,
 
@@ -376,7 +478,7 @@
                     
                     const [h, m, s] = this.checkInTime.split(':');
                     const checkInDate = new Date();
-                    checkInDate.setHours(h, m, s, 0);
+                    checkInDate.setHours(h, m, s || 0, 0);
                     const estDate = new Date(checkInDate.getTime() + (8 * 60 * 60 * 1000));
                     const estH = String(estDate.getHours()).padStart(2, '0');
                     const estM = String(estDate.getMinutes()).padStart(2, '0');
@@ -384,7 +486,7 @@
 
                     const updateTime = () => {
                         const now = new Date();
-                        checkInDate.setHours(h, m, s, 0);
+                        checkInDate.setHours(h, m, s || 0, 0);
 
                         const diffMs = now - checkInDate;
                         const requiredMs = 8 * 60 * 60 * 1000;
@@ -451,26 +553,34 @@
                 },
 
                 submitAttendance(type) {
+
                     if (this.isSubmitting || !this.isWithinRange) return;
                     if (type === 'in' && this.hasCheckedIn) return;
                     if (type === 'out' && (!this.hasCheckedIn || this.hasCheckedOut)) return;
 
                     const proceed = () => {
                         this.isSubmitting = true;
-                        const url = type === 'in' ? "{{ route('karyawan.attendance.store') }}" : "{{ route('karyawan.attendance.checkout') }}";
+                        const url = type === 'in' ? "{{ route(Auth::user()->role->slug . '.attendance.store') }}" : "{{ route(Auth::user()->role->slug . '.attendance.checkout') }}";
 
                         fetch(url, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
                             },
                             body: JSON.stringify({
                                 lat: this.userLat,
                                 long: this.userLong
                             })
                         })
-                            .then(response => response.json())
+                            .then(async response => {
+                                if (!response.ok) {
+                                    const text = await response.text();
+                                    throw new Error('HTTP ' + response.status + ' - ' + (text.substring(0, 100).replace(/(<([^>]+)>)/gi, "")));
+                                }
+                                return response.json();
+                            })
                             .then(data => {
                                 if (data.success) {
                                     Swal.fire({
@@ -502,7 +612,7 @@
                             })
                             .catch(err => {
                                 console.error("Submit error:", err);
-                                Swal.fire('Error', 'Koneksi bermasalah.', 'error');
+                                Swal.fire('Error Detail', 'Gagal: ' + err.message, 'error');
                             })
                             .finally(() => {
                                 this.isSubmitting = false;

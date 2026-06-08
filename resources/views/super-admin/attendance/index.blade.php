@@ -5,6 +5,8 @@
     showDeleteModal: false,
     deleteUrl: '',
     deleteLabel: '',
+    showManualCheckinModal: false,
+    showManualCheckoutModal: false,
     openDelete(url, name, dateStr) {
         this.deleteUrl = url;
         this.deleteLabel = name + ' — ' + dateStr;
@@ -27,22 +29,47 @@
         </div>
     @endif
 
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+        {{-- Judul --}}
         <div>
             <h1 class="text-3xl font-bold text-blue-950 dark:text-white tracking-tight">Monitoring Absensi</h1>
-            <p class="text-blue-500 dark:text-blue-400 mt-1">Pemantauan kehadiran seluruh karyawan — Super Admin dapat menghapus & mencadangkan data.</p>
+            <p class="text-blue-500 dark:text-blue-400 mt-1 text-sm">Pemantauan kehadiran seluruh karyawan.</p>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
-            <a href="{{ route('super-admin.attendance.deleted-backups') }}"
-               class="inline-flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                Backup Terhapus
-            </a>
-            <form action="{{ route('super-admin.attendance.index') }}" method="GET" class="flex items-center space-x-3 bg-slate-50 dark:bg-slate-900 shadow-inner border border-blue-100 dark:border-slate-800 rounded-2xl px-4 py-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <label class="text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-[0.15em]">Pilih Tanggal</label>
-                <input type="date" name="date" value="{{ $date }}" onchange="this.form.submit()"
-                       class="bg-transparent border-none text-sm font-bold text-blue-950 dark:text-white focus:ring-0 cursor-pointer [color-scheme:dark] px-2 outline-none">
-            </form>
+
+        {{-- Tombol-tombol --}}
+        <div class="flex flex-col gap-2 items-end">
+            {{-- Baris 1: Backup Terhapus + Pilih Tanggal --}}
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('super-admin.attendance.deleted-backups') }}"
+                   class="inline-flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                    Backup Terhapus
+                </a>
+                <form action="{{ route('super-admin.attendance.index') }}" method="GET"
+                      class="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-800 rounded-xl px-4 py-2.5">
+                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <label class="text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest">Tanggal</label>
+                    <input type="date" name="date" value="{{ $date }}" onchange="this.form.submit()"
+                           class="bg-transparent border-none text-sm font-bold text-blue-950 dark:text-white focus:ring-0 cursor-pointer [color-scheme:dark] outline-none">
+                </form>
+            </div>
+
+            {{-- Baris 2: Tombol Absen Manual (hanya Super Admin JMN) --}}
+            @if(isset($employees))
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[10px] font-bold text-blue-400 dark:text-blue-500 uppercase tracking-widest mr-1">Absen Manual:</span>
+                <button type="button" @click="showManualCheckinModal = true"
+                    class="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-emerald-500/20 active:scale-95">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                    Masuk
+                </button>
+                <button type="button" @click="showManualCheckoutModal = true"
+                    class="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-orange-500/20 active:scale-95">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg>
+                    Pulang
+                </button>
+            </div>
+            @endif
         </div>
     </div>
 
@@ -125,6 +152,9 @@
                                 @if($attendance->is_pulang_cepat)
                                     <span class="block mt-1 text-[10px] text-amber-600 dark:text-amber-400 font-bold">Pulang Cepat</span>
                                 @endif
+                                @if($attendance->note === 'Absen Diluar')
+                                    <span class="block mt-1 text-[10px] text-teal-600 dark:text-teal-400 font-bold">📍 Absen Diluar</span>
+                                @endif
                             </td>
                             <td class="px-6 py-5 whitespace-nowrap text-center">
                                 <button type="button"
@@ -183,5 +213,147 @@
             </div>
         </div>
     </div>
+
+    {{-- ===================== MODAL ABSEN MASUK MANUAL ===================== --}}
+    @if(isset($employees))
+    <div x-show="showManualCheckinModal" x-cloak
+         class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        <div class="absolute inset-0 bg-blue-950/60 backdrop-blur-sm" @click="showManualCheckinModal = false"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl border border-emerald-100 dark:border-slate-700 w-full max-w-md p-8 z-10"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-500 text-xl">✅</div>
+                <div>
+                    <h3 class="text-lg font-bold text-blue-950 dark:text-white">Absen Masuk Manual</h3>
+                    <p class="text-xs text-blue-500 dark:text-blue-400">Digunakan saat server maintenance/error</p>
+                </div>
+            </div>
+            <form action="{{ route('super-admin.attendance.manual-checkin') }}" method="POST" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-bold text-blue-950 dark:text-white mb-1.5">Karyawan</label>
+                    <select name="user_id" required class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-blue-950 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none">
+                        <option value="">-- Pilih Karyawan --</option>
+                        @foreach($employees as $emp)
+                        <option value="{{ $emp->id }}">{{ $emp->name }} — {{ $emp->division->name ?? 'No Divisi' }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-blue-950 dark:text-white mb-1.5">Tanggal</label>
+                        <input type="date" name="date" value="{{ $date }}" required
+                            class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-blue-950 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none [color-scheme:dark]">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-blue-950 dark:text-white mb-1.5">Jam Masuk</label>
+                        <input type="time" name="check_in" required
+                            class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-blue-950 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none [color-scheme:dark]">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-blue-950 dark:text-white mb-1.5">Status</label>
+                    <select name="status" required class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-blue-950 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="Hadir">Hadir</option>
+                        <option value="Terlambat">Terlambat</option>
+                        <option value="Izin">Izin</option>
+                        <option value="Sakit">Sakit</option>
+                    </select>
+                    <p class="text-[10px] text-blue-400 mt-1">* Status "Terlambat" akan otomatis dihitung jika jam masuk melebihi toleransi.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-blue-950 dark:text-white mb-1.5">Catatan (Opsional)</label>
+                    <input type="text" name="note" placeholder="cth: Server maintenance jam 14.00"
+                        class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-blue-950 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" @click="showManualCheckinModal = false"
+                        class="flex-1 px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-600 transition-all">
+                        Batal
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+                        Simpan Absen Masuk
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- ===================== MODAL ABSEN PULANG MANUAL ===================== --}}
+    <div x-show="showManualCheckoutModal" x-cloak
+         class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        <div class="absolute inset-0 bg-blue-950/60 backdrop-blur-sm" @click="showManualCheckoutModal = false"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl border border-orange-100 dark:border-slate-700 w-full max-w-md p-8 z-10"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-orange-50 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-500 text-xl">🔚</div>
+                <div>
+                    <h3 class="text-lg font-bold text-blue-950 dark:text-white">Absen Pulang Manual</h3>
+                    <p class="text-xs text-blue-500 dark:text-blue-400">Catat jam pulang karyawan secara manual</p>
+                </div>
+            </div>
+            <form action="{{ route('super-admin.attendance.manual-checkout') }}" method="POST" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-bold text-blue-950 dark:text-white mb-1.5">Karyawan</label>
+                    <select name="user_id" required class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-blue-950 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none">
+                        <option value="">-- Pilih Karyawan --</option>
+                        @foreach($employees as $emp)
+                        <option value="{{ $emp->id }}">{{ $emp->name }} — {{ $emp->division->name ?? 'No Divisi' }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-blue-950 dark:text-white mb-1.5">Tanggal Absen Masuk</label>
+                        <input type="date" name="date" value="{{ $date }}" required
+                            class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-blue-950 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none [color-scheme:dark]">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-blue-950 dark:text-white mb-1.5">Jam Pulang</label>
+                        <input type="time" name="check_out" required
+                            class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-blue-950 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none [color-scheme:dark]">
+                    </div>
+                </div>
+                <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-3">
+                    <p class="text-[11px] text-orange-700 dark:text-orange-300 font-medium">💡 <strong>Live Streaming:</strong> Masukkan <strong>tanggal masuk</strong> (kemarin), bukan tanggal hari ini. Sistem akan otomatis mendeteksi shift malamnya.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-blue-950 dark:text-white mb-1.5">Catatan (Opsional)</label>
+                    <input type="text" name="note" placeholder="cth: Server maintenance, absen manual"
+                        class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-blue-950 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" @click="showManualCheckoutModal = false"
+                        class="flex-1 px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-600 transition-all">
+                        Batal
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm shadow-lg shadow-orange-500/20 transition-all active:scale-95">
+                        Simpan Absen Pulang
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endif
+
 </div>
 @endsection

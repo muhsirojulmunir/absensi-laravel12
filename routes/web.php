@@ -10,6 +10,16 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Route Khusus Hosting (InfinityFree) untuk Migrasi
+Route::get('/migrations', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        return '<pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
+    } catch (\Exception $e) {
+        return '<pre>' . $e->getMessage() . '</pre>';
+    }
+});
+
 // Forgot Password / OTP Flow
 Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
 Route::post('/forgot-password', [AuthController::class, 'sendOtp'])->name('password.email');
@@ -32,6 +42,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('users/{user}/toggle-status', [App\Http\Controllers\SuperAdmin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
         Route::resource('users', App\Http\Controllers\SuperAdmin\UserController::class);
 
+        // Location Management
+        Route::resource('locations', App\Http\Controllers\SuperAdmin\LocationController::class);
+
         // Holiday Management
         Route::resource('holidays', App\Http\Controllers\SuperAdmin\HolidayController::class)->only(['index', 'store', 'destroy']);
 
@@ -43,6 +56,21 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/attendance/{attendance}/delete', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'destroy'])
             ->whereNumber('attendance')
             ->name('attendance.destroy');
+        Route::post('/attendance/manual-checkin', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'manualCheckin'])->name('attendance.manual-checkin');
+        Route::post('/attendance/manual-checkout', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'manualCheckout'])->name('attendance.manual-checkout');
+
+        // Leave Approvals untuk Super Admin (Bisa hapus dll)
+        Route::get('/leave-approvals', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'index'])->name('leave-approvals.index');
+        Route::delete('/leave-approvals/{leaveRequest}', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'destroy'])->name('leave-approvals.destroy');
+
+        // Sales Reports
+        Route::get('/sales-reports', [App\Http\Controllers\Shared\SalesReportController::class, 'index'])->name('sales-reports.index');
+
+        // Ramayana Stocks
+        Route::get('/ramayana-stocks', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'index'])->name('ramayana-stocks.index');
+        Route::get('/ramayana-stocks/download-template', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'downloadTemplate'])->name('ramayana-stocks.download-template');
+        Route::get('/ramayana-stocks/{user}', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'show'])->name('ramayana-stocks.show');
+        Route::post('/ramayana-stocks/import', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'import'])->name('ramayana-stocks.import');
     });
 
     Route::prefix('pic')->name('pic.')->group(function () {
@@ -52,11 +80,34 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/leave-approvals', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'index'])->name('leave-approvals.index');
         Route::put('/leave-approvals/{leaveRequest}/approve', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'approve'])->name('leave-approvals.approve');
         Route::put('/leave-approvals/{leaveRequest}/reject', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'reject'])->name('leave-approvals.reject');
+        Route::delete('/leave-approvals/{leaveRequest}', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'destroy'])->name('leave-approvals.destroy');
 
         // Divisional Employees
         Route::get('/employees', [App\Http\Controllers\PIC\EmployeeController::class, 'index'])->name('employees.index');
         Route::get('/employees/{user}', [App\Http\Controllers\PIC\EmployeeController::class, 'show'])->name('employees.show');
         Route::get('/reports', [App\Http\Controllers\PIC\ReportController::class, 'index'])->name('reports.index');
+    });
+
+    Route::prefix('pic-ramayana')->name('pic_ramayana.')->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\PIC\DashboardController::class, 'index'])->name('dashboard');
+
+        // Leave Approvals
+        Route::get('/leave-approvals', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'index'])->name('leave-approvals.index');
+        Route::put('/leave-approvals/{leaveRequest}/approve', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'approve'])->name('leave-approvals.approve');
+        Route::put('/leave-approvals/{leaveRequest}/reject', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'reject'])->name('leave-approvals.reject');
+        Route::delete('/leave-approvals/{leaveRequest}', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'destroy'])->name('leave-approvals.destroy');
+
+        // Divisional Employees
+        Route::get('/employees', [App\Http\Controllers\PIC\EmployeeController::class, 'index'])->name('employees.index');
+        Route::get('/employees/{user}', [App\Http\Controllers\PIC\EmployeeController::class, 'show'])->name('employees.show');
+        Route::get('/reports', [App\Http\Controllers\PIC\ReportController::class, 'index'])->name('reports.index');
+        
+        // Ramayana Stocks
+        Route::get('/ramayana-stocks', [App\Http\Controllers\PIC\RamayanaStockController::class, 'index'])->name('ramayana-stocks.index');
+        Route::get('/ramayana-stocks/{id}', [App\Http\Controllers\PIC\RamayanaStockController::class, 'show'])->name('ramayana-stocks.show');
+
+        // Sales Reports
+        Route::get('/sales-reports', [App\Http\Controllers\Shared\SalesReportController::class, 'index'])->name('sales-reports.index');
     });
 
     Route::prefix('hrd')->name('hrd.')->group(function () {
@@ -66,6 +117,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/attendance', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'index'])->name('attendance.index');
         Route::get('/attendance/recap', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'recap'])->name('attendance.recap');
         Route::post('/attendance/recap/pay', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'payMealAllowance'])->name('attendance.pay-meal-allowance');
+        Route::post('/attendance/recap/toggle-payment', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'togglePayment'])->name('attendance.toggle-payment');
     });
 
     Route::prefix('karyawan')->name('karyawan.')->group(function () {
@@ -87,6 +139,30 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'update'])->name('profile.update');
     });
 
+    Route::prefix('karyawan-ramayana')->name('karyawan_ramayana.')->group(function () {
+        Route::get('/dashboard', function () {
+            $settings = \App\Models\Setting::all()->pluck('value', 'key');
+            return view('karyawan.dashboard', compact('settings'));
+        })->name('dashboard');
+
+        // Leave Requests
+        Route::resource('leave-requests', App\Http\Controllers\Karyawan\LeaveRequestController::class)->only(['index', 'store']);
+        
+        // Attendance History / Action
+        Route::get('/attendance', [App\Http\Controllers\Karyawan\AttendanceController::class, 'index'])->name('attendance.index');
+        Route::post('/attendance/store', [App\Http\Controllers\Karyawan\AttendanceController::class, 'store'])->name('attendance.store');
+        Route::post('/attendance/checkout', [App\Http\Controllers\Karyawan\AttendanceController::class, 'checkout'])->name('attendance.checkout');
+
+        // Profile / Data Diri
+        Route::get('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'update'])->name('profile.update');
+
+        // Sales & Stock Input
+        Route::resource('sales', App\Http\Controllers\KaryawanRamayana\SalesController::class);
+        
+        Route::get('stocks', [App\Http\Controllers\KaryawanRamayana\StockController::class, 'index'])->name('stocks.index');
+    });
+
     // Save FCM Token (untuk semua user yang login)
     Route::post('/save-fcm-token', function (\Illuminate\Http\Request $request) {
         $request->validate(['token' => 'required|string']);
@@ -99,10 +175,11 @@ Route::middleware(['auth'])->group(function () {
 // API Route for Database Sync (Exempted from CSRF)
 Route::post('/api/sync-users', [\App\Http\Controllers\Api\SyncController::class, 'syncUsers']);
 
-// Temporary route to run migrations on live server
+// Temporary route to run migrations and seeders on live server
 Route::get('/run-migrations', function () {
     \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-    return 'Migrations completed successfully!';
+    \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'RamayanaRoleDivisionSeeder', '--force' => true]);
+    return 'Migrations and Seeder completed successfully!';
 });
 
 // Cron Trigger untuk Smart Notification (dipanggil oleh layanan cron eksternal)

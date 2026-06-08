@@ -4,7 +4,12 @@
 @section('content')
     <div class="space-y-6 md:space-y-10 animate-[fadeIn_0.5s_ease-out]" x-data="{ 
         selectedType: '{{ old('type') }}',
-        activeTab: new URLSearchParams(window.location.search).has('page') ? 'riwayat' : 'pengajuan'
+        activeTab: new URLSearchParams(window.location.search).has('page') ? 'riwayat' : 'pengajuan',
+        subType: '{{ old('sub_type') }}',
+        today: '{{ date('Y-m-d') }}',
+        startOfMonth: '{{ date('Y-m-01') }}',
+        get minStartDate() { return this.selectedType === 'Lupa Absen' ? this.startOfMonth : this.today; },
+        get maxStartDate() { return this.selectedType === 'Lupa Absen' ? this.today : ''; }
     }">
         <!-- Header: Bold & Minimalist -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 group">
@@ -111,19 +116,13 @@
                                 <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-[0.2em] ml-2">Pilih
                                     Kategori <span class="text-rose-500">*</span></label>
                                 <input type="hidden" name="type" x-model="selectedType" required>
-                                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                                    <template x-for="item in ['Sakit', 'Izin Tidak Masuk', 'Izin Masuk Siang', 'Libur', 'Lainnya']">
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <template x-for="item in ['Izin Tidak Masuk', 'Izin Masuk Siang', 'Libur', 'Lupa Absen', 'Absen Diluar']">
                                         <button type="button" @click="selectedType = item"
                                             :class="selectedType === item ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20 -translate-y-0.5' : 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/50 dark:hover:bg-slate-800/50'"
                                             class="p-3 md:p-4 rounded-3xl border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 group">
                                             <div :class="selectedType === item ? 'bg-white/20' : 'bg-blue-50 dark:bg-slate-800 group-hover:bg-blue-100 dark:group-hover:bg-slate-700'"
                                                 class="p-2 rounded-2xl transition-colors">
-                                                <template x-if="item === 'Sakit'">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                    </svg>
-                                                </template>
                                                 <template x-if="item === 'Izin Tidak Masuk'">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -144,10 +143,20 @@
                                                         </path>
                                                     </svg>
                                                 </template>
-                                                <template x-if="item === 'Lainnya'">
+                                                <template x-if="item === 'Lupa Absen'">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                                             d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z">
+                                                        </path>
+                                                    </svg>
+                                                </template>
+                                                <template x-if="item === 'Absen Diluar'">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z">
+                                                        </path>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z">
                                                         </path>
                                                     </svg>
                                                 </template>
@@ -159,28 +168,121 @@
                                 </div>
                             </div>
 
+                            <template x-if="selectedType === 'Izin Tidak Masuk'">
+                                <div class="bg-blue-50/50 dark:bg-slate-900/50 p-5 rounded-3xl border border-blue-100 dark:border-slate-700 space-y-4">
+                                    <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-[0.2em] ml-2">Kategori Izin <span class="text-rose-500">*</span></label>
+                                    <input type="hidden" name="sub_type" x-model="subType" :required="selectedType === 'Izin Tidak Masuk'">
+                                    
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <button type="button" @click="subType = 'Sakit'"
+                                            :class="subType === 'Sakit' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-slate-700'"
+                                            class="p-3 rounded-2xl text-xs font-bold transition-all">Sakit</button>
+                                        <button type="button" @click="subType = 'Izin Tidak Masuk'"
+                                            :class="subType === 'Izin Tidak Masuk' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-slate-700'"
+                                            class="p-3 rounded-2xl text-xs font-bold transition-all">Izin Tidak Masuk</button>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <template x-if="selectedType === 'Lupa Absen'">
+                                <div class="bg-blue-50/50 dark:bg-slate-900/50 p-5 rounded-3xl border border-blue-100 dark:border-slate-700 space-y-4">
+                                    <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-[0.2em] ml-2">Jenis Lupa Absen <span class="text-rose-500">*</span> <span class="text-amber-500 normal-case tracking-normal font-normal"> (Kesempatan hanya 1x dalam 1 bulan) </span> </label>
+
+                                    <input type="hidden" name="sub_type" x-model="subType" :required="selectedType === 'Lupa Absen'">
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <button type="button" @click="subType = 'Absen Masuk'"
+                                            :class="subType === 'Absen Masuk' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-slate-700'"
+                                            class="p-3 rounded-2xl text-xs font-bold transition-all">Absen Masuk</button>
+                                        <button type="button" @click="subType = 'Absen Pulang'"
+                                            :class="subType === 'Absen Pulang' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-slate-700'"
+                                            class="p-3 rounded-2xl text-xs font-bold transition-all">Absen Pulang</button>
+                                    </div>
+                                    <div class="space-y-1.5 mt-2" x-show="subType">
+                                        <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">Jam <span class="text-rose-500">*</span></label>
+                                        <input type="time" name="time_start" value="{{ old('time_start') }}" :required="selectedType === 'Lupa Absen'" class="w-full md:w-1/2 bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-full text-blue-900 dark:text-blue-100 px-4 py-3 text-xs font-bold transition-all shadow-sm">
+                                    </div>
+                                </div>
+                            </template>
+
+                            <template x-if="selectedType === 'Absen Diluar'">
+                                <div class="bg-blue-50/50 dark:bg-slate-900/50 p-5 rounded-3xl border border-blue-100 dark:border-slate-700 space-y-4">
+                                    <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-[0.2em] ml-2">Jenis Absen Diluar <span class="text-rose-500">*</span> <span class="text-blue-500 normal-case tracking-normal font-normal"> (Untuk karyawan bertugas diluar kantor) </span> </label>
+
+                                    <input type="hidden" name="sub_type" x-model="subType" :required="selectedType === 'Absen Diluar'">
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <button type="button" @click="subType = 'Absen Masuk'"
+                                            :class="subType === 'Absen Masuk' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-slate-700'"
+                                            class="p-3 rounded-2xl text-xs font-bold transition-all">Absen Masuk</button>
+                                        <button type="button" @click="subType = 'Absen Pulang'"
+                                            :class="subType === 'Absen Pulang' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-slate-700'"
+                                            class="p-3 rounded-2xl text-xs font-bold transition-all">Absen Pulang</button>
+                                    </div>
+                                    <div class="space-y-1.5 mt-2" x-show="subType">
+                                        <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">Jam <span class="text-rose-500">*</span></label>
+                                        <input type="time" name="time_start" value="{{ old('time_start') }}" :required="selectedType === 'Absen Diluar'" class="w-full md:w-1/2 bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-full text-blue-900 dark:text-blue-100 px-4 py-3 text-xs font-bold transition-all shadow-sm">
+                                    </div>
+                                </div>
+                            </template>
+
+
+                            <template x-if="selectedType === 'Izin Masuk Siang'">
+                                <div class="bg-blue-50/50 dark:bg-slate-900/50 p-5 rounded-3xl border border-blue-100 dark:border-slate-700 grid grid-cols-2 gap-4">
+                                    <div class="space-y-1.5">
+                                        <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">Mulai Jam <span class="text-rose-500">*</span></label>
+                                        <input type="time" name="time_start" value="{{ old('time_start') }}" :required="selectedType === 'Izin Masuk Siang'" class="w-full bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-full text-blue-900 dark:text-blue-100 px-4 py-3 text-xs font-bold transition-all shadow-sm">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">Sampai Jam <span class="text-rose-500">*</span></label>
+                                        <input type="time" name="time_end" value="{{ old('time_end') }}" :required="selectedType === 'Izin Masuk Siang'" class="w-full bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-full text-blue-900 dark:text-blue-100 px-4 py-3 text-xs font-bold transition-all shadow-sm">
+                                    </div>
+                                </div>
+                            </template>
+
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="space-y-1.5">
                                         <label
-                                            class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">Mulai</label>
-                                        <input type="date" name="start_date" required min="{{ date('Y-m-d') }}"
+                                            class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">
+                                            Tanggal
+                                            <template x-if="selectedType === 'Lupa Absen'">
+                                                <span class="text-amber-500 normal-case tracking-normal font-normal text-[9px]">(pilih tanggal yang terlupa)</span>
+                                            </template>
+                                        </label>
+                                        <input type="date" name="start_date" required
+                                            :min="minStartDate"
+                                            :max="maxStartDate"
                                             value="{{ old('start_date') }}"
                                             class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-50 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-full text-blue-900 dark:text-blue-100 px-4 py-3 text-xs font-bold transition-all shadow-sm">
                                     </div>
-                                    <div class="space-y-1.5">
+                                    <div class="space-y-1.5" x-show="selectedType !== 'Lupa Absen' && selectedType !== 'Absen Diluar'">
                                         <label
                                             class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">Sampai</label>
-                                        <input type="date" name="end_date" required min="{{ date('Y-m-d') }}"
+                                        <input type="date" name="end_date"
+                                            :required="selectedType !== 'Lupa Absen' && selectedType !== 'Absen Diluar'"
+                                            :min="today"
                                             value="{{ old('end_date') }}"
                                             class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-50 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-full text-blue-900 dark:text-blue-100 px-4 py-3 text-xs font-bold transition-all shadow-sm">
                                     </div>
+                                    {{-- For Lupa Absen & Absen Diluar, end_date = start_date (same day) --}}
+                                    <template x-if="selectedType === 'Lupa Absen' || selectedType === 'Absen Diluar'">
+                                        <input type="hidden" name="end_date" :value="$el.closest('form').querySelector('[name=start_date]').value || today">
+                                    </template>
                                 </div>
                                 <div class="space-y-1.5">
                                     <label
                                         class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">Alasan</label>
                                     <textarea name="reason" rows="2" required placeholder="Tulis alasan singkat..."
-                                        class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-50 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-[1.5rem] text-blue-950 dark:text-blue-100 px-4 py-3 text-xs font-medium resize-none shadow-sm placeholder:text-slate-400 dark:placeholder:text-slate-600">{{ old('reason') }}</textarea>
+                                        :readonly="selectedType === 'Libur'"
+                                        x-effect="if(selectedType === 'Libur') { $el.value = 'Off day'; } else if($el.value === 'Off day') { $el.value = ''; }"
+                                        class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-50 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-[1.5rem] text-blue-950 dark:text-blue-100 px-4 py-3 text-xs font-medium resize-none shadow-sm placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none read-only:bg-slate-200 dark:read-only:bg-slate-800 read-only:text-slate-500">{{ old('reason') }}</textarea>
+                                    
+                                    <template x-if="selectedType === 'Izin Tidak Masuk'">
+                                        <p class="text-[9px] font-bold text-rose-500 mt-2 ml-2 italic">
+                                            Dilarang beralasan "Urusan Pribadi" atau "Keperluan Pribadi". Harap cantumkan alasan yang sebenarnya dan jelas.
+                                        </p>
+                                    </template>
                                 </div>
                             </div>
 
@@ -260,12 +362,25 @@
                                             <div class="flex items-center space-x-4">
                                                 <div
                                                     class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-slate-900 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg shadow-sm border border-blue-100 dark:border-slate-700 group-hover:rotate-12 transition-transform">
-                                                    @if($leave->type == 'Sakit') 🤒 @elseif($leave->type == 'Libur') 🏝️ @elseif($leave->type == 'Izin Tidak Masuk') 📝 @elseif($leave->type == 'Izin Masuk Siang') 🌅 @else ✨ @endif
+                                                    @if($leave->type == 'Sakit' || ($leave->type == 'Izin Tidak Masuk' && $leave->sub_type == 'Sakit')) 🤒 @elseif($leave->type == 'Libur') 🏝️ @elseif($leave->type == 'Izin Tidak Masuk') 📝 @elseif($leave->type == 'Izin Masuk Siang') 🌅 @elseif($leave->type == 'Lupa Absen') ⏰ @elseif($leave->type == 'Absen Diluar') 📍 @else ✨ @endif
                                                 </div>
                                                 <div>
                                                     <p class="text-xs md:text-sm font-black text-blue-950 dark:text-blue-100 uppercase tracking-tighter">
-                                                        {{ $leave->type == 'Cuti Tahunan' ? 'Libur' : $leave->type }}</p>
-                                                    <p class="text-[10px] text-blue-400 dark:text-blue-500 font-bold truncate max-w-[200px] italic">
+                                                        @if($leave->type == 'Izin Tidak Masuk' && $leave->sub_type)
+                                                            {{ $leave->sub_type }}
+                                                        @else
+                                                            {{ $leave->type == 'Cuti Tahunan' ? 'Libur' : $leave->type }}
+                                                        @endif
+                                                        @if(($leave->type === 'Lupa Absen' || $leave->type === 'Absen Diluar') && $leave->sub_type)
+                                                            <span class="{{ $leave->type === 'Absen Diluar' ? 'text-teal-500' : 'text-blue-500' }}">({{ $leave->sub_type }})</span>
+                                                        @endif
+                                                    </p>
+                                                    @if(($leave->type === 'Lupa Absen' || $leave->type === 'Absen Diluar') && $leave->time_start)
+                                                        <p class="text-[10px] font-bold {{ $leave->type === 'Absen Diluar' ? 'text-teal-500 dark:text-teal-400' : 'text-rose-500 dark:text-rose-400' }} mt-0.5">Jam: {{ \Carbon\Carbon::parse($leave->time_start)->format('H:i') }}</p>
+                                                    @elseif($leave->type === 'Izin Masuk Siang' && $leave->time_start && $leave->time_end)
+                                                        <p class="text-[10px] font-bold text-amber-500 dark:text-amber-400 mt-0.5">Jam: {{ \Carbon\Carbon::parse($leave->time_start)->format('H:i') }} - {{ \Carbon\Carbon::parse($leave->time_end)->format('H:i') }}</p>
+                                                    @endif
+                                                    <p class="text-[10px] text-blue-400 dark:text-blue-500 font-bold truncate max-w-[200px] italic mt-1">
                                                         "{{ $leave->reason }}"</p>
                                                 </div>
                                             </div>
@@ -273,8 +388,8 @@
                                         <td class="px-6 md:px-8 py-5 whitespace-nowrap text-center">
                                             <span
                                                 class="bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-black text-blue-800 dark:text-blue-200 tracking-tighter border border-slate-100 dark:border-slate-800 uppercase">
-                                                {{ \Carbon\Carbon::parse($leave->start_date)->format('d M') }} -
-                                                {{ \Carbon\Carbon::parse($leave->end_date)->format('d M Y') }}
+                                                {{ \Carbon\Carbon::parse($leave->start_date)->translatedFormat('d M') }} -
+                                                {{ \Carbon\Carbon::parse($leave->end_date)->translatedFormat('d M Y') }}
                                             </span>
                                         </td>
                                         <td class="px-6 md:px-10 py-5 whitespace-nowrap text-right">

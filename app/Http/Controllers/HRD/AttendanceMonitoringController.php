@@ -47,15 +47,38 @@ class AttendanceMonitoringController extends Controller
             $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
             $endDate = $startDate->copy()->endOfMonth();
         } elseif ($period == 'custom') {
-            $startDate = Carbon::parse($request->get('start_date', Carbon::today()->toDateString()))->startOfDay();
-            $endDate = Carbon::parse($request->get('end_date', Carbon::today()->toDateString()))->endOfDay();
+            $customRange = $request->get('custom_date_range');
+            if ($customRange) {
+                // Flatpickr range might use ' to ' or ' - '
+                if (str_contains($customRange, ' to ')) {
+                    $dates = explode(' to ', $customRange);
+                } elseif (str_contains($customRange, ' - ')) {
+                    $dates = explode(' - ', $customRange);
+                } else {
+                    $dates = [$customRange, $customRange];
+                }
+                
+                $startDate = Carbon::parse($dates[0])->startOfDay();
+                $endDate = Carbon::parse($dates[1] ?? $dates[0])->endOfDay();
+                
+                // Prevent filtering beyond today
+                if ($endDate->isAfter(Carbon::today()->endOfDay())) {
+                    $endDate = Carbon::today()->endOfDay();
+                }
+                if ($startDate->isAfter(Carbon::today()->endOfDay())) {
+                    $startDate = Carbon::today()->startOfDay();
+                }
+            } else {
+                $startDate = Carbon::today()->startOfDay();
+                $endDate = Carbon::today()->endOfDay();
+            }
         }
 
         $query = User::withRole('karyawan')->where('is_active', true)
             ->with(['division', 'attendances' => function($q) use ($startDate, $endDate) {
                 $q->whereBetween('date', [$startDate, $endDate]);
             }, 'leaveRequests' => function($q) use ($startDate, $endDate) {
-                $q->where('status', 'approved')
+                $q->whereIn('status', ['approved', 'pending'])
                   ->where(function($query) use ($startDate, $endDate) {
                       $query->whereBetween('start_date', [$startDate, $endDate])
                             ->orWhereBetween('end_date', [$startDate, $endDate])
@@ -100,87 +123,82 @@ class AttendanceMonitoringController extends Controller
                 return [$d => $item->status];
             })->toArray();
             
-            $user->izin_count = count(array_filter($attendanceDates, fn($s) => in_array($s, ['Izin', 'Sakit']))) + count(array_filter($excuseDates, fn($t) => in_array($t, ['Izin Tidak Masuk', 'Izin Tdk Masuk', 'Sakit', 'Lainnya'])));
-            $user->libur_count = count(array_filter($attendanceDates, fn($s) => $s == 'Libur')) + count(array_filter($excuseDates, fn($t) => in_array($t, ['Libur', 'Libur (Day Off)'])));
-
-            // Calculate Meal Allowance Weekly (Sat-Fri cycle)
-            $totalAllowance = 0;
-            $currentPointer = $startDate->copy()->startOfDay();
-            $isLiveStreaming = str_contains(strtolower($user->division->name ?? ''), 'live streaming');
-            $today = Carbon::today();
+            $izinDetails = [];
+            $liburDetails = [];
             
-            while ($currentPointer->lte($endDate)) {
-                // Find preceding or current Saturday
-                if ($currentPointer->dayOfWeek === Carbon::SATURDAY) {
-                    $weekStart = $currentPointer->copy()->startOfDay();
-                } else {
-                    $weekStart = $currentPointer->copy()->previous(Carbon::SATURDAY)->startOfDay();
+            // Loop setiap hari dalam periode terpilih
+            $currentDate = $startDate->copy();
+            while ($currentDate->lte($endDate)) {
+                if ($currentDate->isAfter(\Carbon\Carbon::today())) {
+                    break;
                 }
-                $weekEnd = $weekStart->copy()->addDays(6)->endOfDay(); // Friday
+                $dateStr = $currentDate->toDateString();
                 
-                $segStart = $weekStart->max($startDate);
-                $segEnd = $weekEnd->min($endDate);
+                // Atur bahasa ke Indonesia
+                \Carbon\Carbon::setLocale('id');
+                $formattedDate = $currentDate->translatedFormat('l, d M Y');
                 
-                // 1. Identify Penalty for this week (Sat-Fri)
-                $hasPenalty = false;
-                $pPointer = $weekStart->copy()->startOfDay();
-                
-                while ($pPointer->lte($weekEnd)) {
-                    $dateStr = $pPointer->toDateString();
-                    $status = $attendanceDates[$dateStr] ?? null;
-                    $excuseType = $excuseDates[$dateStr] ?? null;
-                    
-                    // Check if it's a holiday
-                    $isHoliday = $holidays->filter(function($h) use ($pPointer, $user) {
-                        return $h->date->isSameDay($pPointer) && (is_null($h->division_id) || $h->division_id == $user->division_id);
-                    })->isNotEmpty();
-                    
-                    $isWeekend = $pPointer->isWeekend();
-                    $isStaffKantor = !$isLiveStreaming;
-                    
-                    $isLibur = $isHoliday || ($isStaffKantor && $isWeekend) || in_array($excuseType, ['Libur', 'Libur (Day Off)']) || $status === 'Libur';
-                    
-                    if (!$isLibur) {
-                        // Working day penalty checks
-                        if (!$status && !$excuseType) {
-                            if ($pPointer->lte($today)) {
-                                $hasPenalty = true; // Alpha (hanya jika hari ini atau lampau)
-                            }
-                        } elseif (in_array($excuseType, ['Izin Tidak Masuk', 'Izin Tdk Masuk', 'Sakit'])) {
-                            $hasPenalty = true; // Sick or Absent Leave
-                        } elseif (in_array($status, ['Izin', 'Sakit'])) {
-                            $hasPenalty = true;
+                if (isset($attendanceDates[$dateStr])) {
+                    $status = $attendanceDates[$dateStr];
+                    if (in_array($status, ['Izin', 'Sakit'])) {
+                        $izinDetails[] = "- $formattedDate ($status)";
+                    } elseif (str_starts_with((string)$status, 'Libur')) {
+                        $liburDetails[] = "- $formattedDate ($status)";
+                    }
+                } elseif (isset($excuseDates[$dateStr])) {
+                    $type = $excuseDates[$dateStr];
+                    if (in_array($type, ['Izin Tidak Masuk', 'Izin Tdk Masuk', 'Sakit', 'Lainnya'])) {
+                        $izinDetails[] = "- $formattedDate ($type)";
+                    } elseif (in_array($type, ['Libur', 'Libur (Day Off)'])) {
+                        $liburDetails[] = "- $formattedDate ($type)";
+                    }
+                } else {
+                    // Jika tidak ada absensi dan tidak ada pengajuan izin/libur
+                    // Cek apakah hari ini weekend (Sabtu/Minggu) dan user adalah Staff Kantor
+                    if ($user->division && str_contains(strtolower($user->division->name), 'staff kantor') && $currentDate->isWeekend()) {
+                        $liburDetails[] = "- $formattedDate (Libur Akhir Pekan)";
+                    } 
+                    // Cek apakah hari ini ada libur nasional yang diset Super Admin
+                    else {
+                        $holiday = $holidays->first(function($h) use ($dateStr) {
+                            return \Carbon\Carbon::parse($h->date)->toDateString() === $dateStr;
+                        });
+                        if ($holiday) {
+                            $liburDetails[] = "- $formattedDate (Libur: " . $holiday->name . ")";
                         }
                     }
-                    $pPointer->addDay();
                 }
                 
-                // 2. Calculate allowance for this week segment
-                $rate = $hasPenalty ? 20000 : 35000;
-                $calcPointer = $segStart->copy();
-                
-                while ($calcPointer->lte($segEnd)) {
-                    $dateStr = $calcPointer->toDateString();
-                    $status = $attendanceDates[$dateStr] ?? null;
-                    
-                    // Allowance only given if present
-                    if (in_array($status, ['Hadir', 'Terlambat'])) {
-                        $totalAllowance += $rate;
-                    }
-                    $calcPointer->addDay();
-                }
-                
-                $currentPointer = $weekEnd->copy()->addDay()->startOfDay();
+                $currentDate->addDay();
             }
-            
-            $user->total_meal_allowance = $totalAllowance;
+
+            $user->izin_count = count($izinDetails);
+            $user->libur_count = count($liburDetails);
+            $user->izin_details = implode("\n", $izinDetails);
+            $user->libur_details = implode("\n", $liburDetails);
+
+            // Calculate Meal Allowance: Rp 35.000 per hari masuk (Hadir/Terlambat)
+            $mealRate = 35000;
+            $attendanceDaysCount = $user->attendances->whereIn('status', ['Hadir', 'Terlambat'])->count();
+            $calculatedAmount = $mealRate * $attendanceDaysCount;
+            $user->calculated_meal_allowance = $calculatedAmount;
             
             // Check if this period has been paid
             $payment = \App\Models\MealAllowancePayment::where('user_id', $user->id)
-                ->where('start_date', $startDate->toDateString())
-                ->where('end_date', $endDate->toDateString())
+                ->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('start_date', [$startDate->toDateString(), $endDate->toDateString()])
+                      ->orWhereBetween('end_date', [$startDate->toDateString(), $endDate->toDateString()])
+                      ->orWhere(function($sub) use ($startDate, $endDate) {
+                          $sub->where('start_date', '<=', $startDate->toDateString())
+                              ->where('end_date', '>=', $endDate->toDateString());
+                      });
+                })
                 ->first();
+            
             $user->is_meal_paid = $payment ? true : false;
+            
+            // Jika sudah lunas, set total menjadi 0 agar tidak dihitung sebagai beban tagihan
+            $user->total_meal_allowance = $user->is_meal_paid ? 0 : $calculatedAmount;
         }
 
         return [
@@ -206,13 +224,21 @@ class AttendanceMonitoringController extends Controller
         if ($request->has('bulk_pay')) {
             // Bulk payment
             foreach ($request->bulk_pay as $userId => $amount) {
-                \App\Models\MealAllowancePayment::updateOrCreate(
+                \App\Models\MealAllowancePayment::where('user_id', $userId)
+                    ->where(function($q) use ($request) {
+                        $q->whereBetween('start_date', [$request->start_date, $request->end_date])
+                          ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
+                          ->orWhere(function($sub) use ($request) {
+                              $sub->where('start_date', '<=', $request->start_date)
+                                  ->where('end_date', '>=', $request->end_date);
+                          });
+                    })->delete();
+
+                \App\Models\MealAllowancePayment::create(
                     [
                         'user_id' => $userId,
                         'start_date' => $request->start_date,
                         'end_date' => $request->end_date,
-                    ],
-                    [
                         'amount' => $amount,
                         'paid_by' => auth()->id(),
                     ]
@@ -225,13 +251,21 @@ class AttendanceMonitoringController extends Controller
                 'amount' => 'required|numeric',
             ]);
 
-            \App\Models\MealAllowancePayment::updateOrCreate(
+            \App\Models\MealAllowancePayment::where('user_id', $request->user_id)
+                ->where(function($q) use ($request) {
+                    $q->whereBetween('start_date', [$request->start_date, $request->end_date])
+                      ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
+                      ->orWhere(function($sub) use ($request) {
+                          $sub->where('start_date', '<=', $request->start_date)
+                              ->where('end_date', '>=', $request->end_date);
+                      });
+                })->delete();
+
+            \App\Models\MealAllowancePayment::create(
                 [
                     'user_id' => $request->user_id,
                     'start_date' => $request->start_date,
                     'end_date' => $request->end_date,
-                ],
-                [
                     'amount' => $request->amount,
                     'paid_by' => auth()->id(),
                 ]
@@ -239,5 +273,41 @@ class AttendanceMonitoringController extends Controller
         }
 
         return back()->with('success', 'Pembayaran uang makan berhasil dicatat.');
+    }
+
+    public function togglePayment(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date',
+            'amount' => 'required|numeric',
+        ]);
+
+        $payments = \App\Models\MealAllowancePayment::where('user_id', $request->user_id)
+            ->where(function($q) use ($request) {
+                $q->whereBetween('start_date', [$request->start_date, $request->end_date])
+                  ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
+                  ->orWhere(function($sub) use ($request) {
+                      $sub->where('start_date', '<=', $request->start_date)
+                          ->where('end_date', '>=', $request->end_date);
+                  });
+            })->get();
+
+        if ($payments->count() > 0) {
+            foreach ($payments as $p) {
+                $p->delete();
+            }
+            return back()->with('success', 'Status diubah menjadi Belum Lunas.');
+        } else {
+            \App\Models\MealAllowancePayment::create([
+                'user_id' => $request->user_id,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'amount' => $request->amount,
+                'paid_by' => auth()->id(),
+            ]);
+            return back()->with('success', 'Status diubah menjadi Lunas.');
+        }
     }
 }

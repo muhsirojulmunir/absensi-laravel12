@@ -21,17 +21,18 @@
     @endif
 
     <!-- Search/Filter Bar -->
-    <div class="bg-blue-50/30 dark:bg-slate-900/50 border border-blue-100 dark:border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row gap-4">
+    <form method="GET" action="{{ route('super-admin.users.index') }}" class="bg-blue-50/30 dark:bg-slate-900/50 border border-blue-100 dark:border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row gap-4">
         <div class="relative flex-1">
             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 dark:text-blue-400">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </span>
-            <input type="text" placeholder="Cari karyawan berdasarkan nama, email atau ID..." class="w-full bg-slate-50 dark:bg-slate-900 shadow-inner border border-blue-100 dark:border-slate-800 rounded-xl py-3 pl-12 pr-4 text-sm text-blue-950 dark:text-blue-100 focus:ring-2 focus:ring-blue-600 outline-none transition-all placeholder-slate-600 dark:placeholder-slate-400">
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari berdasarkan nama, username atau ID karyawan..." class="w-full bg-slate-50 dark:bg-slate-900 shadow-inner border border-blue-100 dark:border-slate-800 rounded-xl py-3 pl-12 pr-4 text-sm text-blue-950 dark:text-blue-100 focus:ring-2 focus:ring-blue-600 outline-none transition-all placeholder-slate-600 dark:placeholder-slate-400">
         </div>
-        <select class="bg-slate-50 dark:bg-slate-900 shadow-inner border border-blue-100 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-blue-950 dark:text-blue-100 focus:ring-2 focus:ring-blue-600 outline-none cursor-pointer">
-            <option value="" class="dark:bg-slate-900">Semua Divisi</option>
-        </select>
-    </div>
+        <button type="submit" class="inline-flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-6 py-3 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <span>Cari</span>
+        </button>
+    </form>
 
     <!-- Data Table -->
     <div class="bg-white dark:bg-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-blue-100 dark:border-slate-700 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden">
@@ -131,8 +132,11 @@
             </table>
         </div>
         
-        <div class="bg-slate-50 dark:bg-slate-900 shadow-inner/30 px-8 py-4 border-t border-blue-100 dark:border-slate-700 flex items-center justify-between">
-            <p class="text-[11px] font-medium text-blue-500 dark:text-blue-400 italic">Menampilkan {{ $users->count() }} total pengguna</p>
+        <div class="bg-slate-50 dark:bg-slate-900 shadow-inner/30 px-8 py-4 border-t border-blue-100 dark:border-slate-700 flex flex-col md:flex-row items-center justify-between gap-3">
+            <p class="text-[11px] font-medium text-blue-500 dark:text-blue-400 italic">Menampilkan {{ $users->firstItem() ?? 0 }}-{{ $users->lastItem() ?? 0 }} dari {{ $users->total() }} pengguna</p>
+            <div class="flex items-center space-x-1">
+                {{ $users->links('vendor.pagination.tailwind') }}
+            </div>
         </div>
     </div>
 </div>

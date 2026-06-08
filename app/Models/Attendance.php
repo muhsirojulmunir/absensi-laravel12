@@ -20,6 +20,7 @@ class Attendance extends Model
         'long',
         'photo',
         'lateness_minutes',
+        'note',
     ];
 
     public function user()

@@ -72,8 +72,8 @@ class SendSmartNotification extends Command
                     }
                 }
 
-                // Pengingat PULANG: Jam 17:00 - 17:15, sudah Clock In tapi belum Clock Out
-                $isTimePulang = ($now->format('H:i') >= '17:00' && $now->format('H:i') <= '17:15');
+                // Pengingat PULANG: Jam 17:00 - 17:30, sudah Clock In tapi belum Clock Out
+                $isTimePulang = ($now->format('H:i') >= '17:00' && $now->format('H:i') <= '17:30');
                 if ($isTimePulang || $this->option('test')) {
                     if ($todayAttendance && !$todayAttendance->check_out) {
                         $this->info("📤 Mengirim pengingat Clock Out ke {$user->name} (Staff Kantor)");
@@ -102,8 +102,8 @@ class SendSmartNotification extends Command
                     );
                     $hoursWorked = $clockIn->diffInMinutes($now);
 
-                    // Kirim notif saat tepat di jam ke-8 (antara menit 480-490)
-                    if (($hoursWorked >= 480 && $hoursWorked <= 490) || $this->option('test')) {
+                    // Kirim notif setelah 8 jam bekerja (antara menit 480-510)
+                    if (($hoursWorked >= 480 && $hoursWorked <= 510) || $this->option('test')) {
                         $this->info("📤 Mengirim pengingat 8 jam ke {$user->name} (Live Streaming)");
 
                         $message = $gemini->generateAttendanceReminder(

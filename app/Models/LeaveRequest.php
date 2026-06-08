@@ -12,8 +12,11 @@ class LeaveRequest extends Model
     protected $fillable = [
         'user_id',
         'type',
+        'sub_type',
         'start_date',
         'end_date',
+        'time_start',
+        'time_end',
         'reason',
         'status', // pending, approved, rejected
         'approved_by',
@@ -22,6 +25,7 @@ class LeaveRequest extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        // Optional: cast time to string to avoid carbon errors if we only care about 'H:i'
     ];
 
     public function user()

@@ -53,7 +53,9 @@ class AuthController extends Controller
             return match($role) {
                 'super-admin' => redirect()->intended('super-admin/dashboard'),
                 'pic' => redirect()->intended('pic/dashboard'),
+                'pic_ramayana' => redirect()->intended('pic-ramayana/dashboard'),
                 'hrd' => redirect()->intended('hrd/dashboard'),
+                'karyawan_ramayana' => redirect()->intended('karyawan-ramayana/dashboard'),
                 default => redirect()->intended('karyawan/dashboard'),
             };
         }

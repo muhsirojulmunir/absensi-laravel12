@@ -26,19 +26,19 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         <div class="bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 md:p-6 rounded-3xl space-y-2 hover:-translate-y-1 transition-transform group">
             <p class="text-[8px] md:text-[9px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-[0.2em]">Hadir (Bulan Ini)</p>
-            <p class="text-2xl md:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tighter group-hover:scale-110 origin-left transition-transform font-mono">{{ $attendances->where('status', 'Hadir')->count() }}</p>
+            <p class="text-2xl md:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tighter group-hover:scale-110 origin-left transition-transform font-mono">{{ $currentMonthStats->where('status', 'Hadir')->count() }}</p>
         </div>
         <div class="bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 md:p-6 rounded-3xl space-y-2 hover:-translate-y-1 transition-transform group">
-            <p class="text-[8px] md:text-[9px] font-black text-amber-400 uppercase tracking-[0.2em]">Pulang Cepat</p>
-            <p class="text-2xl md:text-3xl font-black text-amber-500 tracking-tighter group-hover:scale-110 origin-left transition-transform font-mono">{{ $attendances->where('is_pulang_cepat', true)->count() }}</p>
+            <p class="text-[8px] md:text-[9px] font-black text-amber-400 uppercase tracking-[0.2em]">Pulang Cepat (Bulan Ini)</p>
+            <p class="text-2xl md:text-3xl font-black text-amber-500 tracking-tighter group-hover:scale-110 origin-left transition-transform font-mono">{{ $currentMonthStats->where('is_pulang_cepat', true)->count() }}</p>
         </div>
         <div class="bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 md:p-6 rounded-3xl space-y-2 hover:-translate-y-1 transition-transform group">
-            <p class="text-[8px] md:text-[9px] font-black text-indigo-400 uppercase tracking-[0.2em]">Izin</p>
-            <p class="text-2xl md:text-3xl font-black text-indigo-500 tracking-tighter group-hover:scale-110 origin-left transition-transform font-mono">{{ $attendances->where('status', 'Izin')->count() }}</p>
+            <p class="text-[8px] md:text-[9px] font-black text-indigo-400 uppercase tracking-[0.2em]">Izin (Bulan Ini)</p>
+            <p class="text-2xl md:text-3xl font-black text-indigo-500 tracking-tighter group-hover:scale-110 origin-left transition-transform font-mono">{{ $currentMonthStats->where('status', 'Izin')->count() }}</p>
         </div>
         <div class="bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 md:p-6 rounded-3xl space-y-2 hover:-translate-y-1 transition-transform group">
-            <p class="text-[8px] md:text-[9px] font-black text-red-400 uppercase tracking-[0.2em]">Sakit</p>
-            <p class="text-2xl md:text-3xl font-black text-red-500 tracking-tighter group-hover:scale-110 origin-left transition-transform font-mono">{{ $attendances->where('status', 'Sakit')->count() }}</p>
+            <p class="text-[8px] md:text-[9px] font-black text-red-400 uppercase tracking-[0.2em]">Sakit (Bulan Ini)</p>
+            <p class="text-2xl md:text-3xl font-black text-red-500 tracking-tighter group-hover:scale-110 origin-left transition-transform font-mono">{{ $currentMonthStats->where('status', 'Sakit')->count() }}</p>
         </div>
     </div>
 
@@ -60,7 +60,7 @@
                             <td class="px-6 md:px-10 py-4 md:py-6 whitespace-nowrap">
                                 <div class="flex items-center space-x-2 md:space-x-3">
                                     <div class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)] group-hover:scale-150 transition-transform"></div>
-                                    <span class="text-xs md:text-sm font-bold text-blue-900 dark:text-blue-100 tracking-widest uppercase">{{ \Carbon\Carbon::parse($attendance->date)->format('d M Y') }}</span>
+                                    <span class="text-xs md:text-sm font-bold text-blue-900 dark:text-blue-100 tracking-widest uppercase">{{ \Carbon\Carbon::parse($attendance->date)->translatedFormat('d M Y') }}</span>
                                 </div>
                             </td>
                             <td class="px-6 md:px-8 py-4 md:py-6 whitespace-nowrap text-center">
@@ -76,6 +76,7 @@
                                         'Terlambat' => 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900/30',
                                         'Izin' => 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30',
                                         'Sakit' => 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/30',
+                                        'Libur' => 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/30',
                                     ];
                                     $colorClass = $statusColors[$attendance->status] ?? 'bg-slate-50 dark:bg-slate-900/20 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800';
                                 @endphp
@@ -86,6 +87,17 @@
                                     <span class="block mt-2 px-3 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30 text-[8px] md:text-[10px] font-black uppercase rounded-lg tracking-widest shadow-sm inline-block">
                                         <svg class="w-3 h-3 inline-block mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                         Pulang Cepat
+                                    </span>
+                                @endif
+                                @if(!empty($attendance->note) && $attendance->status === 'Libur')
+                                    <span class="block mt-2 px-3 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-900/30 text-[8px] md:text-[10px] font-black uppercase rounded-lg tracking-widest shadow-sm inline-block">
+                                        <svg class="w-3 h-3 inline-block mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                                        {{ $attendance->note }}
+                                    </span>
+                                @elseif(isset($attendance->note) && $attendance->note === 'Absen Diluar')
+                                    <span class="block mt-2 px-3 py-1 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-900/30 text-[8px] md:text-[10px] font-black uppercase rounded-lg tracking-widest shadow-sm inline-block">
+                                        <svg class="w-3 h-3 inline-block mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                        Absen Diluar
                                     </span>
                                 @endif
                             </td>

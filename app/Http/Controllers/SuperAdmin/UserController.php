@@ -11,9 +11,31 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with(['role', 'division'])->get();
+        $query = User::with(['role', 'division'])
+                     ->where('username', '!=', 'superadmin')
+                     ->orderBy('role_id', 'asc')
+                     ->orderByRaw("
+                        CASE 
+                            WHEN division_id = 3 THEN 1 /* Staff Kantor */
+                            WHEN division_id = 1 THEN 2 /* Live Streaming */
+                            WHEN division_id = 4 THEN 3 /* Gudang */
+                            ELSE 4
+                        END ASC
+                     ");
+
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('username', 'like', "%{$search}%")
+                  ->orWhere('employee_id', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->paginate(10)->withQueryString();
         return view('super-admin.users.index', compact('users'));
     }
 
@@ -21,7 +43,8 @@ class UserController extends Controller
     {
         $roles = Role::all();
         $divisions = Division::all();
-        return view('super-admin.users.create', compact('roles', 'divisions'));
+        $locations = \App\Models\Location::all();
+        return view('super-admin.users.create', compact('roles', 'divisions', 'locations'));
     }
 
     public function store(Request $request)
@@ -32,6 +55,7 @@ class UserController extends Controller
             'password' => 'required|min:8',
             'role_id' => 'required|exists:roles,id',
             'division_id' => 'nullable|exists:divisions,id',
+            'location_id' => 'nullable|exists:locations,id',
             'employee_id' => 'nullable|unique:users',
         ]);
 
@@ -42,6 +66,7 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'role_id' => $request->role_id,
             'division_id' => $request->division_id,
+            'location_id' => $request->location_id,
             'employee_id' => $request->employee_id,
             'phone' => $request->phone,
             'address' => $request->address,
@@ -55,7 +80,8 @@ class UserController extends Controller
     {
         $roles = Role::all();
         $divisions = Division::all();
-        return view('super-admin.users.edit', compact('user', 'roles', 'divisions'));
+        $locations = \App\Models\Location::all();
+        return view('super-admin.users.edit', compact('user', 'roles', 'divisions', 'locations'));
     }
 
     public function update(Request $request, User $user)
@@ -65,9 +91,10 @@ class UserController extends Controller
             'username' => 'required|unique:users,username,' . $user->id,
             'role_id' => 'required|exists:roles,id',
             'division_id' => 'nullable|exists:divisions,id',
+            'location_id' => 'nullable|exists:locations,id',
         ]);
 
-        $data = $request->only(['name', 'username', 'email', 'role_id', 'division_id', 'employee_id', 'phone', 'address', 'position']);
+        $data = $request->only(['name', 'username', 'email', 'role_id', 'division_id', 'location_id', 'employee_id', 'phone', 'address', 'position']);
         
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);

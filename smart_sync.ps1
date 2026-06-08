@@ -19,16 +19,21 @@ if (Test-Path $stateFile) {
 
 function Create-Dir-FTP {
     param ([string]$RemotePath)
-    $uri = [URI]"ftp://$ftpHost$RemotePath"
-    try {
-        $ftp = [System.Net.FtpWebRequest]::Create($uri)
-        $ftp.Credentials = New-Object System.Net.NetworkCredential($ftpUser, $ftpPass)
-        $ftp.Method = [System.Net.WebRequestMethods+Ftp]::MakeDirectory
-        $response = $ftp.GetResponse()
-        $response.Close()
-        $response.Dispose()
-    } catch {
-        # Abaikan jika folder sudah ada
+    $folders = $RemotePath.TrimStart("/").Split("/")
+    $currentPath = ""
+    foreach ($folder in $folders) {
+        $currentPath += "/$folder"
+        $uri = [URI]"ftp://$ftpHost$currentPath"
+        try {
+            $ftp = [System.Net.FtpWebRequest]::Create($uri)
+            $ftp.Credentials = New-Object System.Net.NetworkCredential($ftpUser, $ftpPass)
+            $ftp.Method = [System.Net.WebRequestMethods+Ftp]::MakeDirectory
+            $response = $ftp.GetResponse()
+            $response.Close()
+            $response.Dispose()
+        } catch {
+            # Abaikan jika folder sudah ada
+        }
     }
 }
 
@@ -74,8 +79,10 @@ function Sync-Directory {
         
         if ($item.PSIsContainer) {
             # Folder yang di-blacklist (jangan di-sync!)
-            if ($name -eq ".git" -or $name -eq "vendor" -or $name -eq "node_modules" -or $name -eq "storage" -or $name -eq "database_backups" -or $name -eq "bootstrap") {
-                continue
+            if ($CurrentLocalDir -eq $localWorkspace) {
+                if ($name -eq ".git" -or $name -eq "vendor" -or $name -eq "node_modules" -or $name -eq "storage" -or $name -eq "database_backups" -or $name -eq "bootstrap") {
+                    continue
+                }
             }
             Sync-Directory -CurrentLocalDir $item.FullName -CurrentRemoteDir "$CurrentRemoteDir/$name"
         } else {

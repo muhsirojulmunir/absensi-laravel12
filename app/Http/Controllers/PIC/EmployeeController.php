@@ -11,7 +11,9 @@ class EmployeeController extends Controller
 {
     public function index()
     {
-        $employees = User::withRole('karyawan')
+        $targetRole = Auth::user()->role->slug === 'pic_ramayana' ? 'karyawan_ramayana' : 'karyawan';
+        
+        $employees = User::withRole($targetRole)
             ->where('is_active', true)
             ->where('id', '!=', Auth::id())
             ->with(['role', 'attendances' => function ($query) {
@@ -26,8 +28,10 @@ class EmployeeController extends Controller
 
     public function show(User $user)
     {
-        // Ensure we are viewing a 'karyawan', not another PIC/Admin unless intended
-        if ($user->role->slug !== 'karyawan') {
+        $targetRole = Auth::user()->role->slug === 'pic_ramayana' ? 'karyawan_ramayana' : 'karyawan';
+        
+        // Ensure we are viewing a specific employee role, not another PIC/Admin unless intended
+        if ($user->role->slug !== $targetRole) {
             abort(404);
         }
 
