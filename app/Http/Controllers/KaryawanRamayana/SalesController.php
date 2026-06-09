@@ -70,9 +70,9 @@ class SalesController extends Controller
             // Format product_key: sku|warna|size|satuan
             $productParts = explode('|', $item['product_key']);
             $sku = $productParts[0] ?? '';
-            $warna = !empty($productParts[1]) ? $productParts[1] : null;
-            $size = !empty($productParts[2]) ? $productParts[2] : null;
-            $satuan = !empty($productParts[3]) ? $productParts[3] : 'PSG';
+            $warna = isset($productParts[1]) && $productParts[1] !== '' ? $productParts[1] : null;
+            $size = isset($productParts[2]) && $productParts[2] !== '' ? $productParts[2] : null;
+            $satuan = isset($productParts[3]) && $productParts[3] !== '' ? $productParts[3] : 'PSG';
             
             $qty = (int)$item['qty'];
 
@@ -81,15 +81,15 @@ class SalesController extends Controller
                 ->where('sku', $sku)
                 ->where('type', 'stock_in');
                 
-            if ($warna) $stockInQuery->where('warna', $warna); else $stockInQuery->whereNull('warna');
-            if ($size) $stockInQuery->where('size', $size); else $stockInQuery->whereNull('size');
+            if ($warna) $stockInQuery->where('warna', $warna); else $stockInQuery->where(function($q) { $q->whereNull('warna')->orWhere('warna', ''); });
+            if ($size) $stockInQuery->where('size', $size); else $stockInQuery->where(function($q) { $q->whereNull('size')->orWhere('size', ''); });
             $stockIn = $stockInQuery->sum('qty');
 
             $stockOutQuery = SalesInput::where('user_id', $userId)
                 ->where('sku', $sku)
                 ->where('type', 'sale');
-            if ($warna) $stockOutQuery->where('warna', $warna); else $stockOutQuery->whereNull('warna');
-            if ($size) $stockOutQuery->where('size', $size); else $stockOutQuery->whereNull('size');
+            if ($warna) $stockOutQuery->where('warna', $warna); else $stockOutQuery->where(function($q) { $q->whereNull('warna')->orWhere('warna', ''); });
+            if ($size) $stockOutQuery->where('size', $size); else $stockOutQuery->where(function($q) { $q->whereNull('size')->orWhere('size', ''); });
             $stockOut = $stockOutQuery->sum('qty');
 
             $availableStock = $stockIn - $stockOut;

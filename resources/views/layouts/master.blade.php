@@ -201,6 +201,14 @@
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Laporan Penjualan</span>
                 </a>
+
+                <a href="{{ route('super-admin.top-products.index') }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.top-products.*') ? 'bg-amber-500/20 text-amber-300 shadow-sm' : 'text-amber-100/70 hover:bg-amber-500/10 hover:text-amber-300' }}"
+                   :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
+                   title="Analisis Top Produk">
+                    <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Analisis Top Produk</span>
+                </a>
             @endif
 
             {{-- ============ HRD ============ --}}
@@ -274,6 +282,14 @@
                    title="Laporan Penjualan">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Laporan Penjualan</span>
+                </a>
+
+                <a href="{{ route('pic_ramayana.top-products.index') }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('pic_ramayana.top-products.*') ? 'bg-amber-500/20 text-amber-300 shadow-sm' : 'text-amber-100/70 hover:bg-amber-500/10 hover:text-amber-300' }}"
+                   :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
+                   title="Analisis Top Produk">
+                    <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Analisis Top Produk</span>
                 </a>
                 @endif
             @endif

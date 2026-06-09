@@ -71,6 +71,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/sales-reports', [App\Http\Controllers\Shared\SalesReportController::class, 'index'])->name('sales-reports.index');
 
         // Ramayana Stocks
+        Route::get('/top-products', [App\Http\Controllers\Shared\TopProductController::class, 'index'])->name('top-products.index');
         Route::get('/ramayana-stocks', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'index'])->name('ramayana-stocks.index');
         Route::get('/ramayana-stocks/download-template', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'downloadTemplate'])->name('ramayana-stocks.download-template');
         Route::get('/ramayana-stocks/{user}', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'show'])->name('ramayana-stocks.show');
@@ -111,6 +112,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/ramayana-stocks/{id}', [App\Http\Controllers\PIC\RamayanaStockController::class, 'show'])->name('ramayana-stocks.show');
 
         // Sales Reports
+        Route::get('/top-products', [App\Http\Controllers\Shared\TopProductController::class, 'index'])->name('top-products.index');
         Route::get('/sales-reports', [App\Http\Controllers\Shared\SalesReportController::class, 'index'])->name('sales-reports.index');
     });
 
