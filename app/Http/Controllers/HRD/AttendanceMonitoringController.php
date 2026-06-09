@@ -30,47 +30,28 @@ class AttendanceMonitoringController extends Controller
 
     public function buildRecapData(Request $request): array
     {
-        $period = $request->get('period', 'month');
         $divisionId = $request->get('division_id');
-        $startDate = Carbon::now()->startOfMonth();
-        $endDate = Carbon::now()->endOfMonth();
+        $startDate = Carbon::today()->startOfDay();
+        $endDate = Carbon::today()->endOfDay();
 
-        if ($period == 'day') {
-            $startDate = Carbon::parse($request->get('date', Carbon::today()->toDateString()))->startOfDay();
-            $endDate = $startDate->copy()->endOfDay();
-        } elseif ($period == 'week') {
-            $startDate = Carbon::now()->startOfWeek();
-            $endDate = Carbon::now()->endOfWeek();
-        } elseif ($period == 'month') {
-            $month = $request->get('month', Carbon::now()->month);
-            $year = $request->get('year', Carbon::now()->year);
-            $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
-            $endDate = $startDate->copy()->endOfMonth();
-        } elseif ($period == 'custom') {
-            $customRange = $request->get('custom_date_range');
-            if ($customRange) {
-                // Flatpickr range might use ' to ' or ' - '
-                if (str_contains($customRange, ' to ')) {
-                    $dates = explode(' to ', $customRange);
-                } elseif (str_contains($customRange, ' - ')) {
-                    $dates = explode(' - ', $customRange);
-                } else {
-                    $dates = [$customRange, $customRange];
-                }
-                
-                $startDate = Carbon::parse($dates[0])->startOfDay();
-                $endDate = Carbon::parse($dates[1] ?? $dates[0])->endOfDay();
-                
-                // Prevent filtering beyond today
-                if ($endDate->isAfter(Carbon::today()->endOfDay())) {
-                    $endDate = Carbon::today()->endOfDay();
-                }
-                if ($startDate->isAfter(Carbon::today()->endOfDay())) {
-                    $startDate = Carbon::today()->startOfDay();
-                }
+        $customRange = $request->get('custom_date_range');
+        if ($customRange) {
+            if (str_contains($customRange, ' to ')) {
+                $dates = explode(' to ', $customRange);
+            } elseif (str_contains($customRange, ' - ')) {
+                $dates = explode(' - ', $customRange);
             } else {
-                $startDate = Carbon::today()->startOfDay();
+                $dates = [$customRange, $customRange];
+            }
+
+            $startDate = Carbon::parse($dates[0])->startOfDay();
+            $endDate = Carbon::parse($dates[1] ?? $dates[0])->endOfDay();
+
+            if ($endDate->isAfter(Carbon::today()->endOfDay())) {
                 $endDate = Carbon::today()->endOfDay();
+            }
+            if ($startDate->isAfter(Carbon::today()->endOfDay())) {
+                $startDate = Carbon::today()->startOfDay();
             }
         }
 
@@ -205,11 +186,8 @@ class AttendanceMonitoringController extends Controller
             'users' => $users,
             'divisions' => $divisions,
             'divisionId' => $divisionId,
-            'period' => $period,
             'startDate' => $startDate->toDateString(),
             'endDate' => $endDate->toDateString(),
-            'currentMonth' => (int)$startDate->format('m'),
-            'currentYear' => (int)$startDate->format('Y'),
             'recapRouteName' => 'hrd.attendance.recap',
         ];
     }
@@ -309,5 +287,41 @@ class AttendanceMonitoringController extends Controller
             ]);
             return back()->with('success', 'Status diubah menjadi Lunas.');
         }
+    }
+
+    public function paymentHistory(Request $request)
+    {
+        $payments = \App\Models\MealAllowancePayment::with(['user', 'paidBy'])
+            ->orderByDesc('start_date')
+            ->get();
+
+        $groupedByPeriod = [];
+        foreach ($payments as $payment) {
+            $periodKey = $payment->start_date . '|' . $payment->end_date;
+            $startDate = Carbon::parse($payment->start_date);
+            $endDate = Carbon::parse($payment->end_date);
+            $periodLabel = $startDate->translatedFormat('d M') . ' - ' . $endDate->translatedFormat('d M Y');
+
+            if (!isset($groupedByPeriod[$periodKey])) {
+                $groupedByPeriod[$periodKey] = [
+                    'label' => $periodLabel,
+                    'startDate' => $payment->start_date,
+                    'endDate' => $payment->end_date,
+                    'items' => [],
+                    'totalAmount' => 0,
+                    'totalCount' => 0,
+                ];
+            }
+
+            $groupedByPeriod[$periodKey]['items'][] = $payment;
+            $groupedByPeriod[$periodKey]['totalAmount'] += $payment->amount;
+            $groupedByPeriod[$periodKey]['totalCount']++;
+        }
+
+        return view('hrd.attendance.payment-history', [
+            'groupedByPeriod' => collect($groupedByPeriod),
+            'totalPayments' => $payments->count(),
+            'grandTotal' => $payments->sum('amount'),
+        ]);
     }
 }

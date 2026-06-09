@@ -124,6 +124,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/attendance/recap', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'recap'])->name('attendance.recap');
         Route::post('/attendance/recap/pay', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'payMealAllowance'])->name('attendance.pay-meal-allowance');
         Route::post('/attendance/recap/toggle-payment', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'togglePayment'])->name('attendance.toggle-payment');
+        Route::get('/attendance/payment-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'paymentHistory'])->name('attendance.payment-history');
     });
 
     Route::prefix('karyawan')->name('karyawan.')->group(function () {
