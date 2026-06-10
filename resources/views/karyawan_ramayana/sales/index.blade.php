@@ -53,7 +53,7 @@
                     <tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
                         <th class="p-4">Tanggal</th>
                         <th class="p-4">SKU / Produk</th>
-                        <th class="p-4">Warna & Size</th>
+                        <th class="p-4">Size</th>
                         <th class="p-4">Qty (Psg)</th>
                         <th class="p-4">Nominal (Rp)</th>
                         <th class="p-4 text-right">Aksi</th>
@@ -69,7 +69,7 @@
                             {{ $sale->sku }}
                         </td>
                         <td class="p-4 text-sm text-slate-600 dark:text-slate-400">
-                            {{ $sale->warna ?? '-' }} <span class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded text-xs ml-1 border border-slate-200 dark:border-slate-700">{{ $sale->size ?? '-' }}</span>
+                            <span class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded text-xs ml-1 border border-slate-200 dark:border-slate-700">{{ $sale->size ?? '-' }}</span>
                         </td>
                         <td class="p-4 text-sm font-bold text-slate-700 dark:text-slate-300">
                             {{ $sale->qty }}

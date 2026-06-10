@@ -2,9 +2,9 @@
 @section('title', 'Kartu Stock - ' . ($user->location->name ?? $user->name))
 @section('content')
 
-<!-- Include html2canvas for PNG export and SheetJS for Excel export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- SheetJS untuk Export Excel | JSZip untuk ZIP -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <div class="space-y-6" x-data="{ search: '' }">
     <!-- Header & Actions -->
@@ -21,9 +21,9 @@
         </div>
 
         <div class="flex flex-wrap gap-2">
-            <button onclick="exportToPNG()" class="inline-flex items-center px-4 py-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-800/50 rounded-xl text-sm font-bold shadow-sm transition-all">
+            <button id="btn-zip" onclick="exportToZipA4(this)" class="inline-flex items-center px-4 py-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-800/50 rounded-xl text-sm font-bold shadow-sm transition-all">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                Download PNG
+                Download ZIP (A4)
             </button>
             <button onclick="exportToExcel()" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-green-500/30 transition-all transform hover:-translate-y-0.5">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -52,7 +52,6 @@
                 <input type="date" name="date" value="{{ $filterDate }}" onchange="this.form.submit()" class="w-full sm:w-48 bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 p-2.5 transition-colors font-medium">
             </div>
         </form>
-        <!-- Info tanggal yang aktif -->
         <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
             <svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             Menampilkan stok per tanggal: <span class="font-bold text-slate-700 dark:text-slate-300">{{ \Carbon\Carbon::parse($filterDate)->translatedFormat('d F Y') }}</span>
@@ -62,9 +61,9 @@
         </div>
     </div>
 
-    <!-- Kartu Stock Area (This area will be exported to PNG) -->
+    <!-- Kartu Stock Area -->
     <div id="kartu-stock-area" class="bg-white overflow-hidden" style="padding: 20px; font-family: Arial, sans-serif; color: #000; border: 1px solid #d1d5db; min-height: 500px;">
-        
+
         <!-- Header Laporan -->
         <div class="text-center mb-6">
             <h1 style="font-size: 24px; font-weight: bold; margin: 0; text-transform: uppercase;">JAYA MANDIRI</h1>
@@ -78,8 +77,12 @@
                 <tr>
                     <th style="border: 1px solid #000; padding: 10px; background-color: #1e3a5f; color: #fff; width: 5%; text-align: center; font-weight: bold;">No</th>
                     <th style="border: 1px solid #000; padding: 10px; background-color: #1e3a5f; color: #fff; width: 15%; text-align: left; font-weight: bold;">Kode Barang</th>
-                    <th style="border: 1px solid #000; padding: 10px; background-color: #1e3a5f; color: #fff; width: 40%; text-align: left; font-weight: bold;">Nama Barang</th>
-                    <th style="border: 1px solid #000; padding: 10px; background-color: #1e3a5f; color: #fff; width: 20%; text-align: center; font-weight: bold;">Total Quantity</th>
+                    <th onclick="sortTable('name')" style="border: 1px solid #000; padding: 10px; background-color: #1e3a5f; color: #fff; width: 40%; text-align: left; font-weight: bold; cursor: pointer; user-select: none;">
+                        Nama Barang <span id="sort-name-icon" style="font-size: 11px; margin-left: 4px; opacity: 0.9;">↑</span>
+                    </th>
+                    <th onclick="sortTable('qty')" style="border: 1px solid #000; padding: 10px; background-color: #1e3a5f; color: #fff; width: 20%; text-align: center; font-weight: bold; cursor: pointer; user-select: none;">
+                        Total Quantity <span id="sort-qty-icon" style="font-size: 11px; margin-left: 4px; opacity: 0.8;">⇅</span>
+                    </th>
                     <th style="border: 1px solid #000; padding: 10px; background-color: #1e3a5f; color: #fff; width: 20%; text-align: left; font-weight: bold;">Keterangan</th>
                 </tr>
             </thead>
@@ -88,6 +91,9 @@
                 @forelse($flatStocks as $stock)
                 @php $isEven = $rowNo % 2 === 0; @endphp
                 <tr x-show="search === '' || '{{ strtolower($stock['sku'] . ' ' . $stock['kode_barang']) }}'.includes(search.toLowerCase())"
+                    data-orig-index="{{ $rowNo - 1 }}"
+                    data-name="{{ strtolower($stock['sku']) }}@if(!empty($stock['size'])) {{ strtolower($stock['size']) }}@endif"
+                    data-qty="{{ $stock['qty'] }}"
                     style="background-color: {{ $isEven ? '#eef2ff' : '#ffffff' }};">
                     <td style="border: 1px solid #c0c0c0; padding: 8px; text-align: center; color: #666;">{{ $rowNo++ }}</td>
                     <td style="border: 1px solid #c0c0c0; padding: 8px; font-family: monospace; font-weight: bold;">{{ $stock['kode_barang'] ?: '-' }}</td>
@@ -103,7 +109,6 @@
                 </tr>
                 @endforelse
             </tbody>
-            <!-- Footer Summary -->
             <tfoot>
                 <tr style="background-color: #1e3a5f;">
                     <td colspan="3" style="border: 1px solid #000; padding: 10px; font-weight: bold; text-align: right; color: #fff;">TOTAL :</td>
@@ -117,92 +122,318 @@
 </div>
 
 <script>
-    // Export area to PNG using html2canvas
-    function exportToPNG() {
-        const area = document.getElementById('kartu-stock-area');
-        const originalBorder = area.style.border;
-        area.style.border = 'none';
-        
-        html2canvas(area, {
-            scale: 2,
-            backgroundColor: "#ffffff",
-            logging: false
-        }).then(canvas => {
-            area.style.border = originalBorder;
-            let link = document.createElement('a');
-            link.download = 'Kartu_Stock__{{ Str::slug($user->location->name ?? "RAMAYANA") }}_{{ \Carbon\Carbon::parse($filterDate)->format("d-m-Y") }}.png';
-            link.href = canvas.toDataURL("image/png");
-            link.click();
+// ── SORTING ──────────────────────────────────────────────────────────────────
+// Default: Nama Barang A→Z (dir=1) saat halaman pertama load
+const sortState = { col: 'name', dir: 1 };
+
+function applySort() {
+    const tbody = document.querySelector('#stock-table tbody');
+    const rows  = Array.from(tbody.querySelectorAll('tr[data-orig-index]'));
+
+    const icons = { 1: '↑', 2: '↓', 0: '⇅' };
+    document.getElementById('sort-name-icon').textContent = sortState.col === 'name' ? icons[sortState.dir] : '⇅';
+    document.getElementById('sort-qty-icon').textContent  = sortState.col === 'qty'  ? icons[sortState.dir] : '⇅';
+
+    if (sortState.dir === 0) {
+        rows.sort((a, b) => parseInt(a.dataset.origIndex) - parseInt(b.dataset.origIndex));
+    } else {
+        rows.sort((a, b) => {
+            if (sortState.col === 'name') {
+                const va = a.dataset.name || '';
+                const vb = b.dataset.name || '';
+                return sortState.dir === 1 ? va.localeCompare(vb) : vb.localeCompare(va);
+            } else {
+                const va = parseFloat(a.dataset.qty) || 0;
+                const vb = parseFloat(b.dataset.qty) || 0;
+                return sortState.dir === 1 ? va - vb : vb - va;
+            }
         });
     }
 
-    // Export table to styled Excel using SheetJS
-    function exportToExcel() {
-        const wb = XLSX.utils.book_new();
-        
-        // Data array manual (untuk kontrol penuh atas formatting)
-        const data = [];
-        
-        // Header laporan (baris 1-4)
-        data.push(["JAYA MANDIRI"]);
-        data.push(["Laporan Posisi Persediaan (Qty) ({{ $user->location->name ?? 'RAMAYANA' }})"]);
-        data.push(["Per Tanggal : {{ \Carbon\Carbon::parse($filterDate)->format('d-m-Y') }}"]);
-        data.push(["SPG: {{ $user->name }}"]);
-        data.push([]); // Baris kosong
-        
-        // Header tabel
-        data.push(["No", "Kode Barang", "Nama Barang", "Total Quantity", "Satuan", "Keterangan"]);
-        
-        // Data stok
-        @php $excelNo = 1; @endphp
-        @foreach($flatStocks as $stock)
-        data.push([{{ $excelNo++ }}, "{{ $stock['kode_barang'] ?: '-' }}", "{{ addslashes($stock['sku']) }}@if(!empty($stock['size'])) {{ $stock['size'] }}@endif", {{ $stock['qty'] }}, "{{ $stock['satuan'] }}", ""]);
-        @endforeach
-        
-        // Footer
-        data.push(["", "", "TOTAL", {{ $totalOverallStock }}, "", ""]);
-        
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        
-        // Set column widths
-        ws['!cols'] = [
-            { wch: 5 },   // No
-            { wch: 15 },  // Kode Barang
-            { wch: 45 },  // Nama Barang
-            { wch: 18 },  // Total Qty
-            { wch: 10 },  // Satuan
-            { wch: 20 }   // Keterangan
-        ];
-        
-        // Merge cells untuk header laporan
-        ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, // JAYA MANDIRI
-            { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }, // Laporan...
-            { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } }, // Per Tanggal
-            { s: { r: 3, c: 0 }, e: { r: 3, c: 5 } }, // SPG
-        ];
-        
-        // Style header cells (bold & centered)
-        const headerStyle = { font: { bold: true, sz: 14 }, alignment: { horizontal: "center" } };
-        const tableHeaderStyle = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E3A5F" } }, alignment: { horizontal: "center" }, border: { top: {style: "thin"}, bottom: {style: "thin"}, left: {style: "thin"}, right: {style: "thin"} } };
-        
-        // Apply styles (SheetJS community doesn't support styles natively, but we can set cell types)
-        // For proper styling, set number formats
-        const dataStartRow = 6; // row index where data starts (0-indexed)
-        const totalRows = data.length;
-        
-        // Format qty column as number
-        for (let i = dataStartRow; i < totalRows; i++) {
-            const cellRef = XLSX.utils.encode_cell({ r: i, c: 3 }); // Column D (Qty)
-            if (ws[cellRef] && typeof ws[cellRef].v === 'number') {
-                ws[cellRef].t = 'n';
-                ws[cellRef].z = '#,##0.00';
+    rows.forEach((row, i) => {
+        tbody.appendChild(row);
+        row.cells[0].textContent    = i + 1;
+        row.style.backgroundColor   = (i % 2 !== 0) ? '#eef2ff' : '#ffffff';
+    });
+}
+
+function sortTable(col) {
+    if (sortState.col === col) {
+        // name: 1(A-Z) → 2(Z-A) → 1(A-Z) — tidak ada default/reset untuk name
+        // qty : 1(kecil-besar) → 2(besar-kecil) → 0(default) → 1 dst
+        if (col === 'name') {
+            sortState.dir = sortState.dir === 1 ? 2 : 1;
+        } else {
+            sortState.dir = (sortState.dir + 1) % 3;
+        }
+    } else {
+        sortState.col = col;
+        sortState.dir = 1;
+    }
+    applySort();
+}
+
+// Jalankan default sort A→Z saat halaman selesai load
+document.addEventListener('DOMContentLoaded', () => applySort());
+
+// ── EXPORT ZIP A4 (Canvas API — tanpa html2canvas, jauh lebih cepat) ─────────
+async function exportToZipA4(btn) {
+    const originalHTML  = btn.innerHTML;
+    btn.disabled        = true;
+
+    const ROWS_PER_PAGE = 30;
+    const PW = 1123, PH = 794; // landscape A4 px @96dpi — lebih lebar untuk tabel
+
+    const allRows     = Array.from(document.querySelectorAll('#stock-table tbody tr[data-orig-index]'));
+    const visibleRows = allRows.filter(r => r.style.display !== 'none');
+    const totalPages  = Math.max(1, Math.ceil(visibleRows.length / ROWS_PER_PAGE));
+
+    const locationName  = '{{ Str::slug($user->location->name ?? "RAMAYANA") }}';
+    const filterDateStr = '{{ \Carbon\Carbon::parse($filterDate)->format("d-m-Y") }}';
+    const locationLabel = '{{ $user->location->name ?? "RAMAYANA" }}';
+    const totalStock    = '{{ number_format($totalOverallStock, 2, ".", "") }}';
+
+    const zip = new JSZip();
+
+    // Warna
+    const C_HEADER = '#1e3a5f';
+    const C_EVEN   = '#eef2ff';
+    const C_WHITE  = '#ffffff';
+    const C_BORDER = '#c0c0c0';
+    const C_DARK   = '#000000';
+
+    // Helper: wrap text dalam lebar tertentu (canvas measureText)
+    function wrapText(ctx, text, maxWidth) {
+        const words = String(text).split(' ');
+        const lines = [];
+        let line    = '';
+        for (const word of words) {
+            const test = line ? line + ' ' + word : word;
+            if (ctx.measureText(test).width > maxWidth && line) {
+                lines.push(line);
+                line = word;
+            } else {
+                line = test;
             }
         }
-        
-        XLSX.utils.book_append_sheet(wb, ws, "Laporan Persediaan");
-        XLSX.writeFile(wb, 'Kartu_Stock_{{ Str::slug($user->location->name ?? "RAMAYANA") }}_{{ \Carbon\Carbon::parse($filterDate)->format("d-m-Y") }}.xlsx');
+        if (line) lines.push(line);
+        return lines.length ? lines : [''];
     }
+
+    for (let page = 0; page < totalPages; page++) {
+        btn.innerHTML = `Memproses halaman ${page + 1}/${totalPages}...`;
+
+        const pageRows = visibleRows.slice(page * ROWS_PER_PAGE, (page + 1) * ROWS_PER_PAGE);
+
+        const canvas  = document.createElement('canvas');
+        canvas.width  = PW * 2; // retina 2x
+        canvas.height = PH * 2;
+        const ctx     = canvas.getContext('2d');
+        ctx.scale(2, 2); // scale up untuk ketajaman
+
+        // Background putih
+        ctx.fillStyle = C_WHITE;
+        ctx.fillRect(0, 0, PW, PH);
+
+        // ── Header laporan ──
+        ctx.fillStyle = C_DARK;
+        ctx.textAlign = 'center';
+
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText('JAYA MANDIRI', PW / 2, 36);
+
+        ctx.font = 'bold 13px Arial';
+        ctx.fillText(`Laporan Posisi Persediaan (Qty) (${locationLabel})`, PW / 2, 56);
+
+        ctx.font = 'bold 11px Arial';
+        ctx.fillText(`Per Tanggal : ${filterDateStr.replace(/-/g, '/')}`, PW / 2, 74);
+
+        ctx.font = '10px Arial';
+        ctx.fillStyle = '#666';
+        ctx.fillText(`Halaman ${page + 1} / ${totalPages}`, PW / 2, 90);
+
+        // ── Tabel ──
+        const tableX      = 20;
+        const tableWidth  = PW - 40;
+        const colWidths   = [
+            tableWidth * 0.04,  // No
+            tableWidth * 0.13,  // Kode Barang
+            tableWidth * 0.42,  // Nama Barang
+            tableWidth * 0.22,  // Qty
+            tableWidth * 0.19,  // Keterangan
+        ];
+        const rowH        = 26;
+        const headerH     = 30;
+        let   curY        = 104;
+
+        // Header tabel
+        ctx.fillStyle = C_HEADER;
+        ctx.fillRect(tableX, curY, tableWidth, headerH);
+
+        ctx.fillStyle = C_WHITE;
+        ctx.font      = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+
+        const headers = ['No', 'Kode Barang', 'Nama Barang', 'Total Quantity', 'Keterangan'];
+        let xOff = tableX;
+        headers.forEach((h, i) => {
+            ctx.fillText(h, xOff + colWidths[i] / 2, curY + 19);
+            xOff += colWidths[i];
+        });
+
+        // Border header
+        ctx.strokeStyle = C_DARK;
+        ctx.lineWidth   = 0.8;
+        xOff = tableX;
+        headers.forEach((_, i) => {
+            ctx.strokeRect(xOff, curY, colWidths[i], headerH);
+            xOff += colWidths[i];
+        });
+        curY += headerH;
+
+        // Baris data
+        pageRows.forEach((row, idx) => {
+            const globalNo = page * ROWS_PER_PAGE + idx + 1;
+            const isEven   = globalNo % 2 === 0;
+            const cells    = row.cells;
+
+            const namaText = cells[2].textContent.trim();
+            const namaLines = wrapText(
+                Object.assign(document.createElement('canvas').getContext('2d'), { font: '10px Arial' }),
+                namaText,
+                colWidths[2] - 8
+            );
+            const rowHeight = Math.max(rowH, namaLines.length * 14 + 8);
+
+            // Background baris
+            ctx.fillStyle = isEven ? C_EVEN : C_WHITE;
+            ctx.fillRect(tableX, curY, tableWidth, rowHeight);
+
+            // Teks tiap sel
+            ctx.fillStyle   = '#444';
+            ctx.font        = '10px Arial';
+            ctx.textAlign   = 'center';
+
+            // No
+            ctx.fillText(String(globalNo), tableX + colWidths[0] / 2, curY + rowHeight / 2 + 4);
+
+            // Kode Barang
+            ctx.font      = 'bold 9px monospace';
+            ctx.textAlign = 'left';
+            ctx.fillText(cells[1].textContent.trim(), tableX + colWidths[0] + 4, curY + rowHeight / 2 + 4);
+
+            // Nama Barang (multi-line)
+            ctx.font = '10px Arial';
+            const namaCtx = canvas.getContext('2d');
+            namaCtx.scale(1, 1);
+            namaLines.forEach((line, li) => {
+                ctx.fillText(
+                    line,
+                    tableX + colWidths[0] + colWidths[1] + 4,
+                    curY + 14 + li * 14
+                );
+            });
+
+            // Qty — warna sesuai nilai
+            const qtyVal   = parseFloat(row.dataset.qty) || 0;
+            ctx.fillStyle  = qtyVal < 0 ? '#dc2626' : (qtyVal === 0 ? '#d97706' : '#059669');
+            ctx.font       = 'bold 10px Arial';
+            ctx.textAlign  = 'center';
+            const qtyX     = tableX + colWidths[0] + colWidths[1] + colWidths[2];
+            ctx.fillText(cells[3].textContent.trim(), qtyX + colWidths[3] / 2, curY + rowHeight / 2 + 4);
+
+            // Border baris
+            ctx.strokeStyle = C_BORDER;
+            ctx.lineWidth   = 0.5;
+            xOff = tableX;
+            colWidths.forEach(w => {
+                ctx.strokeRect(xOff, curY, w, rowHeight);
+                xOff += w;
+            });
+
+            curY += rowHeight;
+        });
+
+        // Footer TOTAL (hanya halaman terakhir)
+        if (page === totalPages - 1) {
+            ctx.fillStyle = C_HEADER;
+            ctx.fillRect(tableX, curY, tableWidth, rowH);
+
+            ctx.fillStyle = C_WHITE;
+            ctx.font      = 'bold 10px Arial';
+            ctx.textAlign = 'right';
+            const totalLabelX = tableX + colWidths[0] + colWidths[1] + colWidths[2] - 6;
+            ctx.fillText('TOTAL :', totalLabelX, curY + 18);
+
+            ctx.textAlign = 'center';
+            const totalQtyX = tableX + colWidths[0] + colWidths[1] + colWidths[2];
+            ctx.fillText(totalStock, totalQtyX + colWidths[3] / 2, curY + 18);
+
+            ctx.strokeStyle = C_DARK;
+            ctx.lineWidth   = 0.8;
+            xOff = tableX;
+            colWidths.forEach(w => {
+                ctx.strokeRect(xOff, curY, w, rowH);
+                xOff += w;
+            });
+        }
+
+        // Canvas → PNG base64 → masuk ZIP
+        const imgData = canvas.toDataURL('image/png').split(',')[1];
+        zip.file(`Halaman_${String(page + 1).padStart(2, '0')}_dari_${totalPages}.png`, imgData, { base64: true });
+    }
+
+    btn.innerHTML = 'Membuat ZIP...';
+    const blob   = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 3 } });
+    const link   = document.createElement('a');
+    link.href     = URL.createObjectURL(blob);
+    link.download = `Kartu_Stock_${locationName}_${filterDateStr}.zip`;
+    link.click();
+
+    btn.disabled  = false;
+    btn.innerHTML = originalHTML;
+}
+
+// ── EXPORT EXCEL ──────────────────────────────────────────────────────────────
+function exportToExcel() {
+    const wb   = XLSX.utils.book_new();
+    const data = [];
+
+    data.push(["JAYA MANDIRI"]);
+    data.push(["Laporan Posisi Persediaan (Qty) ({{ $user->location->name ?? 'RAMAYANA' }})"]);
+    data.push(["Per Tanggal : {{ \Carbon\Carbon::parse($filterDate)->format('d-m-Y') }}"]);
+    data.push(["SPG: {{ $user->name }}"]);
+    data.push([]);
+    data.push(["No", "Kode Barang", "Nama Barang", "Total Quantity", "Satuan", "Keterangan"]);
+
+    @php $excelNo = 1; @endphp
+    @foreach($flatStocks as $stock)
+    data.push([{{ $excelNo++ }}, "{{ $stock['kode_barang'] ?: '-' }}", "{{ addslashes($stock['sku']) }}@if(!empty($stock['size'])) {{ $stock['size'] }}@endif", {{ $stock['qty'] }}, "{{ $stock['satuan'] }}", ""]);
+    @endforeach
+
+    data.push(["", "", "TOTAL", {{ $totalOverallStock }}, "", ""]);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{ wch:5 }, { wch:15 }, { wch:45 }, { wch:18 }, { wch:10 }, { wch:20 }];
+    ws['!merges'] = [
+        { s:{r:0,c:0}, e:{r:0,c:5} },
+        { s:{r:1,c:0}, e:{r:1,c:5} },
+        { s:{r:2,c:0}, e:{r:2,c:5} },
+        { s:{r:3,c:0}, e:{r:3,c:5} },
+    ];
+
+    const dataStartRow = 6;
+    for (let i = dataStartRow; i < data.length; i++) {
+        const cellRef = XLSX.utils.encode_cell({ r: i, c: 3 });
+        if (ws[cellRef] && typeof ws[cellRef].v === 'number') {
+            ws[cellRef].t = 'n';
+            ws[cellRef].z = '#,##0.00';
+        }
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan Persediaan");
+    XLSX.writeFile(wb, 'Kartu_Stock_{{ Str::slug($user->location->name ?? "RAMAYANA") }}_{{ \Carbon\Carbon::parse($filterDate)->format("d-m-Y") }}.xlsx');
+}
 </script>
 
 @endsection

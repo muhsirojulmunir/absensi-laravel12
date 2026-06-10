@@ -98,9 +98,8 @@
                                     <option value="">Ketik untuk mencari produk...</option>
                                     @foreach($availableStocks as $stock)
                                         @php
-                                            $key = $stock->sku . '|' . $stock->warna . '|' . $stock->size . '|' . $stock->satuan;
+                                            $key = $stock->sku . '|' . $stock->size . '|' . $stock->satuan;
                                             $label = $stock->sku;
-                                            if ($stock->warna) $label .= " - " . $stock->warna;
                                             if ($stock->size) $label .= " (Size " . $stock->size . ")";
                                             $label .= " — Sisa Stok: " . $stock->total_qty . " " . ($stock->satuan ?? 'PSG');
                                         @endphp

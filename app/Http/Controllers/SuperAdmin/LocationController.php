@@ -8,10 +8,36 @@ use Illuminate\Http\Request;
 
 class LocationController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $locations = Location::latest()->get();
-        return view('super-admin.locations.index', compact('locations'));
+        $query = $request->get('q', '');
+        $perPage = 10;
+
+        $locations = Location::query();
+
+        if (!empty($query)) {
+            $locations->where('name', 'like', '%' . $query . '%')
+                      ->orWhere('latitude', 'like', '%' . $query . '%')
+                      ->orWhere('longitude', 'like', '%' . $query . '%');
+        }
+
+        $locations = $locations->latest()->paginate($perPage);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'data' => $locations->items(),
+                'pagination' => [
+                    'total' => $locations->total(),
+                    'per_page' => $locations->perPage(),
+                    'current_page' => $locations->currentPage(),
+                    'last_page' => $locations->lastPage(),
+                    'from' => $locations->firstItem(),
+                    'to' => $locations->lastItem(),
+                ]
+            ]);
+        }
+
+        return view('super-admin.locations.index', compact('locations', 'query'));
     }
 
     public function create()

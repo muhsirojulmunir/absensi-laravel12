@@ -517,7 +517,7 @@
                 mode: "range",
                 dateFormat: "Y-m-d",
                 locale: "id",
-                maxDate: "today",
+                maxDate: "{{ \Carbon\Carbon::now()->isFriday() ? \Carbon\Carbon::now()->addDay()->toDateString() : \Carbon\Carbon::today()->toDateString() }}",
                 defaultDate: ["{{ $startDate }}", "{{ $endDate }}"],
                 onChange: function(selectedDates, dateStr, instance) {
                     if (selectedDates.length === 2) {

@@ -25,7 +25,16 @@ class AttendanceMonitoringController extends Controller
 
     public function recap(Request $request)
     {
-        return view('hrd.attendance.recap', $this->buildRecapData($request));
+        $data = $this->buildRecapData($request);
+
+        // Enable filter setiap saat
+        $today = Carbon::now();
+        $canFilter = true;
+
+        $data['canFilter'] = $canFilter;
+        $data['todayName'] = $today->translatedFormat('l');
+
+        return view('hrd.attendance.recap', $data);
     }
 
     public function buildRecapData(Request $request): array
@@ -47,9 +56,8 @@ class AttendanceMonitoringController extends Controller
             $startDate = Carbon::parse($dates[0])->startOfDay();
             $endDate = Carbon::parse($dates[1] ?? $dates[0])->endOfDay();
 
-            if ($endDate->isAfter(Carbon::today()->endOfDay())) {
-                $endDate = Carbon::today()->endOfDay();
-            }
+            // Jangan restrict end date - allow sampai masa depan
+            // (untuk Live Streamer yang perlu bayar sampai Sabtu hari itu)
             if ($startDate->isAfter(Carbon::today()->endOfDay())) {
                 $startDate = Carbon::today()->startOfDay();
             }
@@ -78,7 +86,6 @@ class AttendanceMonitoringController extends Controller
         $divisions = \App\Models\Division::all();
 
         // Get all holidays in this period to determine off days
-        // We get holidays for the whole month/period + some buffer for weekly calculation
         $startWeek = $startDate->copy()->startOfWeek();
         $endWeek = $endDate->copy()->endOfWeek();
         $holidays = \App\Models\Holiday::whereBetween('date', [$startWeek, $endWeek])->get();
@@ -87,7 +94,7 @@ class AttendanceMonitoringController extends Controller
             $user->hadir_count = $user->attendances->where('status', 'Hadir')->count();
             $user->terlambat_count = $user->attendances->where('status', 'Terlambat')->count();
             $user->pulang_cepat_count = $user->attendances->where('is_pulang_cepat', true)->count();
-            
+
             // Collect all "Excuse" dates for the period
             $excuseDates = []; // date => type
             foreach ($user->leaveRequests as $lr) {
@@ -97,16 +104,16 @@ class AttendanceMonitoringController extends Controller
                     $current->addDay();
                 }
             }
-            
+
             // Map attendances for quick lookup (ensure key is Y-m-d)
             $attendanceDates = $user->attendances->mapWithKeys(function ($item) {
                 $d = \Carbon\Carbon::parse($item->date)->toDateString();
                 return [$d => $item->status];
             })->toArray();
-            
+
             $izinDetails = [];
             $liburDetails = [];
-            
+
             // Loop setiap hari dalam periode terpilih
             $currentDate = $startDate->copy();
             while ($currentDate->lte($endDate)) {
@@ -158,13 +165,53 @@ class AttendanceMonitoringController extends Controller
             $user->izin_details = implode("\n", $izinDetails);
             $user->libur_details = implode("\n", $liburDetails);
 
-            // Calculate Meal Allowance: Rp 35.000 per hari masuk (Hadir/Terlambat)
-            $mealRate = 35000;
+            // Calculate Meal Allowance
+            $isLiveStreamer = $user->division && strtolower($user->division->name) === 'live streaming';
             $attendanceDaysCount = $user->attendances->whereIn('status', ['Hadir', 'Terlambat'])->count();
-            $calculatedAmount = $mealRate * $attendanceDaysCount;
+
+            if ($isLiveStreamer) {
+                $calculatedAmount = 0;
+                $currentDateCheck = $startDate->copy();
+                
+                while ($currentDateCheck->lte($endDate)) {
+                    $dateStr = $currentDateCheck->toDateString();
+                    
+                    $hasAttendance = $user->attendances->where('date', $dateStr)->first();
+                    $excuse = $user->leaveRequests
+                        ->where('status', '!=', 'rejected')
+                        ->filter(function($lr) use ($dateStr) {
+                            $checkDate = Carbon::parse($dateStr);
+                            return $checkDate->between($lr->start_date, $lr->end_date);
+                        })
+                        ->first();
+
+                    if ($hasAttendance) {
+                        if (in_array($hasAttendance->status, ['Hadir', 'Terlambat'])) {
+                            $calculatedAmount += 35000;
+                        } elseif (in_array($hasAttendance->status, ['Izin', 'Sakit'])) {
+                            $calculatedAmount += 20000;
+                        }
+                    } elseif ($excuse) {
+                        if (in_array($excuse->type, ['Izin Tidak Masuk', 'Izin Tdk Masuk', 'Sakit', 'Lainnya'])) {
+                            $calculatedAmount += 20000;
+                        }
+                        // Jika tipe-nya Libur / Libur (Day Off), tidak dapat uang makan (tambah 0)
+                    } elseif ($currentDateCheck->isSaturday()) {
+                        // Sabtu auto-hadir jika tidak ada izin/attendance
+                        $calculatedAmount += 35000;
+                    }
+                    
+                    $currentDateCheck->addDay();
+                }
+            } else {
+                // Regular employee: 35rb per hari hadir
+                $calculatedAmount = 35000 * $attendanceDaysCount;
+            }
+
             $user->calculated_meal_allowance = $calculatedAmount;
-            
-            // Check if this period has been paid
+            $user->is_live_streamer = $isLiveStreamer;
+
+            // Check if this period has been paid and update if needed (dynamic history)
             $payment = \App\Models\MealAllowancePayment::where('user_id', $user->id)
                 ->where(function($q) use ($startDate, $endDate) {
                     $q->whereBetween('start_date', [$startDate->toDateString(), $endDate->toDateString()])
@@ -173,9 +220,12 @@ class AttendanceMonitoringController extends Controller
                           $sub->where('start_date', '<=', $startDate->toDateString())
                               ->where('end_date', '>=', $endDate->toDateString());
                       });
-                })
-                ->first();
-            
+                })->first();
+
+            if ($payment) {
+                $payment->update(['amount' => $calculatedAmount]);
+            }
+
             $user->is_meal_paid = $payment ? true : false;
             
             // Jika sudah lunas, set total menjadi 0 agar tidak dihitung sebagai beban tagihan
