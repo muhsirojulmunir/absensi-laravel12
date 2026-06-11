@@ -2,10 +2,16 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @mixin \Illuminate\Database\Eloquent\Builder
+ * @method static Builder|Attendance where(string $column, mixed $operator = null, mixed $value = null)
+ * @method static Builder|Attendance whereDate(string $column, mixed $value)
+ * @method static Builder|Attendance whereNotNull(string $column)
+ * @method static Builder|Attendance whereNull(string $column)
+ * @method static Attendance|null first()
+ * @method static Builder|Attendance query()
  */
 class Attendance extends Model
 {

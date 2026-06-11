@@ -32,12 +32,7 @@
                         class="w-full bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-xl p-3 cursor-not-allowed">
                 </div>
                 
-                <!-- Warna -->
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Warna</label>
-                    <input type="text" name="warna" value="{{ $warna }}" readonly
-                        class="w-full bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-xl p-3 cursor-not-allowed">
-                </div>
+                <!-- No warna anymore -->
             </div>
 
             <!-- Grid Input Qty (Pasang) -->

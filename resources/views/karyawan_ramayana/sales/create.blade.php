@@ -111,11 +111,10 @@
                             <!-- Qty -->
                             <div class="col-span-6 md:col-span-3 relative">
                                 <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Qty (<span x-text="item.satuan"></span>) <span class="text-red-500">*</span></label>
-                                <input type="number" :name="`items[${index}][qty]`" x-model.number="item.qty" required min="1" :max="item.maxQty"
+                                <input type="number" :name="`items[${index}][qty]`" x-model.number="item.qty" required min="1"
                                     placeholder="1"
-                                    @input="if(item.qty > item.maxQty) item.qty = item.maxQty"
                                     class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 p-3 text-sm transition-colors">
-                                <p class="text-[10px] mt-1 font-semibold" :class="item.maxQty > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" x-text="item.maxQty > 0 ? 'Maksimal: ' + item.maxQty : 'Pilih produk dulu'"></p>
+                                <p class="text-[10px] mt-1 font-semibold" :class="item.maxQty > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" x-text="item.product_key !== '' ? 'Sisa stok saat ini: ' + item.maxQty : 'Pilih produk dulu'"></p>
                             </div>
 
                             <!-- Nominal -->
@@ -231,10 +230,6 @@
                                 } else {
                                     self.items[index].maxQty = 0;
                                     self.items[index].satuan = 'PSG';
-                                }
-                                
-                                if(self.items[index].qty > self.items[index].maxQty) {
-                                    self.items[index].qty = self.items[index].maxQty;
                                 }
                             } else {
                                 self.items[index].maxQty = 0;

@@ -41,13 +41,7 @@
                         class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 p-3 transition-colors">
                 </div>
                 
-                <!-- Warna -->
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Pilih Warna</label>
-                    <input type="text" name="warna"
-                        placeholder="Contoh: Hitam Putih"
-                        class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 p-3 transition-colors">
-                </div>
+                <!-- Warna input removed -->
             </div>
 
             <!-- Kategori Ukuran Diganti Custom -->

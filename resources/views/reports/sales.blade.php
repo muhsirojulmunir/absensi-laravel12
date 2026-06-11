@@ -177,7 +177,7 @@
                         <th class="text-left px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Counter</th>
                         <th class="text-left px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Produk / SKU</th>
                         <th class="text-left px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Size</th>
-                        <th class="text-left px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Warna</th>
+                        <!-- removed warna th -->
                         <th class="text-right px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Qty (Psg)</th>
                         <th class="text-right px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Nominal (Rp)</th>
                     </tr>
@@ -214,9 +214,7 @@
                             <td class="px-6 py-3.5">
                                 <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $sale->size ?: '-' }}</span>
                             </td>
-                            <td class="px-6 py-3.5">
-                                <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $sale->warna ?: '-' }}</span>
-                            </td>
+                            <!-- removed warna td -->
                             <td class="px-6 py-3.5 text-right">
                                 <span class="inline-flex items-center justify-center min-w-[2.5rem] bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-lg text-xs font-black">
                                     {{ $sale->qty }}
@@ -244,7 +242,7 @@
                 @if($sales->count() > 0)
                 <tfoot>
                     <tr class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800/80 dark:to-slate-800/80 border-t-2 border-blue-200 dark:border-slate-700">
-                        <td colspan="7" class="px-6 py-4 text-right">
+                        <td colspan="6" class="px-6 py-4 text-right">
                             <span class="text-xs font-black text-blue-800 dark:text-blue-200 uppercase tracking-widest">Grand Total</span>
                         </td>
                         <td class="px-6 py-4 text-right">

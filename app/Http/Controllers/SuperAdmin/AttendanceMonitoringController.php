@@ -19,11 +19,11 @@ class AttendanceMonitoringController extends Controller
 {
     private function isHenrySuperAdmin(?User $user): bool
     {
-        if (!$user) {
+        if (!$user instanceof User) {
             return false;
         }
 
-        $name = strtolower(trim((string) $user->name));
+        $name     = strtolower(trim((string) $user->name));
         $username = strtolower(trim((string) ($user->username ?? '')));
 
         return $name === 'henry' || $username === 'henry';
@@ -31,6 +31,7 @@ class AttendanceMonitoringController extends Controller
 
     public function index(Request $request): View
     {
+        /** @var User|null $currentUser */
         $currentUser = Auth::user();
         if ($this->isHenrySuperAdmin($currentUser)) {
             $employees = User::whereHas('role', function ($q) {
@@ -47,14 +48,14 @@ class AttendanceMonitoringController extends Controller
 
             if ($employeeId) {
                 $attendances = Attendance::query()
-                    ->whereRaw('user_id = ?', [$employeeId], 'and')
+                    ->where('user_id', $employeeId)
                     ->whereDate('date', '>=', $start->toDateString())
                     ->whereDate('date', '<=', $end->toDateString())
                     ->orderBy('date')
                     ->get();
 
                 $leaves = LeaveRequest::query()
-                    ->whereRaw('user_id = ?', [$employeeId], 'and')
+                    ->where('user_id', $employeeId)
                     ->whereDate('start_date', '>=', $start->toDateString())
                     ->whereDate('start_date', '<=', $end->toDateString())
                     ->orderBy('start_date')
@@ -77,13 +78,13 @@ class AttendanceMonitoringController extends Controller
             } else {
                 $allReports = $employees->map(function ($employee) use ($start, $end) {
                     $attendances = Attendance::query()
-                        ->whereRaw('user_id = ?', [$employee->id], 'and')
+                        ->where('user_id', $employee->id)
                         ->whereDate('date', '>=', $start->toDateString())
                         ->whereDate('date', '<=', $end->toDateString())
                         ->get();
 
                     $leaves = LeaveRequest::query()
-                        ->whereRaw('user_id = ?', [$employee->id], 'and')
+                        ->where('user_id', $employee->id)
                         ->whereDate('start_date', '>=', $start->toDateString())
                         ->whereDate('start_date', '<=', $end->toDateString())
                         ->get();
@@ -204,7 +205,7 @@ class AttendanceMonitoringController extends Controller
             $existing->update([
                 'check_in'        => $request->check_in . ':00',
                 'status'          => $status,
-                'lateness_minutes'=> $latenessMinutes,
+                'lateness_minutes' => $latenessMinutes,
                 'is_pulang_cepat' => false,
                 'note'            => $request->note ?? 'Absen Manual oleh Admin',
                 'lat'             => 0,
@@ -217,7 +218,7 @@ class AttendanceMonitoringController extends Controller
                 'check_in'        => $request->check_in . ':00',
                 'check_out'       => null,
                 'status'          => $status,
-                'lateness_minutes'=> $latenessMinutes,
+                'lateness_minutes' => $latenessMinutes,
                 'is_pulang_cepat' => false,
                 'note'            => $request->note ?? 'Absen Manual oleh Admin',
                 'lat'             => 0,
@@ -244,7 +245,7 @@ class AttendanceMonitoringController extends Controller
 
         $targetDate = Carbon::parse($request->date)->toDateString();
         $employee   = User::findOrFail($request->user_id);
-        $userDivision= $employee->division ? strtolower(trim($employee->division->name)) : '';
+        $userDivision = $employee->division ? strtolower(trim($employee->division->name)) : '';
         $isLiveStreaming = str_contains($userDivision, 'live streaming');
 
         // Cari attendance hari ini, atau kemarin (untuk live streaming yang shift malam)

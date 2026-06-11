@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\SalesInput;
 use App\Models\Location;
 use App\Models\User;
+use App\Models\IncomingStock;
+use App\Models\IncomingStockItem;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -39,16 +41,20 @@ class RamayanaStockController extends Controller
         $totalOverallStock = 0;
         
         foreach ($users as $user) {
-            $rawStocks = SalesInput::select('sku',
-                DB::raw("SUM(CASE WHEN type = 'stock_in' THEN qty ELSE -qty END) as current_stock")
+            $rawStocks = SalesInput::select(DB::raw('MAX(kode_barang) as kode_barang'), 'sku', 'satuan',
+                DB::raw("SUM(CASE WHEN type IN ('stock_in','incoming') THEN qty ELSE -qty END) as current_stock")
             )
             ->where('user_id', $user->id)
             ->where('date', '<=', $filterDate)
-            ->groupBy('sku')
+            ->groupBy('sku', 'satuan')
             ->get();
             
-            $counterTotalStock = $rawStocks->sum('current_stock');
-            $counterTotalSku = $rawStocks->count();
+            $counterTotalStock = $rawStocks->sum(function($item) {
+                return abs($item->current_stock);
+            });
+            $counterTotalSku = $rawStocks->filter(function($item) {
+                return $item->current_stock != 0;
+            })->count();
             
             $counterStats[] = [
                 'user_id' => $user->id,
@@ -89,13 +95,12 @@ class RamayanaStockController extends Controller
         $totalOverallStock = 0;
 
         foreach ($rawStocks as $stock) {
-            $key = $stock->sku . '|' . $stock->warna . '|' . $stock->size;
+            $key = $stock->sku . '|' . $stock->size;
             
             if (!isset($groupedStocks[$key])) {
                 $groupedStocks[$key] = [
                     'kode_barang' => $stock->kode_barang,
                     'sku' => $stock->sku,
-                    'warna' => $stock->warna,
                     'size' => $stock->size,
                     'satuan' => $stock->satuan ?? 'PSG',
                     'qty' => 0,
@@ -103,7 +108,7 @@ class RamayanaStockController extends Controller
                 ];
             }
             
-            if ($stock->type === 'stock_in') {
+            if (in_array($stock->type, ['stock_in', 'incoming'])) {
                 $groupedStocks[$key]['has_stock_in'] = true;
             }
             
@@ -115,14 +120,14 @@ class RamayanaStockController extends Controller
                 $groupedStocks[$key]['satuan'] = $stock->satuan;
             }
 
-            $qty = $stock->type === 'stock_in' ? $stock->qty : -$stock->qty;
+            $qty = in_array($stock->type, ['stock_in', 'incoming']) ? $stock->qty : -$stock->qty;
             $groupedStocks[$key]['qty'] += $qty;
         }
 
         $flatStocks = [];
         
         foreach ($groupedStocks as $st) {
-            if ($st['has_stock_in']) {
+            if ($st['qty'] != 0) {
                 $flatStocks[] = $st;
                 $totalUniqueSkus[$st['sku']] = true;
                 $totalOverallStock += $st['qty'];
@@ -239,11 +244,15 @@ class RamayanaStockController extends Controller
             $insertData = [];
             $now = now();
 
-            // Hapus SEMUA stock_in lama milik user ini (clean slate per import)
+            // Hapus SEMUA stock_in DAN incoming lama milik user ini (clean slate per import)
             SalesInput::where('user_id', $userId)
-                ->where('type', 'stock_in')
+                ->whereIn('type', ['stock_in', 'incoming'])
                 ->delete();
-            $debugLog[] = "Deleted all old stock_in for user $userId";
+            $debugLog[] = "Deleted all old stock_in and incoming for user $userId";
+
+            // Hapus juga riwayat barang masuk (incoming_stocks + items cascade)
+            IncomingStock::where('user_id', $userId)->delete();
+            $debugLog[] = "Deleted all incoming_stocks history for user $userId";
 
             // Ambil total penjualan yang sudah ada untuk kompensasi
             $existingSales = SalesInput::select('kode_barang', DB::raw("SUM(qty) as total_out"))
@@ -346,6 +355,180 @@ class RamayanaStockController extends Controller
             return redirect()->route('super-admin.ramayana-stocks.index')->with('success', $message);
         } else {
             return redirect()->back()->with('error', 'Gagal membaca file Excel. ' . SimpleXLSX::parseError());
+        }
+    }
+
+    // ========================================================================
+    // BARANG MASUK (INCOMING STOCK)
+    // ========================================================================
+
+    /**
+     * Form tambah barang masuk untuk counter tertentu
+     */
+    public function createIncoming($userId)
+    {
+        $user = User::findOrFail($userId);
+
+        // Ambil daftar SKU yang sudah ada di stok counter ini
+        $existingSkus = SalesInput::where('user_id', $user->id)
+            ->where('type', 'stock_in')
+            ->select('sku', 'kode_barang', 'size', 'warna', 'satuan')
+            ->distinct()
+            ->orderBy('sku')
+            ->get();
+
+        return view('super-admin.ramayana-stocks.incoming.create', compact('user', 'existingSkus'));
+    }
+
+    /**
+     * Simpan barang masuk
+     */
+    public function storeIncoming(Request $request, $userId)
+    {
+        $user = User::findOrFail($userId);
+
+        $request->validate([
+            'date' => 'required|date',
+            'note' => 'nullable|string|max:255',
+            'items' => 'required|array|min:1',
+            'items.*.sku' => 'required|string',
+            'items.*.qty' => 'required|integer|min:1',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $totalItems = count($request->items);
+            $totalQty = 0;
+
+            // Buat record riwayat
+            $incoming = IncomingStock::create([
+                'user_id' => $user->id,
+                'date' => $request->date,
+                'note' => $request->note,
+                'total_items' => $totalItems,
+                'total_qty' => 0, // akan diupdate setelah loop
+                'created_by' => auth()->id(),
+            ]);
+
+            $now = now();
+
+            foreach ($request->items as $item) {
+                $qty = (int) $item['qty'];
+                $totalQty += $qty;
+
+                // Simpan detail item ke incoming_stock_items
+                IncomingStockItem::create([
+                    'incoming_stock_id' => $incoming->id,
+                    'sku' => $item['sku'],
+                    'kode_barang' => $item['kode_barang'] ?? null,
+                    'size' => $item['size'] ?? null,
+                    'warna' => $item['warna'] ?? null,
+                    'satuan' => $item['satuan'] ?? 'PSG',
+                    'qty' => $qty,
+                ]);
+
+                // Tambahkan ke sales_inputs sebagai type 'incoming'
+                SalesInput::create([
+                    'user_id' => $user->id,
+                    'type' => 'incoming',
+                    'date' => $request->date,
+                    'sku' => $item['sku'],
+                    'kode_barang' => $item['kode_barang'] ?? null,
+                    'size' => $item['size'] ?? null,
+                    'warna' => $item['warna'] ?? null,
+                    'satuan' => $item['satuan'] ?? 'PSG',
+                    'nominal' => null,
+                    'qty' => $qty,
+                ]);
+            }
+
+            $incoming->update(['total_qty' => $totalQty]);
+
+            DB::commit();
+
+            return redirect()
+                ->route('super-admin.ramayana-stocks.show', $user->id)
+                ->with('success', "Berhasil menambahkan $totalItems barang masuk dengan total $totalQty qty.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal menyimpan barang masuk: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Riwayat barang masuk per counter
+     */
+    public function incomingHistory($userId)
+    {
+        $user = User::findOrFail($userId);
+
+        $incomingStocks = IncomingStock::where('user_id', $user->id)
+            ->with('createdBy')
+            ->orderByDesc('date')
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Grup berdasarkan bulan
+        $groupedByMonth = $incomingStocks->groupBy(function ($item) {
+            return Carbon::parse($item->date)->translatedFormat('F Y');
+        });
+
+        $totalRecords = $incomingStocks->count();
+        $grandTotalQty = $incomingStocks->sum('total_qty');
+        $grandTotalItems = $incomingStocks->sum('total_items');
+
+        return view('super-admin.ramayana-stocks.incoming.history', compact(
+            'user', 'groupedByMonth', 'totalRecords', 'grandTotalQty', 'grandTotalItems'
+        ));
+    }
+
+    /**
+     * Detail barang masuk spesifik (format laporan stok)
+     */
+    public function incomingDetail($userId, $incomingStockId)
+    {
+        $user = User::findOrFail($userId);
+        $incomingStock = IncomingStock::where('user_id', $user->id)
+            ->with(['items', 'createdBy'])
+            ->findOrFail($incomingStockId);
+
+        return view('super-admin.ramayana-stocks.incoming.show', compact('user', 'incomingStock'));
+    }
+
+    /**
+     * Hapus riwayat barang masuk beserta data stoknya
+     */
+    public function destroyIncoming($userId, $incomingStockId)
+    {
+        $user = User::findOrFail($userId);
+        $incomingStock = IncomingStock::where('user_id', $user->id)->findOrFail($incomingStockId);
+
+        DB::beginTransaction();
+        try {
+            // Hapus data incoming di sales_inputs yang sesuai tanggal dan item
+            foreach ($incomingStock->items as $item) {
+                SalesInput::where('user_id', $user->id)
+                    ->where('type', 'incoming')
+                    ->where('date', $incomingStock->date->toDateString())
+                    ->where('sku', $item->sku)
+                    ->where('qty', $item->qty)
+                    ->limit(1)
+                    ->delete();
+            }
+
+            // Hapus incoming_stock (items auto cascade)
+            $incomingStock->delete();
+
+            DB::commit();
+
+            return redirect()
+                ->route('super-admin.ramayana-stocks.incoming.history', $user->id)
+                ->with('success', 'Riwayat barang masuk berhasil dihapus.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
         }
     }
 }

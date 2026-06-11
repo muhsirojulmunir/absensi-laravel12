@@ -13,6 +13,7 @@ class LeaveApprovalController extends Controller
 {
     public function index(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = auth()->user();
         
         // Ko Henry (Rekap Izin)
@@ -29,7 +30,7 @@ class LeaveApprovalController extends Controller
 
         $targetRole = $user->role->slug === 'pic_ramayana' ? 'karyawan_ramayana' : 'karyawan';
 
-        $query = LeaveRequest::with(['user', 'user.division'])
+        $query = LeaveRequest::query()->with(['user', 'user.division'])
             ->whereHas('user', function ($q) use ($isKoHenry, $isJMN, $targetRole) {
                 $q->where('is_active', true);
                 if (!$isKoHenry && !$isJMN) {
@@ -57,8 +58,9 @@ class LeaveApprovalController extends Controller
         $leaveRequests = $query->latest()->paginate(10)->withQueryString();
 
         // Calculate monthly stats globally
-        $statsQuery = LeaveRequest::whereMonth('created_at', now()->month)
-          ->whereYear('created_at', now()->year);
+        $statsQuery = LeaveRequest::query()
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year);
 
         $totalCount = (clone $statsQuery)->count();
         $pendingCount = (clone $statsQuery)->where('status', 'pending')->count();

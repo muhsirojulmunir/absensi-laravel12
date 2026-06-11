@@ -21,7 +21,7 @@ class RamayanaStockController extends Controller
         $search = $request->query('search', '');
         $filterDate = $request->query('date', Carbon::today()->toDateString());
         
-        $query = User::whereHas('role', function($q) {
+        $query = User::query()->whereHas('role', function($q) {
             $q->where('slug', 'karyawan_ramayana');
         })->with('location');
         
@@ -72,7 +72,7 @@ class RamayanaStockController extends Controller
         $search = $request->query('search', '');
         $filterDate = $request->query('date', Carbon::today()->toDateString());
 
-        $query = SalesInput::where('user_id', $user->id)
+        $query = SalesInput::query()->where('user_id', $user->id)
             ->where('date', '<=', $filterDate);
 
         if (!empty($search)) {
@@ -89,13 +89,12 @@ class RamayanaStockController extends Controller
         $totalOverallStock = 0;
 
         foreach ($rawStocks as $stock) {
-            $key = $stock->sku . '|' . $stock->warna . '|' . $stock->size;
+            $key = $stock->sku . '|' . $stock->size;
             
             if (!isset($groupedStocks[$key])) {
                 $groupedStocks[$key] = [
                     'kode_barang' => $stock->kode_barang,
                     'sku' => $stock->sku,
-                    'warna' => $stock->warna,
                     'size' => $stock->size,
                     'satuan' => $stock->satuan ?? 'PSG',
                     'qty' => 0,

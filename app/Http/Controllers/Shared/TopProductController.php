@@ -78,8 +78,8 @@ class TopProductController extends Controller
         $counterQuery = clone $query;
 
         // 1. Global Top Products (Group by SKU, Warna, Size)
-        $globalSales = $globalQuery->select('sku', 'warna', 'size', DB::raw('SUM(qty) as total_qty'), DB::raw('SUM(nominal) as total_nominal'))
-            ->groupBy('sku', 'warna', 'size')
+        $globalSales = $globalQuery->select('sku', 'size', DB::raw('SUM(qty) as total_qty'), DB::raw('SUM(nominal) as total_nominal'))
+            ->groupBy('sku', DB::raw("IFNULL(size, '')"))
             ->orderBy('total_qty', 'desc')
             ->take(10)
             ->get();
@@ -117,7 +117,7 @@ class TopProductController extends Controller
                         });
                     }
                 })
-                ->groupBy('sku', 'warna')
+                ->groupBy('sku')
                 ->get()
                 ->keyBy(function ($item) {
                     return $item->sku . '_' . $item->warna;
@@ -156,7 +156,7 @@ class TopProductController extends Controller
                 DB::raw('SUM(sales_inputs.qty) as total_qty'),
                 DB::raw('SUM(sales_inputs.nominal) as total_nominal')
             )
-            ->groupBy('locations.id', 'locations.name', 'sales_inputs.sku', 'sales_inputs.warna')
+            ->groupBy('locations.id', 'locations.name', 'sales_inputs.sku')
             ->orderBy('locations.name', 'asc')
             ->orderBy('total_qty', 'desc')
             ->get();

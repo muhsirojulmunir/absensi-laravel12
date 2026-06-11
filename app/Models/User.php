@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Role;
 
 class User extends Authenticatable
 {
@@ -123,7 +124,10 @@ class User extends Authenticatable
         };
 
         $lastUser = self::where('employee_id', 'LIKE', $prefix . '-%')
-            ->orderByRaw('CAST(SUBSTRING(employee_id, ' . (strlen($prefix) + 2) . ') AS UNSIGNED) DESC')
+            ->orderByRaw(
+                'CAST(SUBSTRING(employee_id, ? ) AS UNSIGNED) DESC',
+                [strlen($prefix) + 2]
+            )
             ->first();
 
         if (!$lastUser) {

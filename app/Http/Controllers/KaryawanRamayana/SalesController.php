@@ -38,12 +38,14 @@ class SalesController extends Controller
         $userId = Auth::id();
 
         // Calculate available stock per SKU, Warna, Size
-        $availableStocks = SalesInput::select('sku', 'warna', 'size', 'satuan',
-            DB::raw("SUM(CASE WHEN type = 'stock_in' THEN qty ELSE -qty END) as total_qty")
+        $availableStocks = SalesInput::select(
+            'sku', 
+            DB::raw("IFNULL(size, '') as size"), 
+            'satuan',
+            DB::raw("SUM(CASE WHEN type IN ('stock_in', 'incoming') THEN qty ELSE -qty END) as total_qty")
         )
         ->where('user_id', $userId)
-        ->groupBy('sku', 'warna', 'size', 'satuan')
-        ->having('total_qty', '>', 0)
+        ->groupBy('sku', DB::raw("IFNULL(size, '')"), 'satuan')
         ->get();
 
         return view('karyawan_ramayana.sales.create', compact('availableStocks'));
@@ -67,38 +69,52 @@ class SalesController extends Controller
         foreach ($request->items as $index => $item) {
             $nominal = preg_replace('/[^0-9]/', '', $item['nominal']);
             
-            // Format product_key: sku|warna|size|satuan
+            // Format product_key: sku|size|satuan
             $productParts = explode('|', $item['product_key']);
             $sku = $productParts[0] ?? '';
-            $warna = isset($productParts[1]) && $productParts[1] !== '' ? $productParts[1] : null;
-            $size = isset($productParts[2]) && $productParts[2] !== '' ? $productParts[2] : null;
-            $satuan = isset($productParts[3]) && $productParts[3] !== '' ? $productParts[3] : 'PSG';
+            $warna = '';
+            $size = isset($productParts[1]) && $productParts[1] !== '' ? $productParts[1] : '';
+            $satuan = isset($productParts[2]) && $productParts[2] !== '' ? $productParts[2] : 'PSG';
             
             $qty = (int)$item['qty'];
 
             // Cek ketersediaan stok secara persis
-            $stockInQuery = SalesInput::where('user_id', $userId)
-                ->where('sku', $sku)
-                ->where('type', 'stock_in');
+            $stockInQuery = SalesInput::where('user_id', '=', $userId, 'and')
+                ->where('sku', '=', $sku, 'and')
+                ->whereIn('type', ['stock_in', 'incoming']);
                 
-            if ($warna) $stockInQuery->where('warna', $warna); else $stockInQuery->where(function($q) { $q->whereNull('warna')->orWhere('warna', ''); });
-            if ($size) $stockInQuery->where('size', $size); else $stockInQuery->where(function($q) { $q->whereNull('size')->orWhere('size', ''); });
+            if ($size) {
+                $stockInQuery->where('size', '=', $size, 'and');
+            } else {
+                $stockInQuery->where(function($q) {
+                    $q->whereNull('size')->orWhere('size', '=', '', 'and');
+                });
+            }
             $stockIn = $stockInQuery->sum('qty');
 
-            $stockOutQuery = SalesInput::where('user_id', $userId)
-                ->where('sku', $sku)
-                ->where('type', 'sale');
-            if ($warna) $stockOutQuery->where('warna', $warna); else $stockOutQuery->where(function($q) { $q->whereNull('warna')->orWhere('warna', ''); });
-            if ($size) $stockOutQuery->where('size', $size); else $stockOutQuery->where(function($q) { $q->whereNull('size')->orWhere('size', ''); });
+            $stockOutQuery = SalesInput::where('user_id', '=', $userId, 'and')
+                ->where('sku', '=', $sku, 'and')
+                ->where('type', '=', 'sale', 'and');
+            if ($size) {
+                $stockOutQuery->where('size', '=', $size, 'and');
+            } else {
+                $stockOutQuery->where(function($q) {
+                    $q->whereNull('size')->orWhere('size', '=', '', 'and');
+                });
+            }
             $stockOut = $stockOutQuery->sum('qty');
 
             $availableStock = $stockIn - $stockOut;
 
-            if ($qty > $availableStock) {
+            $newStock = $availableStock - $qty;
+            if ($newStock <= 0) {
                 $productName = $sku;
-                if ($warna) $productName .= " ($warna)";
                 if ($size) $productName .= " Size $size";
-                $errors["items.$index.qty"] = "Stok '$productName' tidak mencukupi! Sisa stok: $availableStock $satuan.";
+                if ($newStock == 0) {
+                    $errors[] = "Peringatan: Stok '$productName' sekarang habis (0 $satuan).";
+                } else {
+                    $errors[] = "Peringatan: Stok '$productName' menjadi minus ($newStock $satuan).";
+                }
             }
 
             $insertData[] = [
@@ -116,11 +132,12 @@ class SalesController extends Controller
             ];
         }
 
-        if (!empty($errors)) {
-            throw \Illuminate\Validation\ValidationException::withMessages($errors);
-        }
-
         SalesInput::insert($insertData);
+
+        if (!empty($errors)) {
+            $warningMessage = implode('<br>', $errors);
+            return redirect()->route('karyawan_ramayana.sales.index')->with('success', 'Data penjualan berhasil disimpan.')->with('warning', $warningMessage);
+        }
 
         return redirect()->route('karyawan_ramayana.sales.index')->with('success', 'Data penjualan berhasil disimpan.');
     }
@@ -131,7 +148,7 @@ class SalesController extends Controller
             abort(403);
         }
 
-        $sale->delete();
+        SalesInput::destroy($sale->id);
 
         return redirect()->route('karyawan_ramayana.sales.index')->with('success', 'Data penjualan berhasil dihapus.');
     }

@@ -56,9 +56,6 @@
                         @if(!empty($stock['kode_barang']))
                         <p class="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">Kode: {{ $stock['kode_barang'] }}</p>
                         @endif
-                        @if(!empty($stock['warna']))
-                        <p class="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5">{{ $stock['warna'] }}</p>
-                        @endif
                     </div>
                     <div class="flex-shrink-0 ml-3">
                         <div class="px-3 py-1 bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-400 rounded-full text-xs font-bold whitespace-nowrap border border-fuchsia-200 dark:border-fuchsia-800/50">

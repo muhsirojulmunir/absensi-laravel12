@@ -71,6 +71,8 @@ class UserController extends Controller
             'phone' => $request->phone,
             'address' => $request->address,
             'position' => $request->position,
+            'birth_place' => $request->birth_place,
+            'birth_date' => $request->birth_date,
         ]);
 
         return redirect()->route('super-admin.users.index')->with('success', 'User created successfully.');
@@ -94,7 +96,7 @@ class UserController extends Controller
             'location_id' => 'nullable|exists:locations,id',
         ]);
 
-        $data = $request->only(['name', 'username', 'email', 'role_id', 'division_id', 'location_id', 'employee_id', 'phone', 'address', 'position']);
+        $data = $request->only(['name', 'username', 'email', 'role_id', 'division_id', 'location_id', 'employee_id', 'phone', 'address', 'position', 'birth_place', 'birth_date']);
         
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);

@@ -20,7 +20,15 @@
             </p>
         </div>
 
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2 mt-4 sm:mt-0">
+            <a href="{{ route('super-admin.ramayana-stocks.incoming.create', $user->id) }}" class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-800/50 rounded-xl text-sm font-bold shadow-sm transition-all">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Barang Masuk
+            </a>
+            <a href="{{ route('super-admin.ramayana-stocks.incoming.history', $user->id) }}" class="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-800/50 rounded-xl text-sm font-bold shadow-sm transition-all">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Riwayat Barang Masuk
+            </a>
             <button id="btn-zip" onclick="exportToZipA4(this)" class="inline-flex items-center px-4 py-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-800/50 rounded-xl text-sm font-bold shadow-sm transition-all">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                 Download ZIP (A4)
@@ -90,9 +98,9 @@
                 @php $rowNo = 1; @endphp
                 @forelse($flatStocks as $stock)
                 @php $isEven = $rowNo % 2 === 0; @endphp
-                <tr x-show="search === '' || '{{ strtolower($stock['sku'] . ' ' . $stock['kode_barang']) }}'.includes(search.toLowerCase())"
+                <tr x-show="search === '' || '{{ strtolower(($stock['sku'] ?? '') . ' ' . ($stock['kode_barang'] ?? '')) }}'.includes(search.toLowerCase())"
                     data-orig-index="{{ $rowNo - 1 }}"
-                    data-name="{{ strtolower($stock['sku']) }}@if(!empty($stock['size'])) {{ strtolower($stock['size']) }}@endif"
+                    data-name="{{ strtolower($stock['sku'] ?? '') }}@if(!empty($stock['size'])) {{ strtolower($stock['size']) }}@endif"
                     data-qty="{{ $stock['qty'] }}"
                     style="background-color: {{ $isEven ? '#eef2ff' : '#ffffff' }};">
                     <td style="border: 1px solid #c0c0c0; padding: 8px; text-align: center; color: #666;">{{ $rowNo++ }}</td>
@@ -408,7 +416,7 @@ function exportToExcel() {
 
     @php $excelNo = 1; @endphp
     @foreach($flatStocks as $stock)
-    data.push([{{ $excelNo++ }}, "{{ $stock['kode_barang'] ?: '-' }}", "{{ addslashes($stock['sku']) }}@if(!empty($stock['size'])) {{ $stock['size'] }}@endif", {{ $stock['qty'] }}, "{{ $stock['satuan'] }}", ""]);
+    data.push([{{ $excelNo++ }}, "{{ $stock['kode_barang'] ?: '-' }}", "{{ addslashes($stock['sku'] ?? '') }}@if(!empty($stock['size'])) {{ $stock['size'] }}@endif", {{ $stock['qty'] }}, "{{ $stock['satuan'] }}", ""]);
     @endforeach
 
     data.push(["", "", "TOTAL", {{ $totalOverallStock }}, "", ""]);

@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -76,6 +81,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/ramayana-stocks/download-template', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'downloadTemplate'])->name('ramayana-stocks.download-template');
         Route::get('/ramayana-stocks/{user}', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'show'])->name('ramayana-stocks.show');
         Route::post('/ramayana-stocks/import', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'import'])->name('ramayana-stocks.import');
+
+        // Incoming Stocks (Barang Masuk)
+        Route::get('/ramayana-stocks/{user}/incoming/create', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'createIncoming'])->name('ramayana-stocks.incoming.create');
+        Route::post('/ramayana-stocks/{user}/incoming', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'storeIncoming'])->name('ramayana-stocks.incoming.store');
+        Route::get('/ramayana-stocks/{user}/incoming/history', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'incomingHistory'])->name('ramayana-stocks.incoming.history');
+        Route::get('/ramayana-stocks/{user}/incoming/{incomingStock}', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'incomingDetail'])->name('ramayana-stocks.incoming.show');
+        Route::delete('/ramayana-stocks/{user}/incoming/{incomingStock}', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'destroyIncoming'])->name('ramayana-stocks.incoming.destroy');
     });
 
     Route::prefix('pic')->name('pic.')->group(function () {

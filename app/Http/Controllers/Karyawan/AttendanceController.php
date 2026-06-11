@@ -21,7 +21,7 @@ class AttendanceController extends Controller
     {
         $userAttendances = Auth::user()->attendances()->get();
         
-        $holidays = \App\Models\Holiday::where(function ($query) {
+        $holidays = \App\Models\Holiday::query()->where(function ($query) {
             $query->whereNull('division_id')
                   ->orWhere('division_id', Auth::user()->division_id);
         })->get();

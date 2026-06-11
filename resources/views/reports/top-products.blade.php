@@ -177,7 +177,6 @@
                                         $trendColor = $trendVal > 0 ? '#22c55e' : ($trendVal < 0 ? '#ef4444' : '#64748b');
                                         $trendSign = $trendVal > 0 ? '+' : '';
                                         $info = collect([
-                                            $item->warna ?: null,
                                             $item->size ? 'Size ' . $item->size : null,
                                         ])->filter()->implode(' · ');
                                     @endphp

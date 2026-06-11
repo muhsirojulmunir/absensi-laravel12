@@ -17,26 +17,25 @@ class StockController extends Controller
         $user = Auth::user();
         
         // Group stock for this specific user
-        $rawStocks = SalesInput::select('sku', 'kode_barang', 'warna', 'size', 'satuan',
+        $rawStocks = SalesInput::select('sku', DB::raw('MAX(kode_barang) as kode_barang'), DB::raw("IFNULL(size, '') as size"), 'satuan',
                 DB::raw("SUM(CASE WHEN type = 'stock_in' THEN qty ELSE 0 END) as total_in"),
                 DB::raw("SUM(CASE WHEN type = 'sale' THEN qty ELSE 0 END) as total_out"),
                 DB::raw("SUM(CASE WHEN type = 'stock_in' THEN qty ELSE -qty END) as current_stock")
             )
             ->where('user_id', $userId)
-            ->groupBy('sku', 'kode_barang', 'warna', 'size', 'satuan')
+            ->groupBy('sku', DB::raw("IFNULL(size, '')"), 'satuan')
             ->get();
 
         $groupedStocks = [];
         $totalOverallStock = 0;
 
         foreach ($rawStocks as $stock) {
-            $key = $stock->sku . '|' . $stock->warna;
+            $key = $stock->sku . '|' . $stock->size . '|' . $stock->satuan;
 
             if (!isset($groupedStocks[$key])) {
                 $groupedStocks[$key] = [
                     'sku' => $stock->sku,
                     'kode_barang' => $stock->kode_barang,
-                    'warna' => $stock->warna,
                     'total_stock' => 0,
                     'sizes' => []
                 ];
@@ -70,7 +69,6 @@ class StockController extends Controller
         $request->validate([
             'date' => 'required|date',
             'sku' => 'required|string|max:255',
-            'warna' => 'nullable|string|max:100',
             'sizes' => 'required|array',
             'sizes.*' => 'nullable|integer|min:0',
         ]);
@@ -78,7 +76,6 @@ class StockController extends Controller
         $date = $request->date;
         $userId = Auth::id();
         $sku = ucwords(strtolower(trim($request->sku)));
-        $warna = !empty($request->warna) ? ucwords(strtolower(trim($request->warna))) : null;
 
         $insertData = [];
 
@@ -90,7 +87,7 @@ class StockController extends Controller
                     'date' => $date,
                     'sku' => $sku,
                     'size' => $size,
-                    'warna' => $warna,
+                    'warna' => '',
                     'nominal' => null,
                     'qty' => $qty,
                     'created_at' => now(),
@@ -121,7 +118,6 @@ class StockController extends Controller
     {
         $userId = Auth::id();
         $sku = ucwords(strtolower(trim($request->query('sku'))));
-        $warna = !empty($request->query('warna')) ? ucwords(strtolower(trim($request->query('warna')))) : null;
 
         if (!$sku) abort(404);
 
@@ -133,7 +129,6 @@ class StockController extends Controller
             )
             ->where('user_id', $userId)
             ->where('sku', $sku)
-            ->where('warna', $warna)
             ->groupBy('size')
             ->get();
 
@@ -143,26 +138,23 @@ class StockController extends Controller
         }
         ksort($sizes, SORT_NUMERIC);
 
-        return view('karyawan_ramayana.stocks.edit', compact('sku', 'warna', 'sizes'));
+        return view('karyawan_ramayana.stocks.edit', compact('sku', 'sizes'));
     }
 
     public function updateCatalog(Request $request)
     {
         $request->validate([
             'sku' => 'required|string',
-            'warna' => 'nullable|string',
             'sizes' => 'required|array'
         ]);
 
         $userId = Auth::id();
         $sku = ucwords(strtolower(trim($request->sku)));
-        $warna = !empty($request->warna) ? ucwords(strtolower(trim($request->warna))) : null;
 
         // Fetch total_out (sales) to know how much stock_in is needed for the new current_stock
         $sales = SalesInput::select('size', DB::raw("SUM(qty) as total_out"))
             ->where('user_id', $userId)
             ->where('sku', $sku)
-            ->where('warna', $warna)
             ->where('type', 'sale')
             ->groupBy('size')
             ->get()
@@ -171,7 +163,6 @@ class StockController extends Controller
         // Delete existing stock_in for this SKU/Warna to rebuild it cleanly
         SalesInput::where('user_id', $userId)
             ->where('sku', $sku)
-            ->where('warna', $warna)
             ->where('type', 'stock_in')
             ->delete();
 
@@ -192,7 +183,7 @@ class StockController extends Controller
                     'date' => $now->toDateString(),
                     'sku' => $sku,
                     'size' => $size,
-                    'warna' => $warna,
+                    'warna' => '',
                     'nominal' => null,
                     'qty' => $requiredStockIn,
                     'created_at' => $now,
@@ -212,11 +203,9 @@ class StockController extends Controller
     {
         $userId = Auth::id();
         $sku = ucwords(strtolower(trim($request->query('sku'))));
-        $warna = !empty($request->query('warna')) ? ucwords(strtolower(trim($request->query('warna')))) : null;
 
         SalesInput::where('user_id', $userId)
             ->where('sku', $sku)
-            ->where('warna', $warna)
             ->delete();
 
         return redirect()->route('karyawan_ramayana.stocks.index')->with('success', "Semua stok untuk $sku berhasil dihapus.");

@@ -49,7 +49,7 @@
                 </thead>
                 <tbody id="tableBody" class="divide-y divide-slate-200 dark:divide-slate-800">
                     @forelse($locations as $loc)
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" x-show="search === '' || '{{ strtolower(addslashes($loc->name) . ' ' . $loc->latitude . ' ' . $loc->longitude) }}'.includes(search.toLowerCase())">
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" x-show="search === '' || '{{ strtolower(addslashes($loc->name ?? '') . ' ' . ($loc->latitude ?? '') . ' ' . ($loc->longitude ?? '')) }}'.includes(search.toLowerCase())">
                         <td class="p-4">
                             <div class="font-semibold text-slate-800 dark:text-slate-200">{{ $loc->name }}</div>
                             @if($loc->google_maps_url)
