@@ -22,6 +22,8 @@
         }
     </script>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="{{ asset('images/logo_record.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ asset('images/logo_record.png') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title') - JMN Karyawan</title>
@@ -43,10 +45,14 @@
         <!-- Logo / Brand -->
         <div class="px-4 pt-6 pb-5 border-b border-white/10 flex items-center" :class="collapsed ? 'justify-center' : 'space-x-3'">
             <div class="flex-shrink-0">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+                <img src="{{ asset('images/logo_record.png') }}" 
+                     alt="Record Logo" 
+                     class="object-contain transition-all duration-300"
+                     :class="collapsed ? 'w-10 h-10' : 'w-12 h-12'">
             </div>
             <div x-show="!collapsed" x-transition class="min-w-0 pt-1">
                 <h1 class="text-lg font-bold text-white leading-none tracking-wider uppercase">{{ Auth::user()->role->name }}</h1>
+                <p class="text-[10px] text-blue-200/60 font-medium tracking-wide mt-0.5">Record System</p>
             </div>
         </div>
 
@@ -368,6 +374,7 @@
         <!-- Top Header -->
         <header class="h-16 border-b border-blue-200 dark:border-slate-800 flex items-center justify-between px-5 lg:px-8 shrink-0 bg-white dark:bg-slate-900/50 backdrop-blur-md shadow-sm sticky top-0 z-30">
             <div class="flex items-center space-x-3">
+                <img src="{{ asset('images/logo_record.png') }}" alt="Record Logo" class="w-8 h-8 object-contain lg:hidden">
                 <span class="text-sm font-semibold text-blue-900 dark:text-blue-100">Manajemen Sistem Karyawan</span>
             </div>
             <div class="flex items-center space-x-4">
