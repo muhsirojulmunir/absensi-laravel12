@@ -585,4 +585,66 @@ class AttendanceMonitoringController extends Controller
         $payment->delete();
         return back()->with('success', 'Riwayat pembayaran berhasil dihapus.');
     }
+
+    // ===================================================================
+    // NOTIFIKASI TEST - Halaman test notifikasi untuk HRD
+    // ===================================================================
+
+    public function notificationTestPage()
+    {
+        $users = User::whereNotNull('fcm_token')
+            ->where('fcm_token', '!=', '')
+            ->whereHas('role', fn($q) => $q->where('slug', 'karyawan'))
+            ->with('division')
+            ->get();
+
+        $allUsers = User::whereHas('role', fn($q) => $q->where('slug', 'karyawan'))
+            ->with('division')
+            ->where('is_active', true)
+            ->get();
+
+        return view('hrd.attendance.notification-test', compact('users', 'allUsers'));
+    }
+
+    public function sendTestNotification(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'title'   => 'required|string|max:100',
+            'message' => 'required|string|max:500',
+        ]);
+
+        $user = User::find($request->user_id);
+
+        if (!$user->fcm_token) {
+            return back()->with('error', "Karyawan {$user->name} belum memiliki FCM Token. Minta karyawan untuk login ke web terlebih dahulu dan izinkan notifikasi browser.");
+        }
+
+        $firebase = new \App\Services\FirebaseService();
+        $success = $firebase->sendNotification($user->fcm_token, $request->title, $request->message);
+
+        if ($success) {
+            return back()->with('success', "✅ Notifikasi berhasil dikirim ke {$user->name}!");
+        }
+
+        return back()->with('error', "❌ Gagal mengirim notifikasi ke {$user->name}. Cek log Laravel untuk detail.");
+    }
+
+    public function runSmartNotification(Request $request)
+    {
+        $options = ['--test' => true];
+
+        if ($request->filled('user')) {
+            $options['--user'] = $request->user;
+        }
+        if ($request->filled('type')) {
+            $options['--type'] = $request->type;
+        }
+
+        \Illuminate\Support\Facades\Artisan::call('notify:smart-attendance', $options);
+        $output = \Illuminate\Support\Facades\Artisan::output();
+
+        return back()->with('smart_output', $output ?: 'Tidak ada output. Cek log Laravel.');
+    }
 }
+

@@ -2,10 +2,14 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/recordsh/absensi.recordshoes.com
+    - export PHP=/usr/local/bin/php
     - /bin/cp -R * $DEPLOYPATH
     - /bin/cp .env.production $DEPLOYPATH/.env 2>/dev/null; true
     - /bin/cp .htaccess $DEPLOYPATH/.htaccess 2>/dev/null; true
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan migrate --force 2>/dev/null; true
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan config:cache 2>/dev/null; true
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan route:cache 2>/dev/null; true
-    - cd $DEPLOYPATH && /usr/local/bin/php artisan view:cache 2>/dev/null; true
+    - cd $DEPLOYPATH && $PHP artisan migrate --force 2>/dev/null; true
+    - cd $DEPLOYPATH && $PHP artisan config:cache 2>/dev/null; true
+    - cd $DEPLOYPATH && $PHP artisan route:cache 2>/dev/null; true
+    - cd $DEPLOYPATH && $PHP artisan view:cache 2>/dev/null; true
+    # ✅ Auto-register Cron Job untuk Laravel Scheduler (notifikasi otomatis tiap 5 menit)
+    # Cek apakah cron schedule:run sudah ada, jika belum tambahkan
+    - (crontab -l 2>/dev/null | grep -q "schedule:run" || (crontab -l 2>/dev/null; echo "* * * * * /usr/local/bin/php /home/recordsh/absensi.recordshoes.com/artisan schedule:run >> /dev/null 2>&1") | crontab -) 2>/dev/null; true

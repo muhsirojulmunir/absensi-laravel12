@@ -243,8 +243,23 @@
                     <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Rekap Laporan</span>
                 </a>
 
+                <a href="{{ route('hrd.attendance.payment-history') }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('hrd.attendance.payment-history') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
+                   title="Riwayat Pembayaran">
+                    <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Riwayat Pembayaran</span>
+                </a>
 
+                <a href="{{ route('hrd.notification-test') }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('hrd.notification-test') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
+                   title="Test Notifikasi">
+                    <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                    <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Test Notifikasi</span>
+                </a>
             @endif
+
 
             {{-- ============ PIC & PIC RAMAYANA ============ --}}
             @if(in_array(Auth::user()->role->slug, ['pic', 'pic_ramayana']))

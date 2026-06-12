@@ -141,6 +141,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/attendance/payment-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'paymentHistory'])->name('attendance.payment-history');
         Route::post('/attendance/payment-history/{payment}/update', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'updatePaymentHistory'])->name('attendance.payment-history.update');
         Route::post('/attendance/payment-history/{payment}/delete', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'deletePaymentHistory'])->name('attendance.payment-history.delete');
+
+        // ✅ Test Notifikasi (khusus HRD)
+        Route::get('/notification-test', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'notificationTestPage'])->name('notification-test');
+        Route::post('/notification-test/send', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'sendTestNotification'])->name('notification-test.send');
+        Route::post('/notification-test/run-smart', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'runSmartNotification'])->name('notification-test.run-smart');
     });
 
     Route::prefix('karyawan')->name('karyawan.')->group(function () {
@@ -205,23 +210,40 @@ Route::get('/run-migrations', function () {
     return 'Migrations and Seeder completed successfully!';
 });
 
-// Cron Trigger untuk Smart Notification (dipanggil oleh layanan cron eksternal)
+// ✅ Cron Trigger untuk Smart Notification
+// Dipanggil OTOMATIS setiap 5 menit oleh:
+//   1. Laravel Scheduler (crontab di server) - via schedule:run setiap 1 menit
+//   2. UptimeRobot/layanan eksternal - ping URL ini setiap 5 menit sebagai fallback
 Route::get('/cron/smart-notification', function (\Illuminate\Http\Request $request) {
-    // Simple secret key protection
+    // Proteksi dengan secret key
     if ($request->query('key') !== env('SYNC_SECRET_KEY')) {
         return response()->json(['error' => 'Unauthorized'], 403);
     }
-    
+
+    $startTime = microtime(true);
+
     $options = [];
     if ($request->query('test')) {
         $options['--test'] = true;
     }
-    
+
     \Illuminate\Support\Facades\Artisan::call('notify:smart-attendance', $options);
-    
+    $output = \Illuminate\Support\Facades\Artisan::output();
+
+    $elapsed = round((microtime(true) - $startTime) * 1000);
+
+    // Log setiap kali cron dipanggil agar bisa dipantau
+    \Illuminate\Support\Facades\Log::info('[CRON] smart-notification triggered', [
+        'time'    => now()->toDateTimeString(),
+        'source'  => $request->query('source', 'external'),
+        'elapsed' => $elapsed . 'ms',
+    ]);
+
     return response()->json([
         'success' => true,
-        'output' => \Illuminate\Support\Facades\Artisan::output(),
-        'time' => now()->toDateTimeString(),
+        'output'  => trim($output) ?: 'No output.',
+        'time'    => now()->toDateTimeString(),
+        'elapsed' => $elapsed . 'ms',
+        'server'  => gethostname(),
     ]);
 });
