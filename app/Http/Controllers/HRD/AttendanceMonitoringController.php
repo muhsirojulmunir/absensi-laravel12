@@ -213,17 +213,13 @@ class AttendanceMonitoringController extends Controller
 
             // Check if this period has been paid and update if needed (dynamic history)
             $payment = \App\Models\MealAllowancePayment::where('user_id', $user->id)
-                ->where(function($q) use ($startDate, $endDate) {
-                    $q->whereBetween('start_date', [$startDate->toDateString(), $endDate->toDateString()])
-                      ->orWhereBetween('end_date', [$startDate->toDateString(), $endDate->toDateString()])
-                      ->orWhere(function($sub) use ($startDate, $endDate) {
-                          $sub->where('start_date', '<=', $startDate->toDateString())
-                              ->where('end_date', '>=', $endDate->toDateString());
-                      });
-                })->first();
+                ->where('start_date', $startDate->toDateString())
+                ->where('end_date', $endDate->toDateString())
+                ->first();
 
             if ($payment) {
-                $payment->update(['amount' => $calculatedAmount]);
+                // Do not dynamically update the saved amount to prevent overwriting history
+                // $payment->update(['amount' => $calculatedAmount]);
             }
 
             $user->is_meal_paid = $payment ? true : false;
@@ -253,14 +249,9 @@ class AttendanceMonitoringController extends Controller
             // Bulk payment
             foreach ($request->bulk_pay as $userId => $amount) {
                 \App\Models\MealAllowancePayment::where('user_id', $userId)
-                    ->where(function($q) use ($request) {
-                        $q->whereBetween('start_date', [$request->start_date, $request->end_date])
-                          ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
-                          ->orWhere(function($sub) use ($request) {
-                              $sub->where('start_date', '<=', $request->start_date)
-                                  ->where('end_date', '>=', $request->end_date);
-                          });
-                    })->delete();
+                    ->where('start_date', $request->start_date)
+                    ->where('end_date', $request->end_date)
+                    ->delete();
 
                 \App\Models\MealAllowancePayment::create(
                     [
@@ -280,14 +271,9 @@ class AttendanceMonitoringController extends Controller
             ]);
 
             \App\Models\MealAllowancePayment::where('user_id', $request->user_id)
-                ->where(function($q) use ($request) {
-                    $q->whereBetween('start_date', [$request->start_date, $request->end_date])
-                      ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
-                      ->orWhere(function($sub) use ($request) {
-                          $sub->where('start_date', '<=', $request->start_date)
-                              ->where('end_date', '>=', $request->end_date);
-                      });
-                })->delete();
+                ->where('start_date', $request->start_date)
+                ->where('end_date', $request->end_date)
+                ->delete();
 
             \App\Models\MealAllowancePayment::create(
                 [
@@ -313,14 +299,9 @@ class AttendanceMonitoringController extends Controller
         ]);
 
         $payments = \App\Models\MealAllowancePayment::where('user_id', $request->user_id)
-            ->where(function($q) use ($request) {
-                $q->whereBetween('start_date', [$request->start_date, $request->end_date])
-                  ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
-                  ->orWhere(function($sub) use ($request) {
-                      $sub->where('start_date', '<=', $request->start_date)
-                          ->where('end_date', '>=', $request->end_date);
-                  });
-            })->get();
+            ->where('start_date', $request->start_date)
+            ->where('end_date', $request->end_date)
+            ->get();
 
         if ($payments->count() > 0) {
             foreach ($payments as $p) {
@@ -337,6 +318,43 @@ class AttendanceMonitoringController extends Controller
             ]);
             return back()->with('success', 'Status diubah menjadi Lunas.');
         }
+    }
+
+    public function saveHistory(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date',
+            'payments' => 'required|array',
+            'payments.*.name' => 'required|string',
+            'payments.*.amount' => 'required|numeric',
+            'payments.*.user_id' => 'nullable|integer',
+        ]);
+
+        $startDate = Carbon::parse($request->start_date)->toDateString();
+        $endDate = Carbon::parse($request->end_date)->toDateString();
+
+        // Delete existing records for this exact period
+        \App\Models\MealAllowancePayment::where('start_date', $startDate)
+            ->where('end_date', $endDate)
+            ->delete();
+
+        // Save new records
+        foreach ($request->payments as $p) {
+            \App\Models\MealAllowancePayment::create([
+                'user_id' => $p['user_id'] ?: null,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'amount' => $p['amount'],
+                'manual_employee_name' => $p['user_id'] ? null : $p['name'],
+                'paid_by' => auth()->id(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Laporan berhasil disimpan ke riwayat pembayaran.',
+        ]);
     }
 
     public function paymentHistory(Request $request)

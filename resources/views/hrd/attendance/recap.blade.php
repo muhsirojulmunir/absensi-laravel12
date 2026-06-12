@@ -198,6 +198,10 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                         + Tambah Baris
                     </button>
+                    <button onclick="saveToHistory()" style="display: flex; align-items: center; gap: 6px; background: #eab308; color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 13px;" onmouseover="this.style.background='#ca8a04'" onmouseout="this.style.background='#eab308'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                        Simpan ke Riwayat
+                    </button>
                     <div style="width: 1px; height: 32px; background: #475569;"></div>
                     <button onclick="doPrint()" style="display: flex; align-items: center; gap: 6px; background: #2563eb; color: #fff; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 12px rgba(37,99,235,0.3);" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
@@ -229,7 +233,7 @@
                         </thead>
                         <tbody>
                             @forelse($users as $index => $user)
-                                <tr class="data-row" style="position: relative;">
+                                <tr class="data-row" style="position: relative;" data-user-id="{{ $user->id }}">
                                     <td class="row-num" style="border: 1px solid #000; padding: 4px 6px; text-align: center; color: #000; position: relative;">
                                         <span class="num-text">{{ $index + 1 }}</span>
                                         <div class="print-hide action-btns" style="position: absolute; left: -45px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 4px; z-index: 50;">
@@ -237,7 +241,7 @@
                                             <button onclick="moveRowDown(this)" style="font-size: 14px; background: #e2e8f0; border-radius: 6px; padding: 4px 10px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">▼</button>
                                         </div>
                                     </td>
-                                    <td style="border: 1px solid #000; padding: 4px 6px; color: #000;" contenteditable="true">{{ $user->name }}</td>
+                                    <td class="name-cell" style="border: 1px solid #000; padding: 4px 6px; color: #000;" contenteditable="true">{{ $user->name }}</td>
                                     <td class="uang-makan-cell" style="border: 1px solid #000; padding: 4px 6px; text-align: right; color: #000;" contenteditable="true" oninput="formatRupiah(this); calculateTotal()">Rp {{ number_format($user->total_meal_allowance, 0, ',', '.') }}</td>
                                     <td class="ttd-col" style="border: 1px solid #000; padding: 4px 6px; text-align: center; height: 35px; color: #000; position: relative;" contenteditable="true">
                                         <div class="print-hide action-btns" style="position: absolute; right: -45px; top: 50%; transform: translateY(-50%); z-index: 50;" contenteditable="false">
@@ -259,19 +263,6 @@
                             </tr>
                         </tfoot>
                     </table>
-
-                    {{-- Tanda Tangan --}}
-                    <div style="margin-top: 40px; display: flex; justify-content: space-between; padding: 0 30px;">
-                        <div style="text-align: center;">
-                            <p style="font-size: 12px; font-weight: 700; color: #000; margin-bottom: 60px;">Dibuat oleh,</p>
-                            <p style="border-top: 1px solid #000; padding-top: 4px; font-size: 12px; font-weight: 700; color: #000; padding-left: 16px; padding-right: 16px;" contenteditable="true">( HRD )</p>
-                        </div>
-                        <div style="text-align: center;">
-                            <p style="font-size: 12px; font-weight: 700; color: #000; margin-bottom: 60px;">Disetujui oleh,</p>
-                            <p style="border-top: 1px solid #000; padding-top: 4px; font-size: 12px; font-weight: 700; color: #000; padding-left: 16px; padding-right: 16px;" contenteditable="true">( Direktur )</p>
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </div>
@@ -317,10 +308,21 @@
                 top: 0 !important;
                 width: 100% !important;
                 margin: 0 !important;
-                padding: 15mm 20mm !important;
+                padding: 5mm 15mm 10mm 15mm !important;
                 box-shadow: none !important;
                 background: #fff !important;
                 color: #000 !important;
+            }
+            @page {
+                size: A4;
+                margin: 5mm 10mm 10mm 10mm;
+                @top-center { content: none; }
+                @bottom-center { content: none; }
+            }
+
+            /* Chrome/Edge trick untuk hilangkan header-footer */
+            html {
+                -webkit-print-color-adjust: exact;
             }
 
             /* Hide all non-print elements */
@@ -351,7 +353,10 @@
                 background: #fff !important;
             }
 
-            @page { size: A4; margin: 10mm; }
+           @page {
+    size: A4;
+    margin: 5mm 10mm 10mm 10mm;
+}
 
             #printTable th, #printTable td {
                 border: 0.5pt solid #000 !important;
@@ -400,7 +405,7 @@
                         <button onclick="moveRowDown(this)" style="font-size: 14px; background: #e2e8f0; border-radius: 6px; padding: 4px 10px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">▼</button>
                     </div>
                 </td>
-                <td style="border: 1px solid #000; padding: 4px 6px; color: #000;" contenteditable="true"></td>
+                <td class="name-cell" style="border: 1px solid #000; padding: 4px 6px; color: #000;" contenteditable="true"></td>
                 <td class="uang-makan-cell" style="border: 1px solid #000; padding: 4px 6px; text-align: right; color: #000;" contenteditable="true" oninput="formatRupiah(this); calculateTotal()">Rp 0</td>
                 <td class="ttd-col" style="border: 1px solid #000; padding: 4px 6px; text-align: center; height: 35px; color: #000; position: relative;" contenteditable="true">
                     <div class="print-hide action-btns" style="position: absolute; right: -45px; top: 50%; transform: translateY(-50%); z-index: 50;" contenteditable="false">
@@ -503,6 +508,66 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closePrintPreview();
         });
+
+        // Fitur Simpan ke Riwayat
+        function saveToHistory() {
+            const rows = document.querySelectorAll('#printTable tbody tr.data-row');
+            const payments = [];
+
+            rows.forEach(row => {
+                const nameCell = row.querySelector('.name-cell');
+                const amountCell = row.querySelector('.uang-makan-cell');
+                const userId = row.dataset.userId || null;
+                
+                if (nameCell && amountCell) {
+                    const name = nameCell.innerText.trim();
+                    const amountStr = amountCell.innerText.replace(/[^0-9]/g, '');
+                    const amount = amountStr ? parseInt(amountStr, 10) : 0;
+                    
+                    if (name) {
+                        payments.push({
+                            name: name,
+                            amount: amount,
+                            user_id: userId
+                        });
+                    }
+                }
+            });
+
+            if (payments.length === 0) {
+                alert('Tidak ada data karyawan untuk disimpan.');
+                return;
+            }
+
+            if (!confirm('Simpan data laporan ini ke riwayat pembayaran?')) {
+                return;
+            }
+
+            fetch("{{ route('hrd.attendance.save-history') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    start_date: '{{ $startDate }}',
+                    end_date: '{{ $endDate }}',
+                    payments: payments
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                } else {
+                    alert('Gagal menyimpan: ' + (data.message || 'Terjadi kesalahan'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Terjadi kesalahan saat menyimpan ke riwayat.');
+            });
+        }
     </script>
 
     <!-- Flatpickr for Custom Date Range -->

@@ -28,6 +28,12 @@ class PerformanceEvaluationService
             $endDate = $now;
         }
 
+        // Aplikasi mulai berjalan sejak 21 Mei 2026. Sesuaikan start date jika di periode tersebut.
+        $appStartDate = Carbon::create(2026, 5, 21)->startOfDay();
+        if ($startDate->lt($appStartDate) && $endDate->gte($appStartDate)) {
+            $startDate = $appStartDate->copy();
+        }
+
         // 1. Gather Attendance Data
         $attendances = Attendance::where('user_id', $user->id)
             ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
@@ -56,6 +62,43 @@ class PerformanceEvaluationService
             $totalHariIzin += $start->diffInDays($end) + 1;
         }
 
+        // Calculate expected days dynamically based on Division / Role
+        $divisionName = strtolower($user->division->name ?? '');
+        $isLiveStreamer = str_contains($divisionName, 'live streaming') || str_contains($divisionName, 'streamer');
+        $isStaffKantor = str_contains($divisionName, 'staff kantor');
+
+        $expectedDays = 0;
+        $current = $startDate->copy();
+        
+        // Fetch holidays in the period
+        $holidays = \App\Models\Holiday::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->get()
+            ->pluck('date')
+            ->map(fn($d) => Carbon::parse($d)->toDateString())
+            ->toArray();
+
+        if ($isLiveStreamer) {
+            // Live streamer: 1 day per week target
+            $weeks = $startDate->diffInWeeks($endDate) + 1;
+            $expectedDays = $weeks;
+        } elseif ($isStaffKantor) {
+            // Staff Kantor: Senin-Jumat, Sabtu-Minggu Libur & Libur Nasional Libur
+            while ($current->lte($endDate)) {
+                if (!$current->isWeekend() && !in_array($current->toDateString(), $holidays)) {
+                    $expectedDays++;
+                }
+                $current->addDay();
+            }
+        } else {
+            // Other staff (e.g. Gudang / Ramayana): Senin-Sabtu, Minggu Libur & Libur Nasional Libur
+            while ($current->lte($endDate)) {
+                if (!$current->isSunday() && !in_array($current->toDateString(), $holidays)) {
+                    $expectedDays++;
+                }
+                $current->addDay();
+            }
+        }
+
         $attendanceSummary = [
             'total_hadir' => $totalHadir,
             'total_telat' => $totalTelat,
@@ -64,11 +107,13 @@ class PerformanceEvaluationService
             'total_izin_sakit' => $izinSakit,
             'total_hari_cuti_approved' => $totalHariIzin,
             'avg_lateness_minutes' => round($avgLateness),
+            'expected_days' => $expectedDays,
+            'is_live_streamer' => $isLiveStreamer,
+            'is_staff_kantor' => $isStaffKantor,
         ];
 
         // 3. Sales Data (If applicable)
         $salesSummary = null;
-        $divisionName = strtolower($user->division->name ?? '');
         if (str_contains($divisionName, 'ramayana') || str_contains($divisionName, 'sales')) {
             $sales = SalesInput::where('user_id', $user->id)
                 ->where('type', 'sale')
@@ -122,11 +167,10 @@ class PerformanceEvaluationService
         $izinSakit = $attendance['total_izin_sakit'];
         $avgLateness = $attendance['avg_lateness_minutes'] ?? 0;
         $tepatWaktu = $hadir - $telat;
+        $expectedDays = $attendance['expected_days'] ?? 22;
+        $isLiveStreamer = $attendance['is_live_streamer'] ?? false;
 
         // If completely zero attendance, score should be 0 unless there's an excuse
-        $totalDays = Carbon::create($year, $month, 1)->daysInMonth;
-        
-        // === Hitung Skor ===
         if ($hadir == 0 && $izinSakit == 0 && ($attendance['total_libur'] ?? 0) == 0 && ($attendance['total_hari_cuti_approved'] ?? 0) == 0) {
             $score = 0; // Completely inactive
             $predicate = 'Kurang';
@@ -159,12 +203,20 @@ class PerformanceEvaluationService
             elseif ($persenPulangCepat > 0) $score -= 5;
         }
 
-        // Penalti kehadiran rendah vs total hari aktif (roughly 22)
-        if ($hadir < 10) $score -= 40;
-        elseif ($hadir < 15) $score -= 20;
+        // Penalti kehadiran rendah berdasarkan rate dari expected days
+        if ($expectedDays > 0) {
+            $attendanceRate = ($hadir / $expectedDays) * 100;
+            if ($attendanceRate < 50) $score -= 40;
+            elseif ($attendanceRate < 75) $score -= 20;
+            elseif ($attendanceRate < 90) $score -= 10;
+        } else {
+            $attendanceRate = 100;
+        }
 
         // Bonus kehadiran tinggi
-        if ($hadir >= 22 && $telat === 0 && $pulangCepat === 0) $score += 5;
+        if ($expectedDays > 0 && $hadir >= $expectedDays && $telat === 0 && $pulangCepat === 0) {
+            $score += 5;
+        }
 
         $score = max(0, min(100, $score));
 
@@ -178,11 +230,27 @@ class PerformanceEvaluationService
         $feedbackParts = [];
         
         if ($tepatWaktu > 0 && $telat === 0) {
-            $feedbackParts[] = "{$name} menunjukkan kedisiplinan yang sangat baik selama bulan {$bulan} dengan {$hadir} hari kehadiran sempurna tanpa keterlambatan";
+            if ($isLiveStreamer) {
+                $feedbackParts[] = "{$name} menunjukkan kedisiplinan streaming yang luar biasa dengan menyelesaikan {$hadir} kali jadwal streaming tepat waktu";
+            } else {
+                $feedbackParts[] = "{$name} menunjukkan kedisiplinan yang sangat baik selama bulan {$bulan} dengan {$hadir} hari kehadiran sempurna tanpa keterlambatan";
+            }
         } elseif ($hadir > 0) {
-            $feedbackParts[] = "{$name} tercatat hadir {$hadir} hari di bulan {$bulan}";
+            if ($isLiveStreamer) {
+                $feedbackParts[] = "{$name} melakukan streaming sebanyak {$hadir} kali di bulan {$bulan}";
+            } else {
+                $feedbackParts[] = "{$name} tercatat hadir {$hadir} hari di bulan {$bulan}";
+            }
             if ($telat > 0) {
                 $feedbackParts[] = "namun terlambat {$telat} kali" . ($avgLateness > 0 ? " (rata-rata {$avgLateness} menit)" : "");
+            }
+        }
+
+        if ($expectedDays > 0) {
+            if ($isLiveStreamer) {
+                $feedbackParts[] = "mencapai " . round($attendanceRate) . "% dari total target {$expectedDays} sesi streaming";
+            } else {
+                $feedbackParts[] = "mencapai " . round($attendanceRate) . "% dari target {$expectedDays} hari kerja aktif";
             }
         }
 
@@ -194,7 +262,7 @@ class PerformanceEvaluationService
         }
         $cuti = $attendance['total_hari_cuti_approved'] ?? 0;
         if ($cuti > 0) {
-            $feedbackParts[] = "mengambil cuti yang disetujui sebanyak {$cuti} hari";
+            $feedbackParts[] = "mengambil cuti disetujui {$cuti} hari";
         }
 
         if (empty($feedbackParts)) {
@@ -202,7 +270,7 @@ class PerformanceEvaluationService
         }
         if ($sales && $sales['total_transactions'] > 0) {
             $revenue = number_format($sales['total_revenue'], 0, ',', '.');
-            $feedbackParts[] = "Dari sisi penjualan, berhasil mencatat {$sales['total_transactions']} transaksi dengan total omset Rp {$revenue}";
+            $feedbackParts[] = "Serta berhasil mencatat {$sales['total_transactions']} transaksi penjualan dengan total omset Rp {$revenue}";
         }
 
         $feedback = implode(', ', $feedbackParts) . '.';
@@ -212,32 +280,32 @@ class PerformanceEvaluationService
         $recommendations = [];
 
         if ($telat > 3) {
-            $recommendations[] = "Perlu meningkatkan disiplin waktu kedatangan. Coba atur alarm 30 menit lebih awal";
+            $recommendations[] = "Harap meningkatkan kedisiplinan waktu masuk kerja";
         } elseif ($telat > 0) {
-            $recommendations[] = "Keterlambatan masih terjadi {$telat} kali, usahakan untuk datang tepat waktu di bulan depan";
+            $recommendations[] = "Usahakan untuk konsisten hadir tepat waktu";
         }
 
         if ($pulangCepat > 2) {
-            $recommendations[] = "Hindari pulang lebih awal kecuali ada keperluan mendesak yang sudah disetujui";
+            $recommendations[] = "Kurangi frekuensi pulang lebih cepat";
         }
 
-        if ($hadir >= 20 && $telat === 0) {
-            $recommendations[] = "Pertahankan konsistensi kehadiran yang sangat baik ini! Kamu menjadi contoh yang baik untuk tim";
+        if ($expectedDays > 0 && $hadir >= $expectedDays && $telat === 0) {
+            $recommendations[] = "Pertahankan konsistensi performa luar biasa ini!";
         }
 
-        if ($hadir < 15 && $hadir > 0) {
-            $recommendations[] = "Tingkatkan frekuensi kehadiran di bulan depan untuk menunjukkan komitmen yang lebih baik";
+        if ($expectedDays > 0 && $hadir < $expectedDays) {
+            $recommendations[] = "Tingkatkan tingkat kehadiran atau penuhi target sesi di bulan berikutnya";
         }
 
         if ($sales && $sales['total_transactions'] > 0) {
-            $recommendations[] = "Terus tingkatkan performa penjualan. Coba fokus pada produk-produk unggulan untuk meningkatkan omset";
+            $recommendations[] = "Terus tingkatkan target penjualan produk di counter";
         }
 
         if (empty($recommendations)) {
             if ($score < 70) {
-                 $recommendations[] = "Tingkatkan performa secara keseluruhan dan jadilah lebih proaktif di bulan berikutnya";
+                 $recommendations[] = "Tingkatkan performa secara keseluruhan di bulan berikutnya";
             } else {
-                 $recommendations[] = "Terus pertahankan performa yang sudah baik dan jadilah inspirasi bagi rekan kerja lainnya";
+                 $recommendations[] = "Pertahankan kinerja positif yang sudah dicapai";
             }
         }
 

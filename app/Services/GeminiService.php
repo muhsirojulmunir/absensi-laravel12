@@ -108,13 +108,18 @@ class GeminiService
     public function generatePerformanceReport($user, $month, $year, $attendance, $sales)
     {
         $division = $user->division->name ?? 'Kantor';
+        $expectedDays = $attendance['expected_days'] ?? 22;
+        $isLiveStreamer = $attendance['is_live_streamer'] ?? false;
+        $scheduleType = $isLiveStreamer ? "Live Streamer (Jadwal Kerja 1 Kali Seminggu)" : "Staff Kantor (Senin-Jumat, Sabtu-Minggu Libur)";
         
         $prompt = "Kamu adalah HR Manager & Analis Kinerja 'JMN Matrix AI'. Buatkan evaluasi kinerja bulanan untuk karyawan berikut:\n\n";
         $prompt .= "- Nama: {$user->name}\n";
         $prompt .= "- Divisi: {$division}\n";
+        $prompt .= "- Tipe Jadwal Kerja: {$scheduleType}\n";
         $prompt .= "- Periode: Bulan {$month} Tahun {$year}\n\n";
         
         $prompt .= "DATA ABSENSI:\n";
+        $prompt .= "- Hadir/Masuk: {$attendance['total_hadir']} hari dari target {$expectedDays} hari kerja wajib\n";
         $prompt .= "- Hadir Tepat Waktu: " . ($attendance['total_hadir'] - $attendance['total_telat']) . " hari\n";
         $prompt .= "- Terlambat: {$attendance['total_telat']} hari\n";
         $prompt .= "- Pulang Cepat: {$attendance['total_pulang_cepat']} hari\n";

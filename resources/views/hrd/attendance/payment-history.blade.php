@@ -83,7 +83,7 @@
                                         </td>
                                         <td class="px-6 py-3.5">
                                             <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold">
-                                                {{ $payment->user->name ?? '-' }}
+                                                {{ $payment->user->name ?? $payment->manual_employee_name ?? '-' }}
                                             </span>
                                         </td>
                                         <td class="px-6 py-3.5 whitespace-nowrap text-xs text-blue-600 dark:text-blue-400">

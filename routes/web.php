@@ -67,6 +67,7 @@ Route::middleware(['auth'])->group(function () {
             ->name('attendance.destroy');
         Route::post('/attendance/manual-checkin', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'manualCheckin'])->name('attendance.manual-checkin');
         Route::post('/attendance/manual-checkout', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'manualCheckout'])->name('attendance.manual-checkout');
+        Route::get('/attendance/payment-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'paymentHistory'])->name('attendance.payment-history');
 
         // Leave Approvals untuk Super Admin (Bisa hapus dll)
         Route::get('/leave-approvals', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'index'])->name('leave-approvals.index');
@@ -136,6 +137,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/attendance/recap', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'recap'])->name('attendance.recap');
         Route::post('/attendance/recap/pay', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'payMealAllowance'])->name('attendance.pay-meal-allowance');
         Route::post('/attendance/recap/toggle-payment', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'togglePayment'])->name('attendance.toggle-payment');
+        Route::post('/attendance/recap/save-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'saveHistory'])->name('attendance.save-history');
         Route::get('/attendance/payment-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'paymentHistory'])->name('attendance.payment-history');
     });
 

@@ -15,6 +15,7 @@ class MealAllowancePayment extends Model
         'end_date',
         'amount',
         'paid_by',
+        'manual_employee_name',
     ];
 
     protected $casts = [

@@ -143,6 +143,14 @@
                     </a>
                 @endif
 
+                <a href="{{ route('super-admin.attendance.payment-history') }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.attendance.payment-history') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
+                   title="Riwayat Pembayaran">
+                    <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Pembayaran Uang Makan</span>
+                </a>
+
                 <a href="{{ route('super-admin.holidays.index') }}"
                    class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.holidays.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
