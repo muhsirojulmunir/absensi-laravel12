@@ -73,6 +73,7 @@
                                         <th class="px-6 py-3 text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">Periode</th>
                                         <th class="px-6 py-3 text-xs font-bold text-blue-600 dark:text-blue-400 uppercase text-right">Jumlah</th>
                                         <th class="px-6 py-3 text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">Pembayar</th>
+                                        <th class="px-6 py-3 text-xs font-bold text-blue-600 dark:text-blue-400 uppercase text-center">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-blue-50 dark:divide-slate-700">
@@ -97,6 +98,20 @@
                                         <td class="px-6 py-3.5 whitespace-nowrap text-xs font-medium text-blue-600 dark:text-blue-400">
                                             {{ $payment->paidBy->name ?? '-' }}
                                         </td>
+                                        <td class="px-6 py-3.5 whitespace-nowrap text-center space-x-1">
+                                            <button 
+                                                onclick="openEditModal({{ $payment->id }}, '{{ addslashes($payment->user->name ?? $payment->manual_employee_name ?? '-') }}', {{ $payment->amount }}, {{ $payment->user_id === null ? 'true' : 'false' }})" 
+                                                class="text-xs bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-semibold px-2 py-1 rounded-md transition-colors"
+                                            >
+                                                Edit
+                                            </button>
+                                            <form action="{{ route('hrd.attendance.payment-history.delete', $payment->id) }}" method="POST" class="inline" onsubmit="return confirm('Hapus riwayat pembayaran untuk karyawan ini?')">
+                                                @csrf
+                                                <button type="submit" class="text-xs bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 font-semibold px-2 py-1 rounded-md transition-colors">
+                                                    Hapus
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
                                     @endforeach
                                 </tbody>
@@ -115,5 +130,66 @@
         @endif
     </div>
 
+    <!-- Edit Modal -->
+    <div id="editModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-blue-100 dark:border-slate-700 shadow-2xl max-w-md w-full overflow-hidden">
+            <div class="px-6 py-4 border-b border-blue-50 dark:border-slate-700 flex justify-between items-center bg-blue-50/50 dark:bg-slate-900/50">
+                <h3 class="text-sm font-bold text-blue-950 dark:text-white">Edit Nominal Uang Makan</h3>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <form id="editForm" method="POST" action="">
+                @csrf
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-blue-900 dark:text-blue-400 uppercase mb-2">Nama Karyawan</label>
+                        <input type="text" id="editEmployeeName" name="manual_employee_name" class="w-full text-sm font-semibold text-blue-950 dark:text-white border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none" />
+                        <p class="text-[10px] text-slate-400 mt-1" id="nameNote">Nama hanya dapat diedit untuk baris yang ditambahkan secara manual.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-blue-900 dark:text-blue-400 uppercase mb-2">Nominal Uang Makan (Rp)</label>
+                        <input type="number" id="editAmount" name="amount" required min="0" class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-blue-950 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/30 border-t border-slate-100 dark:border-slate-700 flex justify-end space-x-2">
+                    <button type="button" onclick="closeEditModal()" class="text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:text-white font-semibold px-4 py-2 rounded-lg transition-colors">Batal</button>
+                    <button type="submit" class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg transition-colors shadow-md">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script>
+        function openEditModal(paymentId, employeeName, amount, isManual) {
+            const modal = document.getElementById('editModal');
+            const form = document.getElementById('editForm');
+            const nameInput = document.getElementById('editEmployeeName');
+            const amountInput = document.getElementById('editAmount');
+            
+            // Set form action route
+            form.action = `/hrd/attendance/payment-history/${paymentId}/update`;
+            
+            // Populate data
+            nameInput.value = employeeName;
+            amountInput.value = amount;
+            
+            // If it's a manual entry (user_id is null/not registered), allow editing the name.
+            // Otherwise, disable the name field.
+            if (isManual) {
+                nameInput.removeAttribute('disabled');
+                nameInput.classList.remove('bg-slate-100', 'dark:bg-slate-700');
+            } else {
+                nameInput.setAttribute('disabled', 'true');
+                nameInput.classList.add('bg-slate-100', 'dark:bg-slate-700');
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+    </script>
 @endsection

@@ -139,6 +139,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/attendance/recap/toggle-payment', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'togglePayment'])->name('attendance.toggle-payment');
         Route::post('/attendance/recap/save-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'saveHistory'])->name('attendance.save-history');
         Route::get('/attendance/payment-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'paymentHistory'])->name('attendance.payment-history');
+        Route::post('/attendance/payment-history/{payment}/update', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'updatePaymentHistory'])->name('attendance.payment-history.update');
+        Route::post('/attendance/payment-history/{payment}/delete', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'deletePaymentHistory'])->name('attendance.payment-history.delete');
     });
 
     Route::prefix('karyawan')->name('karyawan.')->group(function () {

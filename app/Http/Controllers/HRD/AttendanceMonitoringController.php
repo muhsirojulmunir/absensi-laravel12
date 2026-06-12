@@ -83,6 +83,27 @@ class AttendanceMonitoringController extends Controller
         }
 
         $users = $query->get();
+
+        // Inject Edo dynamically if not already present
+        $hasEdo = $users->contains(function ($u) {
+            return strtolower($u->name) === 'edo';
+        });
+
+        if (!$hasEdo) {
+            $edo = new User();
+            $edo->id = null;
+            $edo->name = 'Edo';
+            
+            $edoDivision = new \stdClass();
+            $edoDivision->name = 'Staff Kantor';
+            $edo->division = $edoDivision;
+            
+            $edo->setRelation('attendances', collect());
+            $edo->setRelation('leaveRequests', collect());
+            
+            $users->push($edo);
+        }
+
         $divisions = \App\Models\Division::all();
 
         // Get all holidays in this period to determine off days
@@ -208,8 +229,144 @@ class AttendanceMonitoringController extends Controller
                 $calculatedAmount = 35000 * $attendanceDaysCount;
             }
 
-            $user->calculated_meal_allowance = $calculatedAmount;
-            $user->is_live_streamer = $isLiveStreamer;
+            if ($user->name === 'Edo') {
+                $calculatedAmount = 0;
+                $isLiveStreamer = false;
+                $masukDates = [];
+                $liburDates = [];
+                $izinDates = [];
+                $dailyAllowances = [];
+
+                $currentDateCheck = $startDate->copy();
+                while ($currentDateCheck->lte($endDate)) {
+                    $dateStr = $currentDateCheck->toDateString();
+                    \Carbon\Carbon::setLocale('id');
+                    $formattedDate = $currentDateCheck->translatedFormat('d M');
+
+                    if ($currentDateCheck->isWeekend()) {
+                        $dailyAllowances[$dateStr] = 'Libur';
+                        $liburDates[] = $formattedDate;
+                    } else {
+                        $dailyAllowances[$dateStr] = '35.000';
+                        $masukDates[] = $formattedDate;
+                        $calculatedAmount += 35000;
+                    }
+                    $currentDateCheck->addDay();
+                }
+                $user->calculated_meal_allowance = $calculatedAmount;
+                $user->is_live_streamer = $isLiveStreamer;
+            } else {
+                // Generate detailed dates breakdown and daily allowances for recap print preview
+                $masukDates = [];
+                $liburDates = [];
+                $izinDates = [];
+                $dailyAllowances = [];
+
+                $currentDateCheck = $startDate->copy();
+                while ($currentDateCheck->lte($endDate)) {
+                    $dateStr = $currentDateCheck->toDateString();
+                    \Carbon\Carbon::setLocale('id');
+                    $formattedDate = $currentDateCheck->translatedFormat('d M');
+
+                    if ($currentDateCheck->isAfter(\Carbon\Carbon::today())) {
+                        if ($currentDateCheck->isWeekend() && $user->division && str_contains(strtolower($user->division->name), 'staff kantor')) {
+                            $dailyAllowances[$dateStr] = 'Libur';
+                        } else {
+                            $dailyAllowances[$dateStr] = '-';
+                        }
+                        $currentDateCheck->addDay();
+                        continue;
+                    }
+
+                    $hasAttendance = $user->attendances->where('date', $dateStr)->first();
+                    $excuse = $user->leaveRequests
+                        ->where('status', '!=', 'rejected')
+                        ->filter(function($lr) use ($dateStr) {
+                            $checkDate = Carbon::parse($dateStr);
+                            return $checkDate->between($lr->start_date, $lr->end_date);
+                        })
+                        ->first();
+
+                    if ($isLiveStreamer) {
+                        if ($hasAttendance) {
+                            if (in_array($hasAttendance->status, ['Hadir', 'Terlambat'])) {
+                                $masukDates[] = $formattedDate;
+                                $dailyAllowances[$dateStr] = '35.000';
+                            } elseif (in_array($hasAttendance->status, ['Izin', 'Sakit'])) {
+                                $izinDates[] = $formattedDate;
+                                $dailyAllowances[$dateStr] = '20.000';
+                            } else {
+                                $liburDates[] = $formattedDate;
+                                $dailyAllowances[$dateStr] = 'Libur';
+                            }
+                        } elseif ($excuse) {
+                            if (in_array($excuse->type, ['Izin Tidak Masuk', 'Izin Tdk Masuk', 'Sakit', 'Lainnya'])) {
+                                $izinDates[] = $formattedDate;
+                                $dailyAllowances[$dateStr] = '20.000';
+                            } else {
+                                $liburDates[] = $formattedDate;
+                                $dailyAllowances[$dateStr] = 'Libur';
+                            }
+                        } elseif ($currentDateCheck->isSaturday()) {
+                            $masukDates[] = $formattedDate . ' (Sabtu)';
+                            $dailyAllowances[$dateStr] = '35.000';
+                        } else {
+                            $dailyAllowances[$dateStr] = '-';
+                        }
+                    } else {
+                        if ($hasAttendance) {
+                            if (in_array($hasAttendance->status, ['Hadir', 'Terlambat'])) {
+                                $masukDates[] = $formattedDate;
+                                $dailyAllowances[$dateStr] = '35.000';
+                            } elseif (in_array($hasAttendance->status, ['Izin', 'Sakit'])) {
+                                $izinDates[] = $formattedDate;
+                                $dailyAllowances[$dateStr] = 'Izin';
+                            } else {
+                                $liburDates[] = $formattedDate;
+                                $dailyAllowances[$dateStr] = 'Libur';
+                            }
+                        } elseif ($excuse) {
+                            if (in_array($excuse->type, ['Izin Tidak Masuk', 'Izin Tdk Masuk', 'Sakit', 'Lainnya'])) {
+                                $izinDates[] = $formattedDate;
+                                $dailyAllowances[$dateStr] = 'Izin';
+                            } else {
+                                $liburDates[] = $formattedDate;
+                                $dailyAllowances[$dateStr] = 'Libur';
+                            }
+                        } else {
+                            $isStaffKantor = $user->division && str_contains(strtolower($user->division->name), 'staff kantor');
+                            if ($isStaffKantor && $currentDateCheck->isWeekend()) {
+                                $liburDates[] = $formattedDate;
+                                $dailyAllowances[$dateStr] = 'Libur';
+                            } else {
+                                $holiday = $holidays->first(function($h) use ($dateStr) {
+                                    return \Carbon\Carbon::parse($h->date)->toDateString() === $dateStr;
+                                });
+                                if ($holiday) {
+                                    $liburDates[] = $formattedDate;
+                                    $dailyAllowances[$dateStr] = 'Libur';
+                                } else {
+                                    $dailyAllowances[$dateStr] = '-';
+                                }
+                            }
+                        }
+                    }
+                    $currentDateCheck->addDay();
+                }
+            }
+
+            $detailParts = [];
+            if (!empty($masukDates)) {
+                $detailParts[] = "Masuk (" . count($masukDates) . "x): " . implode(', ', $masukDates);
+            }
+            if (!empty($izinDates)) {
+                $detailParts[] = "Izin (" . count($izinDates) . "x): " . implode(', ', $izinDates);
+            }
+            if (!empty($liburDates)) {
+                $detailParts[] = "Libur (" . count($liburDates) . "x): " . implode(', ', $liburDates);
+            }
+            $user->meal_allowance_details = implode(" | ", $detailParts);
+            $user->daily_allowances = $dailyAllowances;
 
             // Check if this period has been paid and update if needed (dynamic history)
             $payment = \App\Models\MealAllowancePayment::where('user_id', $user->id)
@@ -228,6 +385,19 @@ class AttendanceMonitoringController extends Controller
             $user->total_meal_allowance = $user->is_meal_paid ? 0 : $calculatedAmount;
         }
 
+        // Generate periodDates array to send to the view
+        $periodDates = [];
+        $currentDateCheck = $startDate->copy();
+        while ($currentDateCheck->lte($endDate)) {
+            $periodDates[] = [
+                'date_string' => $currentDateCheck->toDateString(),
+                'formatted' => $currentDateCheck->translatedFormat('d M'),
+                'is_saturday' => $currentDateCheck->isSaturday(),
+                'is_weekend' => $currentDateCheck->isWeekend(),
+            ];
+            $currentDateCheck->addDay();
+        }
+
         return [
             'users' => $users,
             'divisions' => $divisions,
@@ -235,6 +405,7 @@ class AttendanceMonitoringController extends Controller
             'startDate' => $startDate->toDateString(),
             'endDate' => $endDate->toDateString(),
             'recapRouteName' => 'hrd.attendance.recap',
+            'periodDates' => $periodDates,
         ];
     }
 
@@ -391,5 +562,27 @@ class AttendanceMonitoringController extends Controller
             'totalPayments' => $payments->count(),
             'grandTotal' => $payments->sum('amount'),
         ]);
+    }
+
+    public function updatePaymentHistory(Request $request, \App\Models\MealAllowancePayment $payment)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'manual_employee_name' => 'nullable|string|max:255',
+        ]);
+
+        $payment->amount = $request->amount;
+        if ($payment->manual_employee_name !== null) {
+            $payment->manual_employee_name = $request->manual_employee_name;
+        }
+        $payment->save();
+
+        return back()->with('success', 'Riwayat pembayaran berhasil diupdate.');
+    }
+
+    public function deletePaymentHistory(\App\Models\MealAllowancePayment $payment)
+    {
+        $payment->delete();
+        return back()->with('success', 'Riwayat pembayaran berhasil dihapus.');
     }
 }

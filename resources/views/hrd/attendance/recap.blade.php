@@ -113,6 +113,7 @@
                     </thead>
                     <tbody class="divide-y divide-blue-50 dark:divide-slate-700">
                         @forelse($users as $user)
+                            @if($user->name === 'Edo') @continue @endif
                             <tr class="hover:bg-blue-50/50 dark:hover:bg-slate-700/30 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="font-semibold text-sm text-blue-950 dark:text-white">{{ $user->name }}</div>
@@ -225,25 +226,41 @@
                     <table id="printTable" style="width: 100%; border-collapse: collapse; font-size: 12px; color: #000;">
                         <thead>
                             <tr style="background: #e5e7eb;">
-                                <th style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: 700; width: 45px; color: #000;">No</th>
-                                <th style="border: 1px solid #000; padding: 4px 6px; text-align: left; font-weight: 700; color: #000;">Nama</th>
-                                <th style="border: 1px solid #000; padding: 4px 6px; text-align: right; font-weight: 700; min-width: 120px; color: #000;">Jumlah Uang Makan</th>
-                                <th class="ttd-col" style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: 700; min-width: 100px; color: #000;">TTD</th>
+                                <th style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: 700; width: 45px; color: #000; vertical-align: middle;" rowspan="2">No</th>
+                                <th style="border: 1px solid #000; padding: 4px 6px; text-align: left; font-weight: 700; color: #000; vertical-align: middle;" rowspan="2">Nama</th>
+                                <th style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: 700; color: #000;" colspan="{{ count($periodDates) }}">Tanggal</th>
+                                <th style="border: 1px solid #000; padding: 4px 6px; text-align: right; font-weight: 700; min-width: 100px; color: #000; vertical-align: middle;" rowspan="2">Jumlah</th>
+                                <th class="ttd-col" style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: 700; min-width: 80px; color: #000; vertical-align: middle;" rowspan="2">TTD</th>
+                            </tr>
+                            <tr style="background: #e5e7eb;">
+                                @foreach($periodDates as $pDate)
+                                    <th style="border: 1px solid #000; padding: 4px 4px; text-align: center; font-weight: 700; font-size: 10px; color: #000; min-width: 50px;">{{ $pDate['formatted'] }}</th>
+                                @endforeach
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($users as $index => $user)
                                 <tr class="data-row" style="position: relative;" data-user-id="{{ $user->id }}">
-                                    <td class="row-num" style="border: 1px solid #000; padding: 4px 6px; text-align: center; color: #000; position: relative;">
+                                    <td class="row-num" style="border: 1px solid #000; padding: 4px 6px; text-align: center; color: #000; position: relative; vertical-align: top;">
                                         <span class="num-text">{{ $index + 1 }}</span>
                                         <div class="print-hide action-btns" style="position: absolute; left: -45px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 4px; z-index: 50;">
                                             <button onclick="moveRowUp(this)" style="font-size: 14px; background: #e2e8f0; border-radius: 6px; padding: 4px 10px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">▲</button>
                                             <button onclick="moveRowDown(this)" style="font-size: 14px; background: #e2e8f0; border-radius: 6px; padding: 4px 10px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">▼</button>
                                         </div>
                                     </td>
-                                    <td class="name-cell" style="border: 1px solid #000; padding: 4px 6px; color: #000;" contenteditable="true">{{ $user->name }}</td>
-                                    <td class="uang-makan-cell" style="border: 1px solid #000; padding: 4px 6px; text-align: right; color: #000;" contenteditable="true" oninput="formatRupiah(this); calculateTotal()" onfocus="clearZero(this)" onblur="fillZero(this)">Rp {{ number_format($user->total_meal_allowance, 0, ',', '.') }}</td>
-                                    <td class="ttd-col" style="border: 1px solid #000; padding: 4px 6px; text-align: center; height: 35px; color: #000; position: relative;" contenteditable="true">
+                                    <td style="border: 1px solid #000; padding: 4px 6px; color: #000; vertical-align: top;">
+                                        <div class="name-cell" contenteditable="true" style="outline: none; font-weight: 600;">{{ $user->name }}</div>
+                                    </td>
+                                    @foreach($periodDates as $pDate)
+                                        @php
+                                            $val = $user->daily_allowances[$pDate['date_string']] ?? '-';
+                                        @endphp
+                                        <td class="daily-cell" data-date="{{ $pDate['date_string'] }}" style="border: 1px solid #000; padding: 4px 4px; text-align: center; color: #000; font-size: 10px; vertical-align: top;" contenteditable="true" oninput="recalculateRowTotal(this.closest('tr'))">
+                                            {{ $val }}
+                                        </td>
+                                    @endforeach
+                                    <td class="uang-makan-cell" style="border: 1px solid #000; padding: 4px 6px; text-align: right; color: #000; vertical-align: top;" contenteditable="true" oninput="formatRupiah(this); calculateTotal()" onfocus="clearZero(this)" onblur="fillZero(this)">Rp {{ number_format($user->total_meal_allowance, 0, ',', '.') }}</td>
+                                    <td class="ttd-col" style="border: 1px solid #000; padding: 4px 6px; text-align: center; height: 35px; color: #000; position: relative; vertical-align: top;" contenteditable="true">
                                         <div class="print-hide action-btns" style="position: absolute; right: -45px; top: 50%; transform: translateY(-50%); z-index: 50;" contenteditable="false">
                                             <button onclick="deleteRow(this)" style="font-size: 16px; font-weight: bold; background: #fee2e2; color: #dc2626; border-radius: 6px; padding: 8px 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">✕</button>
                                         </div>
@@ -251,13 +268,13 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" style="border: 1px solid #000; padding: 12px; text-align: center; color: #999; font-style: italic;">Tidak ada data karyawan.</td>
+                                    <td colspan="{{ 4 + count($periodDates) }}" style="border: 1px solid #000; padding: 12px; text-align: center; color: #999; font-style: italic;">Tidak ada data karyawan.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                         <tfoot>
                             <tr style="background: #e5e7eb; font-weight: 700;">
-                                <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; color: #000;" colspan="2">TOTAL</td>
+                                <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; color: #000;" colspan="{{ 2 + count($periodDates) }}">TOTAL</td>
                                 <td id="totalUangMakan" style="border: 1px solid #000; padding: 4px 6px; text-align: right; color: #000;">Rp {{ number_format($users->sum('total_meal_allowance'), 0, ',', '.') }}</td>
                                 <td class="ttd-col" style="border: 1px solid #000; padding: 4px 6px; color: #000;"></td>
                             </tr>
@@ -380,20 +397,30 @@
             const newRow = document.createElement('tr');
             newRow.className = 'data-row';
 
-            const emptyState = tbody.querySelector('td[colspan="4"]');
+            const emptyState = tbody.querySelector('td[colspan]');
             if (emptyState) emptyState.parentElement.remove();
 
+            // Hitung kolom tanggal yang ada di header
+            const dateHeaders = document.querySelectorAll('#printTable thead tr:nth-child(2) th');
+            let dailyCellsHtml = '';
+            dateHeaders.forEach(th => {
+                dailyCellsHtml += `<td class="daily-cell" style="border: 1px solid #000; padding: 4px 4px; text-align: center; color: #000; font-size: 10px; vertical-align: top;" contenteditable="true" oninput="recalculateRowTotal(this.closest('tr'))">-</td>`;
+            });
+
             newRow.innerHTML = `
-                <td class="row-num" style="border: 1px solid #000; padding: 4px 6px; text-align: center; color: #000; position: relative;">
+                <td class="row-num" style="border: 1px solid #000; padding: 4px 6px; text-align: center; color: #000; position: relative; vertical-align: top;">
                     <span class="num-text"></span>
                     <div class="print-hide action-btns" style="position: absolute; left: -45px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 4px; z-index: 50;">
                         <button onclick="moveRowUp(this)" style="font-size: 14px; background: #e2e8f0; border-radius: 6px; padding: 4px 10px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">▲</button>
                         <button onclick="moveRowDown(this)" style="font-size: 14px; background: #e2e8f0; border-radius: 6px; padding: 4px 10px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">▼</button>
                     </div>
                 </td>
-                <td class="name-cell" style="border: 1px solid #000; padding: 4px 6px; color: #000;" contenteditable="true"></td>
-                <td class="uang-makan-cell" style="border: 1px solid #000; padding: 4px 6px; text-align: right; color: #000;" contenteditable="true" oninput="formatRupiah(this); calculateTotal()" onfocus="clearZero(this)" onblur="fillZero(this)">Rp 0</td>
-                <td class="ttd-col" style="border: 1px solid #000; padding: 4px 6px; text-align: center; height: 35px; color: #000; position: relative;" contenteditable="true">
+                <td style="border: 1px solid #000; padding: 4px 6px; color: #000; vertical-align: top;">
+                    <div class="name-cell" contenteditable="true" style="outline: none; font-weight: 600;"></div>
+                </td>
+            ` + dailyCellsHtml + `
+                <td class="uang-makan-cell" style="border: 1px solid #000; padding: 4px 6px; text-align: right; color: #000; vertical-align: top;" contenteditable="true" oninput="formatRupiah(this); calculateTotal()" onfocus="clearZero(this)" onblur="fillZero(this)">Rp 0</td>
+                <td class="ttd-col" style="border: 1px solid #000; padding: 4px 6px; text-align: center; height: 35px; color: #000; position: relative; vertical-align: top;" contenteditable="true">
                     <div class="print-hide action-btns" style="position: absolute; right: -45px; top: 50%; transform: translateY(-50%); z-index: 50;" contenteditable="false">
                         <button onclick="deleteRow(this)" style="font-size: 16px; font-weight: bold; background: #fee2e2; color: #dc2626; border-radius: 6px; padding: 8px 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">✕</button>
                     </div>
@@ -403,7 +430,7 @@
             tbody.appendChild(newRow);
             updateRowNumbers();
             calculateTotal();
-            newRow.querySelector('td:nth-child(2)').focus();
+            newRow.querySelector('.name-cell').focus();
         }
 
         function deleteRow(btn) {
@@ -449,7 +476,7 @@
                 element.innerText = 'Rp 0';
             } else {
                 let num = parseInt(numStr, 10);
-                element.innerText = 'Rp ' + new Intl.NumberFormat('id-ID').format(num);
+                element.innerText = '' + new Intl.NumberFormat('id-ID').format(num);
             }
 
             let range = document.createRange();
@@ -458,6 +485,23 @@
             range.collapse(false);
             sel.removeAllRanges();
             sel.addRange(range);
+        }
+
+        function recalculateRowTotal(row) {
+            const dailyCells = row.querySelectorAll('.daily-cell');
+            let rowTotal = 0;
+            dailyCells.forEach(cell => {
+                let text = cell.innerText || cell.textContent;
+                let numStr = text.replace(/[^0-9]/g, '');
+                if (numStr !== '') {
+                    rowTotal += parseInt(numStr, 10);
+                }
+            });
+            const amountCell = row.querySelector('.uang-makan-cell');
+            if (amountCell) {
+                amountCell.innerText = 'Rp ' + new Intl.NumberFormat('id-ID').format(rowTotal);
+            }
+            calculateTotal();
         }
 
         function calculateTotal() {
@@ -534,37 +578,30 @@
                             targetCell = rows[rowIndex + 1].querySelectorAll('td')[cellIndex];
                         }
                     } else if (e.key === 'ArrowLeft') {
+                        e.preventDefault();
                         const editableCells = Array.from(row.querySelectorAll('[contenteditable="true"]'));
                         const editIndex = editableCells.indexOf(active);
-                        const selection = window.getSelection();
-                        if (selection.rangeCount > 0) {
-                            const range = selection.getRangeAt(0);
-                            if (range.startOffset === 0) {
-                                e.preventDefault();
-                                if (editIndex > 0) targetCell = editableCells[editIndex - 1];
-                            }
-                        }
+                        if (editIndex > 0) targetCell = editableCells[editIndex - 1];
                     } else if (e.key === 'ArrowRight') {
+                        e.preventDefault();
                         const editableCells = Array.from(row.querySelectorAll('[contenteditable="true"]'));
                         const editIndex = editableCells.indexOf(active);
-                        const selection = window.getSelection();
-                        if (selection.rangeCount > 0) {
-                            const range = selection.getRangeAt(0);
-                            if (range.startOffset === active.innerText.length) {
-                                e.preventDefault();
-                                if (editIndex < editableCells.length - 1) targetCell = editableCells[editIndex + 1];
-                            }
-                        }
+                        if (editIndex < editableCells.length - 1) targetCell = editableCells[editIndex + 1];
                     }
 
-                    if (targetCell && targetCell.getAttribute('contenteditable') === 'true') {
-                        targetCell.focus();
-                        let range = document.createRange();
-                        let sel = window.getSelection();
-                        range.selectNodeContents(targetCell);
-                        range.collapse(false);
-                        sel.removeAllRanges();
-                        sel.addRange(range);
+                    if (targetCell) {
+                        let editable = (targetCell.hasAttribute('contenteditable') && targetCell.getAttribute('contenteditable') === 'true')
+                            ? targetCell
+                            : targetCell.querySelector('[contenteditable="true"]');
+                        if (editable) {
+                            editable.focus();
+                            let range = document.createRange();
+                            let sel = window.getSelection();
+                            range.selectNodeContents(editable);
+                            range.collapse(false);
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                        }
                     }
                 });
             }
@@ -618,6 +655,7 @@
             .then(data => {
                 if (data.success) {
                     alert(data.message);
+                    window.location.reload();
                 } else {
                     alert('Gagal menyimpan: ' + (data.message || 'Terjadi kesalahan'));
                 }
