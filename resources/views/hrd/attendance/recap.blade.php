@@ -80,17 +80,17 @@
                         <input type="hidden" name="bulk_pay[{{ $u->id }}]" value="{{ $u->calculated_meal_allowance }}">
                     @endif
                 @endforeach
-                <button type="submit" class="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-md hover:shadow-lg active:scale-95">
+                <button type="submit" class="flex items-center gap-2 bg-emerald-400 hover:bg-emerald-500 dark:bg-gradient-to-br dark:from-emerald-400 dark:to-teal-500 dark:hover:from-emerald-500 dark:hover:to-teal-600 text-black font-bold px-4 py-2.5 rounded-lg text-sm transition-all shadow-md hover:shadow-lg active:scale-95">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                     Tandai Semua Lunas
                 </button>
             </form>
             @endif
-            <a href="{{ route('hrd.attendance.payment-history') }}" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-md hover:shadow-lg active:scale-95">
+            <a href="{{ route('hrd.attendance.payment-history') }}" class="flex items-center gap-2 bg-indigo-300 hover:bg-indigo-400 dark:bg-gradient-to-br dark:from-purple-400 dark:to-indigo-500 dark:hover:from-purple-500 dark:hover:to-indigo-600 text-black font-bold px-4 py-2.5 rounded-lg text-sm transition-all shadow-md hover:shadow-lg active:scale-95">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Riwayat Pembayaran
             </a>
-            <button onclick="openPrintPreview()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-md hover:shadow-lg active:scale-95">
+            <button onclick="openPrintPreview()" class="flex items-center gap-2 bg-blue-300 hover:bg-blue-400 dark:bg-gradient-to-br dark:from-blue-400 dark:to-cyan-500 dark:hover:from-blue-500 dark:hover:to-cyan-600 text-black font-bold px-4 py-2.5 rounded-lg text-sm transition-all shadow-md hover:shadow-lg active:scale-95">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                 Cetak Laporan (PDF)
             </button>
@@ -144,7 +144,7 @@
                                                 <input type="hidden" name="end_date" value="{{ $endDate }}">
                                                 <input type="hidden" name="amount" value="{{ $user->calculated_meal_allowance }}">
                                                 <button type="submit" class="inline-flex items-center space-x-1 text-xs bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-1.5 rounded-md font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-800/60 transition-colors">
-                                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></path></svg>
+                                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                                                     <span>Lunas</span>
                                                 </button>
                                             </form>
@@ -242,7 +242,7 @@
                                         </div>
                                     </td>
                                     <td class="name-cell" style="border: 1px solid #000; padding: 4px 6px; color: #000;" contenteditable="true">{{ $user->name }}</td>
-                                    <td class="uang-makan-cell" style="border: 1px solid #000; padding: 4px 6px; text-align: right; color: #000;" contenteditable="true" oninput="formatRupiah(this); calculateTotal()">Rp {{ number_format($user->total_meal_allowance, 0, ',', '.') }}</td>
+                                    <td class="uang-makan-cell" style="border: 1px solid #000; padding: 4px 6px; text-align: right; color: #000;" contenteditable="true" oninput="formatRupiah(this); calculateTotal()" onfocus="clearZero(this)" onblur="fillZero(this)">Rp {{ number_format($user->total_meal_allowance, 0, ',', '.') }}</td>
                                     <td class="ttd-col" style="border: 1px solid #000; padding: 4px 6px; text-align: center; height: 35px; color: #000; position: relative;" contenteditable="true">
                                         <div class="print-hide action-btns" style="position: absolute; right: -45px; top: 50%; transform: translateY(-50%); z-index: 50;" contenteditable="false">
                                             <button onclick="deleteRow(this)" style="font-size: 16px; font-weight: bold; background: #fee2e2; color: #dc2626; border-radius: 6px; padding: 8px 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">✕</button>
@@ -295,82 +295,47 @@
             user-select: none;
         }
 
+        /* ===================== PRINT STYLES ===================== */
         @media print {
-            /* Hide everything first */
-            body * { visibility: hidden !important; }
 
-            /* Show only printArea */
-            #printArea, #printArea * { visibility: visible !important; }
+            @page {
+                size: A4;
+                margin: 0;
+            }
 
+            /* Sembunyikan tombol / elemen UI di dalam printArea */
+            .print-hide,
+            .action-btns {
+                display: none !important;
+            }
+
+            /* Style printArea saat dicetak */
             #printArea {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
                 width: 100% !important;
                 margin: 0 !important;
-                padding: 5mm 15mm 10mm 15mm !important;
+                padding: 5mm 20mm !important;
                 box-shadow: none !important;
                 background: #fff !important;
                 color: #000 !important;
             }
-            @page {
-                size: A4;
-                margin: 5mm 10mm 10mm 10mm;
-                @top-center { content: none; }
-                @bottom-center { content: none; }
-            }
 
-            /* Chrome/Edge trick untuk hilangkan header-footer */
-            html {
-                -webkit-print-color-adjust: exact;
-            }
-
-            /* Hide all non-print elements */
-            .print-hide, nav, aside, header, footer,
-            #printPreviewModal > div:first-child,
-            #printPreviewModal .print-hide {
-                display: none !important;
-                visibility: hidden !important;
-            }
-
-            #printPreviewModal {
-                position: absolute !important;
-                inset: 0 !important;
-                z-index: 999999 !important;
-                display: block !important;
-                background: #fff !important;
-            }
-
-            #printPreviewModal > .relative {
-                position: static !important;
-                height: auto !important;
-            }
-
-            #printPreviewModal .flex-1.overflow-y-auto,
-            #printPreviewModal .overflow-y-auto {
-                overflow: visible !important;
-                padding: 0 !important;
-                background: #fff !important;
-            }
-
-           @page {
-    size: A4;
-    margin: 5mm 10mm 10mm 10mm;
-}
-
-            #printTable th, #printTable td {
+            #printTable th,
+            #printTable td {
                 border: 0.5pt solid #000 !important;
                 padding: 3pt 5pt !important;
                 color: #000 !important;
             }
 
-            #printTable th, #printTable tfoot td {
-                background: #eee !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+            #printTable th,
+            #printTable tfoot td {
+                background: #e5e7eb !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
-            [contenteditable] { outline: none !important; }
+            [contenteditable] {
+                outline: none !important;
+            }
         }
     </style>
 
@@ -379,12 +344,34 @@
         function openPrintPreview() {
             document.getElementById('printPreviewModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            calculateTotal(); // pastikan hitung ulang saat buka
+            calculateTotal();
         }
 
         function closePrintPreview() {
             document.getElementById('printPreviewModal').classList.add('hidden');
             document.body.style.overflow = '';
+        }
+
+        // ===== PERBAIKAN UTAMA: doPrint() =====
+        function doPrint() {
+            const printArea = document.getElementById('printArea');
+            const originalParent = printArea.parentNode;
+            const placeholder = document.createComment('printArea-placeholder');
+
+            // Pindahkan printArea langsung ke body agar tidak ada duplikat
+            originalParent.insertBefore(placeholder, printArea);
+            document.body.appendChild(printArea);
+
+            // Sembunyikan semua elemen body lain kecuali printArea
+            const bodyChildren = Array.from(document.body.children).filter(el => el.id !== 'printArea');
+            bodyChildren.forEach(el => el.style.setProperty('display', 'none', 'important'));
+
+            window.print();
+
+            // Kembalikan printArea ke posisi semula setelah print
+            originalParent.insertBefore(printArea, placeholder);
+            placeholder.parentNode.removeChild(placeholder);
+            bodyChildren.forEach(el => el.style.removeProperty('display'));
         }
 
         // Fitur Tambah Baris
@@ -393,7 +380,6 @@
             const newRow = document.createElement('tr');
             newRow.className = 'data-row';
 
-            // Bersihkan teks "Tidak ada data karyawan" jika ada
             const emptyState = tbody.querySelector('td[colspan="4"]');
             if (emptyState) emptyState.parentElement.remove();
 
@@ -406,7 +392,7 @@
                     </div>
                 </td>
                 <td class="name-cell" style="border: 1px solid #000; padding: 4px 6px; color: #000;" contenteditable="true"></td>
-                <td class="uang-makan-cell" style="border: 1px solid #000; padding: 4px 6px; text-align: right; color: #000;" contenteditable="true" oninput="formatRupiah(this); calculateTotal()">Rp 0</td>
+                <td class="uang-makan-cell" style="border: 1px solid #000; padding: 4px 6px; text-align: right; color: #000;" contenteditable="true" oninput="formatRupiah(this); calculateTotal()" onfocus="clearZero(this)" onblur="fillZero(this)">Rp 0</td>
                 <td class="ttd-col" style="border: 1px solid #000; padding: 4px 6px; text-align: center; height: 35px; color: #000; position: relative;" contenteditable="true">
                     <div class="print-hide action-btns" style="position: absolute; right: -45px; top: 50%; transform: translateY(-50%); z-index: 50;" contenteditable="false">
                         <button onclick="deleteRow(this)" style="font-size: 16px; font-weight: bold; background: #fee2e2; color: #dc2626; border-radius: 6px; padding: 8px 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">✕</button>
@@ -417,12 +403,9 @@
             tbody.appendChild(newRow);
             updateRowNumbers();
             calculateTotal();
-
-            // Fokus ke nama karyawan baru
             newRow.querySelector('td:nth-child(2)').focus();
         }
 
-        // Fitur Hapus Baris
         function deleteRow(btn) {
             const row = btn.closest('tr');
             if (confirm("Hapus baris ini?")) {
@@ -432,7 +415,6 @@
             }
         }
 
-        // Fitur Pindah Posisi (Atas/Bawah)
         function moveRowUp(btn) {
             const row = btn.closest('tr');
             const prevRow = row.previousElementSibling;
@@ -455,15 +437,14 @@
             const rows = document.querySelectorAll('#printTable tbody tr.data-row');
             rows.forEach((row, index) => {
                 const numText = row.querySelector('.num-text');
-                if(numText) numText.textContent = index + 1;
+                if (numText) numText.textContent = index + 1;
             });
         }
 
-        // Fitur Format Rupiah Otomatis saat mengetik
         function formatRupiah(element) {
             let text = element.innerText || element.textContent;
             let numStr = text.replace(/[^0-9]/g, '');
-            
+
             if (numStr === '') {
                 element.innerText = 'Rp 0';
             } else {
@@ -471,7 +452,6 @@
                 element.innerText = 'Rp ' + new Intl.NumberFormat('id-ID').format(num);
             }
 
-            // Kembalikan kursor ke posisi paling belakang teks
             let range = document.createRange();
             let sel = window.getSelection();
             range.selectNodeContents(element);
@@ -480,32 +460,117 @@
             sel.addRange(range);
         }
 
-        // Fitur Hitung Total Otomatis
         function calculateTotal() {
             const cells = document.querySelectorAll('.uang-makan-cell');
             let total = 0;
-            
+
             cells.forEach(cell => {
                 let text = cell.innerText || cell.textContent;
-                let numStr = text.replace(/[^0-9]/g, ''); 
+                let numStr = text.replace(/[^0-9]/g, '');
                 if (numStr !== '') {
                     total += parseInt(numStr, 10);
                 }
             });
 
-            // Format total kembali ke Rp
             const totalStr = new Intl.NumberFormat('id-ID').format(total);
             const totalCell = document.getElementById('totalUangMakan');
-            if(totalCell) {
+            if (totalCell) {
                 totalCell.innerText = 'Rp ' + totalStr;
             }
         }
 
-        function doPrint() {
-            window.print();
+        function clearZero(element) {
+            let text = element.innerText.trim();
+            if (text === 'Rp 0' || text === '0') {
+                element.innerText = 'Rp ';
+                let range = document.createRange();
+                let sel = window.getSelection();
+                range.selectNodeContents(element);
+                range.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
         }
 
-        document.addEventListener('keydown', function(e) {
+        function fillZero(element) {
+            let text = element.innerText.trim();
+            let numStr = text.replace(/[^0-9]/g, '');
+            if (numStr === '') {
+                element.innerText = 'Rp 0';
+                calculateTotal();
+            }
+        }
+
+        // Arrow Key Navigation
+        document.addEventListener('DOMContentLoaded', function () {
+            const printTable = document.getElementById('printTable');
+            if (printTable) {
+                printTable.addEventListener('keydown', function (e) {
+                    const active = document.activeElement;
+                    if (!active || !active.hasAttribute('contenteditable')) return;
+
+                    const cell = active.closest('td');
+                    if (!cell) return;
+
+                    const row = cell.closest('tr');
+                    if (!row) return;
+
+                    const table = row.closest('table');
+                    const rows = Array.from(table.querySelectorAll('tbody tr.data-row'));
+                    const rowIndex = rows.indexOf(row);
+                    const cells = Array.from(row.querySelectorAll('td'));
+                    const cellIndex = cells.indexOf(cell);
+
+                    let targetCell = null;
+
+                    if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (rowIndex > 0) {
+                            targetCell = rows[rowIndex - 1].querySelectorAll('td')[cellIndex];
+                        }
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (rowIndex < rows.length - 1) {
+                            targetCell = rows[rowIndex + 1].querySelectorAll('td')[cellIndex];
+                        }
+                    } else if (e.key === 'ArrowLeft') {
+                        const editableCells = Array.from(row.querySelectorAll('[contenteditable="true"]'));
+                        const editIndex = editableCells.indexOf(active);
+                        const selection = window.getSelection();
+                        if (selection.rangeCount > 0) {
+                            const range = selection.getRangeAt(0);
+                            if (range.startOffset === 0) {
+                                e.preventDefault();
+                                if (editIndex > 0) targetCell = editableCells[editIndex - 1];
+                            }
+                        }
+                    } else if (e.key === 'ArrowRight') {
+                        const editableCells = Array.from(row.querySelectorAll('[contenteditable="true"]'));
+                        const editIndex = editableCells.indexOf(active);
+                        const selection = window.getSelection();
+                        if (selection.rangeCount > 0) {
+                            const range = selection.getRangeAt(0);
+                            if (range.startOffset === active.innerText.length) {
+                                e.preventDefault();
+                                if (editIndex < editableCells.length - 1) targetCell = editableCells[editIndex + 1];
+                            }
+                        }
+                    }
+
+                    if (targetCell && targetCell.getAttribute('contenteditable') === 'true') {
+                        targetCell.focus();
+                        let range = document.createRange();
+                        let sel = window.getSelection();
+                        range.selectNodeContents(targetCell);
+                        range.collapse(false);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    }
+                });
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') closePrintPreview();
         });
 
@@ -518,18 +583,14 @@
                 const nameCell = row.querySelector('.name-cell');
                 const amountCell = row.querySelector('.uang-makan-cell');
                 const userId = row.dataset.userId || null;
-                
+
                 if (nameCell && amountCell) {
                     const name = nameCell.innerText.trim();
                     const amountStr = amountCell.innerText.replace(/[^0-9]/g, '');
                     const amount = amountStr ? parseInt(amountStr, 10) : 0;
-                    
+
                     if (name) {
-                        payments.push({
-                            name: name,
-                            amount: amount,
-                            user_id: userId
-                        });
+                        payments.push({ name, amount, user_id: userId });
                     }
                 }
             });
@@ -539,9 +600,7 @@
                 return;
             }
 
-            if (!confirm('Simpan data laporan ini ke riwayat pembayaran?')) {
-                return;
-            }
+            if (!confirm('Simpan data laporan ini ke riwayat pembayaran?')) return;
 
             fetch("{{ route('hrd.attendance.save-history') }}", {
                 method: 'POST',
@@ -575,7 +634,7 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/id.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const form = document.querySelector('[x-ref="filterForm"]');
 
             flatpickr("#custom_date_range", {
@@ -584,7 +643,7 @@
                 locale: "id",
                 maxDate: "{{ \Carbon\Carbon::now()->isFriday() ? \Carbon\Carbon::now()->addDay()->toDateString() : \Carbon\Carbon::today()->toDateString() }}",
                 defaultDate: ["{{ $startDate }}", "{{ $endDate }}"],
-                onChange: function(selectedDates, dateStr, instance) {
+                onChange: function (selectedDates, dateStr, instance) {
                     if (selectedDates.length === 2) {
                         setTimeout(() => form.submit(), 100);
                     }
