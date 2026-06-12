@@ -141,11 +141,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/attendance/payment-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'paymentHistory'])->name('attendance.payment-history');
         Route::post('/attendance/payment-history/{payment}/update', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'updatePaymentHistory'])->name('attendance.payment-history.update');
         Route::post('/attendance/payment-history/{payment}/delete', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'deletePaymentHistory'])->name('attendance.payment-history.delete');
-
-        // ✅ Test Notifikasi (khusus HRD)
-        Route::get('/notification-test', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'notificationTestPage'])->name('notification-test');
-        Route::post('/notification-test/send', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'sendTestNotification'])->name('notification-test.send');
-        Route::post('/notification-test/run-smart', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'runSmartNotification'])->name('notification-test.run-smart');
     });
 
     Route::prefix('karyawan')->name('karyawan.')->group(function () {
