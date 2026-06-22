@@ -236,14 +236,24 @@
                     <p class="text-xs text-blue-500 dark:text-blue-400">Digunakan saat server maintenance/error</p>
                 </div>
             </div>
-            <form action="{{ route('super-admin.attendance.manual-checkin') }}" method="POST" class="space-y-4">
+            <form action="{{ route('super-admin.attendance.manual-checkin') }}" method="POST" class="space-y-4" onsubmit="return confirm('PENTING: Menyimpan absen masuk manual ini akan menindih (overwrite) data absensi masuk yang sudah ada pada tanggal tersebut. Apakah Anda yakin ingin melanjutkan?')">
                 @csrf
+                {{-- Warning Banner / Pengumuman --}}
+                <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 text-xs text-amber-800 dark:text-amber-300">
+                    <p class="font-bold flex items-center gap-1.5 mb-1 text-amber-950 dark:text-amber-200">
+                        <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        PENGUMUMAN PENTING:
+                    </p>
+                    <p>Menyimpan absen masuk manual ini akan <strong>menindih (overwrite)</strong> data absensi masuk yang sudah ada pada tanggal tersebut. Harap pastikan data yang dimasukkan benar.</p>
+                </div>
                 <div>
                     <label class="block text-xs font-bold text-blue-950 dark:text-white mb-1.5">Karyawan</label>
                     <select name="user_id" required class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-blue-950 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none">
                         <option value="">-- Pilih Karyawan --</option>
                         @foreach($employees as $emp)
-                        <option value="{{ $emp->id }}">{{ $emp->name }} — {{ $emp->division->name ?? 'No Divisi' }}</option>
+                        <option value="{{ $emp->id }}">
+                            {{ $emp->name }} — {{ $emp->role->name }}{{ $emp->division ? ' (' . $emp->division->name . ')' : '' }}
+                        </option>
                         @endforeach
                     </select>
                 </div>
@@ -309,14 +319,24 @@
                     <p class="text-xs text-blue-500 dark:text-blue-400">Catat jam pulang karyawan secara manual</p>
                 </div>
             </div>
-            <form action="{{ route('super-admin.attendance.manual-checkout') }}" method="POST" class="space-y-4">
+            <form action="{{ route('super-admin.attendance.manual-checkout') }}" method="POST" class="space-y-4" onsubmit="return confirm('PENTING: Menyimpan absen pulang manual ini akan menindih (overwrite) data absensi pulang yang sudah ada pada tanggal terpilih. Apakah Anda yakin ingin melanjutkan?')">
                 @csrf
+                {{-- Warning Banner / Pengumuman --}}
+                <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 text-xs text-amber-800 dark:text-amber-300">
+                    <p class="font-bold flex items-center gap-1.5 mb-1 text-amber-950 dark:text-amber-200">
+                        <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        PENGUMUMAN PENTING:
+                    </p>
+                    <p>Menyimpan absen pulang manual ini akan <strong>menindih (overwrite)</strong> data absensi pulang yang sudah ada pada tanggal tersebut. Harap pastikan data yang dimasukkan benar.</p>
+                </div>
                 <div>
                     <label class="block text-xs font-bold text-blue-950 dark:text-white mb-1.5">Karyawan</label>
                     <select name="user_id" required class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-blue-950 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none">
                         <option value="">-- Pilih Karyawan --</option>
                         @foreach($employees as $emp)
-                        <option value="{{ $emp->id }}">{{ $emp->name }} — {{ $emp->division->name ?? 'No Divisi' }}</option>
+                        <option value="{{ $emp->id }}">
+                            {{ $emp->name }} — {{ $emp->role->name }}{{ $emp->division ? ' (' . $emp->division->name . ')' : '' }}
+                        </option>
                         @endforeach
                     </select>
                 </div>

@@ -33,17 +33,18 @@ class AttendanceMonitoringController extends Controller
     {
         /** @var User|null $currentUser */
         $currentUser = Auth::user();
+
         if ($this->isHenrySuperAdmin($currentUser)) {
             $employees = User::whereHas('role', function ($q) {
-                $q->where('slug', 'karyawan');
+                $q->whereIn('slug', ['karyawan', 'karyawan_ramayana']);
             })->where('is_active', true)->orderBy('name')->get();
 
             $employeeId = $request->query('employee_id');
-            $month = $request->query('month', Carbon::now()->format('Y-m'));
-            $start = Carbon::parse($month . '-01');
-            $end = $start->copy()->endOfMonth();
+            $month      = $request->query('month', Carbon::now()->format('Y-m'));
+            $start      = Carbon::parse($month . '-01');
+            $end        = $start->copy()->endOfMonth();
 
-            $report = null;
+            $report     = null;
             $allReports = collect();
 
             if ($employeeId) {
@@ -63,17 +64,17 @@ class AttendanceMonitoringController extends Controller
 
                 $summary = [
                     'total_present' => $attendances->where('status', 'Hadir')->count(),
-                    'total_late' => $attendances->where('status', 'Terlambat')->count(),
-                    'total_leave' => $leaves->count(),
-                    'total_sick' => $leaves->where('type', 'Sakit')->count(),
+                    'total_late'    => $attendances->where('status', 'Terlambat')->count(),
+                    'total_leave'   => $leaves->count(),
+                    'total_sick'    => $leaves->where('type', 'Sakit')->count(),
                 ];
 
                 $report = [
                     'attendances' => $attendances,
-                    'leaves' => $leaves,
-                    'summary' => $summary,
-                    'employee' => User::whereKey($employeeId)->first(),
-                    'month' => $month,
+                    'leaves'      => $leaves,
+                    'summary'     => $summary,
+                    'employee'    => User::whereKey($employeeId)->first(),
+                    'month'       => $month,
                 ];
             } else {
                 $allReports = $employees->map(function ($employee) use ($start, $end) {
@@ -91,11 +92,11 @@ class AttendanceMonitoringController extends Controller
 
                     return [
                         'employee' => $employee,
-                        'summary' => [
-                            'total_present' => $attendances->where('status', 'Hadir')->count(),
-                            'total_late' => $attendances->where('status', 'Terlambat')->count(),
-                            'total_leave' => $leaves->count(),
-                            'total_sick' => $leaves->where('type', 'Sakit')->count(),
+                        'summary'  => [
+                            'total_present'            => $attendances->where('status', 'Hadir')->count(),
+                            'total_late'               => $attendances->where('status', 'Terlambat')->count(),
+                            'total_leave'              => $leaves->count(),
+                            'total_sick'               => $leaves->where('type', 'Sakit')->count(),
                             'total_attendance_records' => $attendances->count(),
                         ],
                     ];
@@ -103,11 +104,11 @@ class AttendanceMonitoringController extends Controller
             }
 
             return view('pic.reports.index', [
-                'employees' => $employees,
-                'report' => $report,
-                'allReports' => $allReports,
-                'employeeId' => $employeeId,
-                'month' => $month,
+                'employees'       => $employees,
+                'report'          => $report,
+                'allReports'      => $allReports,
+                'employeeId'      => $employeeId,
+                'month'           => $month,
                 'reportRouteName' => 'super-admin.attendance.index',
             ]);
         }
@@ -120,7 +121,8 @@ class AttendanceMonitoringController extends Controller
             ->get();
 
         // Daftar karyawan aktif untuk dropdown absen manual
-        $employees = User::whereHas('role', fn($q) => $q->where('slug', 'karyawan'))
+        $employees = User::with(['role', 'division'])
+            ->whereHas('role', fn($q) => $q->whereIn('slug', ['karyawan', 'karyawan_ramayana']))
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -131,6 +133,7 @@ class AttendanceMonitoringController extends Controller
     public function destroy(Request $request, Attendance $attendance): RedirectResponse
     {
         $attendance->load(['user.division']);
+
         $date = $attendance->date instanceof Carbon
             ? $attendance->date->toDateString()
             : (string) $attendance->date;
@@ -140,13 +143,13 @@ class AttendanceMonitoringController extends Controller
         DB::transaction(function () use ($attendance, $attendanceId) {
             DeletedAttendance::create([
                 'original_attendance_id' => $attendanceId,
-                'user_id' => $attendance->user_id,
-                'user_name' => $attendance->user->name,
-                'division_name' => $attendance->user->division->name ?? null,
-                'date' => $attendance->date,
-                'payload' => $attendance->toArray(),
-                'deleted_by' => Auth::id(),
-                'deleted_at' => now(),
+                'user_id'                => $attendance->user_id,
+                'user_name'              => $attendance->user->name,
+                'division_name'          => $attendance->user->division->name ?? null,
+                'date'                   => $attendance->date,
+                'payload'                => $attendance->toArray(),
+                'deleted_by'             => Auth::id(),
+                'deleted_at'             => now(),
             ]);
 
             Attendance::query()->whereKey($attendanceId)->delete();
@@ -164,24 +167,27 @@ class AttendanceMonitoringController extends Controller
     public function manualCheckin(Request $request): RedirectResponse
     {
         $request->validate([
-            'user_id'    => 'required|exists:users,id',
-            'date'       => 'required|date',
-            'check_in'   => 'required|date_format:H:i',
-            'status'     => 'required|in:Hadir,Terlambat,Izin,Sakit',
-            'note'       => 'nullable|string|max:255',
+            'user_id'  => 'required|exists:users,id',
+            'date'     => 'required|date',
+            'check_in' => 'required|date_format:H:i',
+            'status'   => 'required|in:Hadir,Terlambat,Izin,Sakit',
+            'note'     => 'nullable|string|max:255',
         ]);
 
         $targetDate = Carbon::parse($request->date)->toDateString();
         $employee   = User::findOrFail($request->user_id);
 
-        // Cek apakah sudah ada absensi di tanggal tersebut
+        /** @var Attendance|null $existing */
         $existing = Attendance::where('user_id', $employee->id)
             ->whereDate('date', $targetDate)
             ->first();
 
-        if ($existing && $existing->check_in) {
+        // Guard: sudah ada check_in (Dinonaktifkan agar Super Admin bisa menindih/overwrite)
+        /*
+        if ($existing instanceof Attendance && !empty($existing->check_in)) {
             return back()->with('error', "Karyawan {$employee->name} sudah memiliki absen masuk pada tanggal {$targetDate}.");
         }
+        */
 
         // Hitung lateness_minutes berdasarkan setting
         $settings        = Setting::all()->pluck('value', 'key');
@@ -189,40 +195,41 @@ class AttendanceMonitoringController extends Controller
         $latenessMinutes = 0;
         $status          = $request->status;
 
-        $userDivision    = $employee->division ? strtolower(trim($employee->division->name)) : '';
-        $isLiveStreaming  = str_contains($userDivision, 'live streaming');
+        $userDivision   = $employee->division ? strtolower(trim((string) $employee->division->name)) : '';
+        $isLiveStreaming = str_contains($userDivision, 'live streaming');
 
         if (!$isLiveStreaming) {
             $expectedCheckIn = Carbon::parse($targetDate . ' ' . ($settings['check_in_time'] ?? '08:00') . ':00');
-            $graceMinutes    = (int)($settings['late_tolerance_minutes'] ?? 15);
-            if ($checkInTime->greaterThan($expectedCheckIn->addMinutes($graceMinutes))) {
-                $latenessMinutes = $expectedCheckIn->diffInMinutes($checkInTime);
-                $status = 'Terlambat';
+            $graceMinutes    = (int) ($settings['late_tolerance_minutes'] ?? 15);
+
+            if ($checkInTime->greaterThan($expectedCheckIn->copy()->addMinutes($graceMinutes))) {
+                $latenessMinutes = (int) $expectedCheckIn->diffInMinutes($checkInTime);
+                $status          = 'Terlambat';
             }
         }
 
-        if ($existing) {
+        if ($existing instanceof Attendance) {
             $existing->update([
-                'check_in'        => $request->check_in . ':00',
-                'status'          => $status,
+                'check_in'         => $request->check_in . ':00',
+                'status'           => $status,
                 'lateness_minutes' => $latenessMinutes,
-                'is_pulang_cepat' => false,
-                'note'            => $request->note ?? 'Absen Manual oleh Admin',
-                'lat'             => 0,
-                'long'            => 0,
+                'is_pulang_cepat'  => false,
+                'note'             => $request->note ?? 'Absen Manual oleh Admin',
+                'lat'              => 0,
+                'long'             => 0,
             ]);
         } else {
             Attendance::create([
-                'user_id'         => $employee->id,
-                'date'            => $targetDate,
-                'check_in'        => $request->check_in . ':00',
-                'check_out'       => null,
-                'status'          => $status,
+                'user_id'          => $employee->id,
+                'date'             => $targetDate,
+                'check_in'         => $request->check_in . ':00',
+                'check_out'        => null,
+                'status'           => $status,
                 'lateness_minutes' => $latenessMinutes,
-                'is_pulang_cepat' => false,
-                'note'            => $request->note ?? 'Absen Manual oleh Admin',
-                'lat'             => 0,
-                'long'            => 0,
+                'is_pulang_cepat'  => false,
+                'note'             => $request->note ?? 'Absen Manual oleh Admin',
+                'lat'              => 0,
+                'long'             => 0,
             ]);
         }
 
@@ -237,24 +244,25 @@ class AttendanceMonitoringController extends Controller
     public function manualCheckout(Request $request): RedirectResponse
     {
         $request->validate([
-            'user_id'    => 'required|exists:users,id',
-            'date'       => 'required|date',
-            'check_out'  => 'required|date_format:H:i',
-            'note'       => 'nullable|string|max:255',
+            'user_id'   => 'required|exists:users,id',
+            'date'      => 'required|date',
+            'check_out' => 'required|date_format:H:i',
+            'note'      => 'nullable|string|max:255',
         ]);
 
-        $targetDate = Carbon::parse($request->date)->toDateString();
-        $employee   = User::findOrFail($request->user_id);
-        $userDivision = $employee->division ? strtolower(trim($employee->division->name)) : '';
+        $targetDate     = Carbon::parse($request->date)->toDateString();
+        $employee       = User::findOrFail($request->user_id);
+        $userDivision   = $employee->division ? strtolower(trim((string) $employee->division->name)) : '';
         $isLiveStreaming = str_contains($userDivision, 'live streaming');
 
-        // Cari attendance hari ini, atau kemarin (untuk live streaming yang shift malam)
+        /** @var Attendance|null $attendance */
         $attendance = Attendance::where('user_id', $employee->id)
             ->whereDate('date', $targetDate)
             ->first();
 
         // Jika live streaming & tidak ada absen hari ini, cek kemarin
-        if (!$attendance && $isLiveStreaming) {
+        if (!$attendance instanceof Attendance && $isLiveStreaming) {
+            /** @var Attendance|null $attendance */
             $attendance = Attendance::where('user_id', $employee->id)
                 ->whereDate('date', Carbon::parse($targetDate)->subDay()->toDateString())
                 ->whereNotNull('check_in')
@@ -262,13 +270,16 @@ class AttendanceMonitoringController extends Controller
                 ->first();
         }
 
-        if (!$attendance) {
+        if (!$attendance instanceof Attendance) {
             return back()->with('error', "Tidak ditemukan absen masuk untuk {$employee->name} pada tanggal {$targetDate}. Buat absen masuk terlebih dahulu.");
         }
 
-        if ($attendance->check_out) {
+        // Guard: sudah ada check_out (Dinonaktifkan agar Super Admin bisa menindih/overwrite)
+        /*
+        if (!empty($attendance->check_out)) {
             return back()->with('error', "Karyawan {$employee->name} sudah memiliki absen pulang.");
         }
+        */
 
         // Hitung is_pulang_cepat
         $isPulangCepat = false;
@@ -276,20 +287,33 @@ class AttendanceMonitoringController extends Controller
 
         if (str_contains($userDivision, 'gudang')) {
             $isPulangCepat = $request->check_out < '18:00';
-        } elseif ($attendance->check_in) {
+        } elseif (!empty($attendance->check_in)) {
             $attendanceDateStr = $attendance->date instanceof Carbon
                 ? $attendance->date->toDateString()
-                : explode(' ', (string)$attendance->date)[0];
+                : explode(' ', (string) $attendance->date)[0];
+
             $clockInTime   = Carbon::parse($attendanceDateStr . ' ' . $attendance->check_in);
-            $minutesWorked = $clockInTime->diffInMinutes($checkOutTime);
+            $minutesWorked = (int) $clockInTime->diffInMinutes($checkOutTime);
             $isPulangCepat = $minutesWorked < (8 * 60);
+        }
+
+        $note = $request->note ?? 'Absen Pulang Manual oleh Admin';
+        $existingNote = !empty($attendance->note) ? $attendance->note : '';
+        if (!empty($existingNote)) {
+            if (!str_contains($existingNote, $note)) {
+                $newNote = $existingNote . ' | ' . $note;
+            } else {
+                $newNote = $existingNote;
+            }
+        } else {
+            $newNote = $note;
         }
 
         $attendance->update([
             'check_out'       => $request->check_out . ':00',
             'is_pulang_cepat' => $isPulangCepat,
             'status'          => 'Hadir',
-            'note'            => ($attendance->note ? $attendance->note . ' | ' : '') . ($request->note ?? 'Absen Pulang Manual oleh Admin'),
+            'note'            => $newNote,
         ]);
 
         return redirect()
@@ -321,7 +345,7 @@ class AttendanceMonitoringController extends Controller
 
     public function restore(DeletedAttendance $deletedBackup): RedirectResponse
     {
-        $payload = $deletedBackup->payload;
+        $payload    = $deletedBackup->payload;
         $dateString = $deletedBackup->date instanceof Carbon
             ? $deletedBackup->date->toDateString()
             : (string) $deletedBackup->date;
@@ -338,16 +362,16 @@ class AttendanceMonitoringController extends Controller
         }
 
         Attendance::create([
-            'user_id' => $payload['user_id'] ?? $deletedBackup->user_id,
-            'check_in' => $payload['check_in'] ?? null,
-            'check_out' => $payload['check_out'] ?? null,
-            'date' => $payload['date'] ?? $dateString,
-            'status' => $payload['status'] ?? 'Hadir',
-            'lat' => $payload['lat'] ?? null,
-            'long' => $payload['long'] ?? null,
-            'photo' => $payload['photo'] ?? null,
+            'user_id'          => $payload['user_id'] ?? $deletedBackup->user_id,
+            'check_in'         => $payload['check_in'] ?? null,
+            'check_out'        => $payload['check_out'] ?? null,
+            'date'             => $payload['date'] ?? $dateString,
+            'status'           => $payload['status'] ?? 'Hadir',
+            'lat'              => $payload['lat'] ?? null,
+            'long'             => $payload['long'] ?? null,
+            'photo'            => $payload['photo'] ?? null,
             'lateness_minutes' => $payload['lateness_minutes'] ?? null,
-            'is_pulang_cepat' => $payload['is_pulang_cepat'] ?? false,
+            'is_pulang_cepat'  => $payload['is_pulang_cepat'] ?? false,
         ]);
 
         DeletedAttendance::destroy($deletedBackup->id);
@@ -356,4 +380,4 @@ class AttendanceMonitoringController extends Controller
             ->route('super-admin.attendance.deleted-backups')
             ->with('success', 'Absensi berhasil dipulihkan dari cadangan.');
     }
-}
+};
