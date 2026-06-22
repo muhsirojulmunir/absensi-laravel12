@@ -131,4 +131,156 @@ class UserController extends Controller
         $nextId = User::generateNextEmployeeId($role->id);
         return response()->json(['id' => $nextId]);
     }
+
+    public function showBulkEmailForm()
+    {
+        return view('super-admin.users.bulk-email');
+    }
+
+    public function parseBulkEmailInput(Request $request)
+    {
+        $request->validate([
+            'raw_text' => 'required|string',
+        ]);
+
+        $rawText = $request->raw_text;
+        $lines = explode("\n", str_replace("\r", "", $rawText));
+        $parsed = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) {
+                continue;
+            }
+
+            $data = [];
+            if (str_contains($line, ',')) {
+                $data = explode(',', $line, 2);
+            } elseif (str_contains($line, ';')) {
+                $data = explode(';', $line, 2);
+            } elseif (str_contains($line, ':')) {
+                $data = explode(':', $line, 2);
+            } elseif (str_contains($line, '|')) {
+                $data = explode('|', $line, 2);
+            } else {
+                $data = preg_split('/\s+/', $line, 2);
+            }
+
+            if (count($data) >= 2) {
+                $inputVal = trim($data[0]);
+                $passwordVal = trim($data[1]);
+                $parsed[] = [
+                    'input' => $inputVal,
+                    'password' => $passwordVal,
+                ];
+            } else {
+                $inputVal = trim($line);
+                $parsed[] = [
+                    'input' => $inputVal,
+                    'password' => '',
+                ];
+            }
+        }
+
+        $results = [];
+        foreach ($parsed as $item) {
+            $input = $item['input'];
+            $password = $item['password'];
+
+            $user = User::with('role')
+                ->where('email', $input)
+                ->orWhere('username', $input)
+                ->first();
+
+            if ($user) {
+                $results[] = [
+                    'found' => true,
+                    'user_id' => $user->id,
+                    'name' => $user->name,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'role' => $user->role->name ?? '-',
+                    'password' => $password,
+                ];
+            } else {
+                $results[] = [
+                    'found' => false,
+                    'input' => $input,
+                    'password' => $password,
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $results,
+        ]);
+    }
+
+    public function sendBulkEmails(Request $request)
+    {
+        $request->validate([
+            'users' => 'required|array',
+            'users.*.user_id' => 'required|exists:users,id',
+            'users.*.password' => 'required|string|min:4',
+            'users.*.update_password' => 'nullable|boolean',
+            'users.*.send_email' => 'nullable|boolean',
+        ]);
+
+        $usersData = $request->users;
+        $successCount = 0;
+        $errorCount = 0;
+        $errors = [];
+
+        foreach ($usersData as $userData) {
+            $user = User::find($userData['user_id']);
+            if (!$user) {
+                $errorCount++;
+                continue;
+            }
+
+            $updatePassword = filter_var($userData['update_password'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $sendEmail = filter_var($userData['send_email'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+            try {
+                if ($updatePassword) {
+                    $user->update([
+                        'password' => Hash::make($userData['password']),
+                    ]);
+                }
+
+                if ($sendEmail) {
+                    if (empty($user->email)) {
+                        throw new \Exception("User {$user->name} tidak memiliki alamat email.");
+                    }
+
+                    \Illuminate\Support\Facades\Mail::send(
+                        'emails.credentials',
+                        [
+                            'name' => $user->name,
+                            'username' => $user->username,
+                            'email' => $user->email,
+                            'password' => $userData['password'],
+                        ],
+                        function ($message) use ($user) {
+                            $message->to($user->email)
+                                    ->subject('Detail Kredensial Akun JMN Matrix');
+                        }
+                    );
+                }
+
+                $successCount++;
+            } catch (\Exception $e) {
+                $errorCount++;
+                $errors[] = "User: {$user->name} ({$user->email}) - Error: " . $e->getMessage();
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'success_count' => $successCount,
+            'error_count' => $errorCount,
+            'errors' => $errors,
+        ]);
+    }
 }

@@ -50,6 +50,9 @@ Route::middleware(['auth'])->group(function () {
         // User Management
         Route::get('users/generate-id/{role}', [App\Http\Controllers\SuperAdmin\UserController::class, 'generateNextId'])->name('users.generate-id');
         Route::post('users/{user}/toggle-status', [App\Http\Controllers\SuperAdmin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
+        Route::get('users/bulk-email', [App\Http\Controllers\SuperAdmin\UserController::class, 'showBulkEmailForm'])->name('users.bulk-email');
+        Route::post('users/bulk-email/parse', [App\Http\Controllers\SuperAdmin\UserController::class, 'parseBulkEmailInput'])->name('users.bulk-email.parse');
+        Route::post('users/bulk-email/send', [App\Http\Controllers\SuperAdmin\UserController::class, 'sendBulkEmails'])->name('users.bulk-email.send');
         Route::resource('users', App\Http\Controllers\SuperAdmin\UserController::class);
 
         // Location Management
