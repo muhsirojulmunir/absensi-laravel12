@@ -77,17 +77,17 @@ class TopProductController extends Controller
         $globalQuery = clone $query;
         $counterQuery = clone $query;
 
-        // 1. Global Top Products (Group by SKU, Warna, Size)
+        // 1. Global Top Products (Group by SKU, Size)
         $globalSales = $globalQuery->select('sku', 'size', DB::raw('SUM(qty) as total_qty'), DB::raw('SUM(nominal) as total_nominal'))
-            ->groupBy('sku', DB::raw("IFNULL(size, '')"))
+            ->groupBy('sku', 'size')
             ->orderBy('total_qty', 'desc')
             ->take(10)
             ->get();
 
-        // Calculate Trends for Global Sales
+        // Calculate Trends for Global Sales (Compared by SKU and Size)
         if ($startDatePrevious && $endDatePrevious && $globalSales->count() > 0) {
-            $skuWarnaPairs = $globalSales->map(function ($item) {
-                return ['sku' => $item->sku, 'warna' => $item->warna];
+            $skuSizePairs = $globalSales->map(function ($item) {
+                return ['sku' => $item->sku, 'size' => $item->size];
             });
 
             $prevQuery = SalesInput::where('type', 'sale')
@@ -104,27 +104,27 @@ class TopProductController extends Controller
                 });
             }
 
-            $prevSales = $prevQuery->select('sku', 'warna', DB::raw('SUM(qty) as prev_qty'))
-                ->where(function($q) use ($skuWarnaPairs) {
-                    foreach ($skuWarnaPairs as $pair) {
+            $prevSales = $prevQuery->select('sku', 'size', DB::raw('SUM(qty) as prev_qty'))
+                ->where(function($q) use ($skuSizePairs) {
+                    foreach ($skuSizePairs as $pair) {
                         $q->orWhere(function($sq) use ($pair) {
                             $sq->where('sku', $pair['sku']);
-                            if ($pair['warna']) {
-                                $sq->where('warna', $pair['warna']);
+                            if ($pair['size']) {
+                                $sq->where('size', $pair['size']);
                             } else {
-                                $sq->whereNull('warna')->orWhere('warna', '');
+                                $sq->whereNull('size')->orWhere('size', '');
                             }
                         });
                     }
                 })
-                ->groupBy('sku')
+                ->groupBy('sku', 'size')
                 ->get()
                 ->keyBy(function ($item) {
-                    return $item->sku . '_' . $item->warna;
+                    return $item->sku . '_' . ($item->size ?? '');
                 });
 
             foreach ($globalSales as $item) {
-                $key = $item->sku . '_' . $item->warna;
+                $key = $item->sku . '_' . ($item->size ?? '');
                 $prevQty = isset($prevSales[$key]) ? $prevSales[$key]->prev_qty : 0;
                 
                 if ($prevQty > 0) {
@@ -143,16 +143,14 @@ class TopProductController extends Controller
         }
 
         // 2. Top Products per Counter
-        // We will fetch all sales grouped by location, sku, and warna
-        // Wait, MySQL mode might be strict, so we must group by user's location_id as well
-        // We'll join with users table to group by location_id
+        // We will fetch all sales grouped by location and SKU
+        // We'll join with users table to group by location_id and location name
         $counterSalesRaw = $counterQuery->join('users', 'sales_inputs.user_id', '=', 'users.id')
             ->join('locations', 'users.location_id', '=', 'locations.id')
             ->select(
                 'locations.id as location_id', 
                 'locations.name as location_name', 
                 'sales_inputs.sku', 
-                'sales_inputs.warna', 
                 DB::raw('SUM(sales_inputs.qty) as total_qty'),
                 DB::raw('SUM(sales_inputs.nominal) as total_nominal')
             )
