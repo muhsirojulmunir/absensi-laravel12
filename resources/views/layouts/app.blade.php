@@ -13,7 +13,7 @@
         body {font-family: 'Plus Jakarta Sans', sans-serif;}
     </style>
 </head>
-<body class="bg-[#0f172a] min-h-screen flex items-center justify-center">
+<body class="bg-[#090d16] text-slate-200 min-h-screen flex items-center justify-center antialiased tracking-tight selection:bg-blue-600 selection:text-white">
     @yield('content')
 </body>
 </html>

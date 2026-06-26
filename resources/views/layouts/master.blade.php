@@ -29,21 +29,21 @@
     <title>@yield('title') - JMN Karyawan</title>
     @vite('resources/css/app.css')
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Poppins', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="bg-white dark:bg-slate-950 text-blue-950 dark:text-slate-200 flex min-h-screen transition-colors duration-300">
+<body class="bg-[#f8fafc] dark:bg-[#0c101a] text-slate-800 dark:text-slate-200 flex min-h-screen transition-colors duration-300">
 
     <!-- Sidebar Kiri (desktop) dengan toggle collapse -->
     <div x-data="{ collapsed: false }" 
          :class="collapsed ? 'w-20' : 'w-64'"
-         class="hidden lg:flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out bg-[#20609b] dark:bg-slate-900 text-white border-r dark:border-slate-800">
+         class="hidden lg:flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out bg-[#090d16] text-slate-200 border-r border-slate-800/60">
         
         <!-- Logo / Brand -->
-        <div class="px-4 pt-6 pb-5 border-b border-white/10 flex items-center" :class="collapsed ? 'justify-center' : 'space-x-3'">
+        <div class="px-4 pt-6 pb-5 border-b border-slate-800 flex items-center" :class="collapsed ? 'justify-center' : 'space-x-3'">
             <div class="flex-shrink-0">
                 <img src="{{ asset('images/logo_record.png') }}" 
                      alt="Record Logo" 
@@ -51,40 +51,40 @@
                      :class="collapsed ? 'w-10 h-10' : 'w-12 h-12'">
             </div>
             <div x-show="!collapsed" x-transition class="min-w-0 pt-1">
-                <h1 class="text-lg font-bold text-white leading-none tracking-wider uppercase">{{ Auth::user()->role->name }}</h1>
-                <p class="text-[10px] text-blue-200/60 font-medium tracking-wide mt-0.5">Record System</p>
+                <h1 class="text-sm font-bold text-white leading-none tracking-wider uppercase">{{ Auth::user()->role->name }}</h1>
+                <p class="text-[10px] text-slate-500 font-medium tracking-wide mt-1">Record System</p>
             </div>
         </div>
 
         <!-- Role Badge -->
         <div class="px-4 py-3" x-show="!collapsed" x-transition>
-            <div class="bg-white/10 rounded-lg px-3 py-2 flex items-center space-x-2">
-                <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden border border-white/10 shadow-inner">
+            <div class="bg-slate-900 border border-slate-800/80 rounded-xl px-3 py-2.5 flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 overflow-hidden border border-slate-700/50 shadow-inner">
                     @if(Auth::user()->avatar)
                         <img src="{{ asset('storage/' . Auth::user()->avatar) }}" class="w-full h-full object-cover">
                     @else
-                        <span class="text-[11px] font-bold text-white uppercase">{{ substr(Auth::user()->name, 0, 1) }}</span>
+                        <span class="text-[11px] font-bold text-slate-300 uppercase">{{ substr(Auth::user()->name, 0, 1) }}</span>
                     @endif
                 </div>
                 <div class="min-w-0">
-                    <p class="text-[11px] font-bold text-white truncate leading-tight">{{ Auth::user()->name }}</p>
-                    <p class="text-[9px] text-blue-200/60 font-medium uppercase tracking-wider">{{ Auth::user()->role->name }}</p>
+                    <p class="text-xs font-semibold text-slate-200 truncate leading-tight">{{ Auth::user()->name }}</p>
+                    <p class="text-[9px] text-slate-500 font-medium uppercase tracking-wider mt-0.5">{{ Auth::user()->role->name }}</p>
                 </div>
             </div>
         </div>
         <div class="px-4 py-3 flex justify-center" x-show="collapsed" x-transition>
-            <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center overflow-hidden border border-white/10 shadow-inner" title="{{ Auth::user()->name }}">
+            <div class="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center overflow-hidden border border-slate-800 shadow-inner" title="{{ Auth::user()->name }}">
                 @if(Auth::user()->avatar)
                     <img src="{{ asset('storage/' . Auth::user()->avatar) }}" class="w-full h-full object-cover">
                 @else
-                    <span class="text-xs font-bold text-white uppercase">{{ substr(Auth::user()->name, 0, 1) }}</span>
+                    <span class="text-xs font-bold text-slate-300 uppercase">{{ substr(Auth::user()->name, 0, 1) }}</span>
                 @endif
             </div>
         </div>
 
         <!-- Menu Label -->
-        <div class="px-4 pb-1" x-show="!collapsed" x-transition>
-            <p class="text-[9px] font-bold text-blue-200/40 uppercase tracking-widest">Menu</p>
+        <div class="px-4 pb-1.5" x-show="!collapsed" x-transition>
+            <p class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Menu</p>
         </div>
 
         <!-- Navigation -->
@@ -92,7 +92,7 @@
 
             <!-- Beranda (semua role) -->
             <a href="{{ route(Auth::user()->role->slug . '.dashboard') }}"
-               class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('*.dashboard') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+               class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('*.dashboard') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                title="Beranda">
                 <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
@@ -104,12 +104,12 @@
                 
                 {{-- Group: Umum --}}
                 <div x-show="!collapsed" x-transition class="pt-3 pb-1 px-3">
-                    <p class="text-[10px] font-bold text-blue-300/50 uppercase tracking-[0.2em]">Umum</p>
+                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em]">Umum</p>
                 </div>
 
                 @if(Auth::user()->id !== 1)
                     <a href="{{ route('super-admin.leave-approvals.index') }}"
-                       class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.leave-approvals.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                       class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.leave-approvals.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                        :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                        title="Rekap Izin">
                         <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -117,7 +117,7 @@
                     </a>
                 @else
                     <a href="{{ route('super-admin.leave-approvals.index') }}"
-                       class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.leave-approvals.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                       class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.leave-approvals.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                        :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                        title="Persetujuan Izin">
                         <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -127,7 +127,7 @@
 
                 @if(strtolower(Auth::user()->username) === 'superadmin1')
                     <a href="{{ route('pic.reports.index') }}"
-                       class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('pic.reports.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                       class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('pic.reports.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                        :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                        title="Laporan Absensi">
                         <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -135,7 +135,7 @@
                     </a>
                 @else
                     <a href="{{ route('super-admin.attendance.index') }}"
-                       class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.attendance.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                       class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.attendance.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                        :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                        title="Monitor Absensi">
                         <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
@@ -144,7 +144,7 @@
                 @endif
 
                 <a href="{{ route('super-admin.attendance.payment-history') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.attendance.payment-history') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.attendance.payment-history') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Riwayat Pembayaran">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -152,7 +152,7 @@
                 </a>
 
                 <a href="{{ route('super-admin.holidays.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.holidays.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.holidays.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Hari Libur">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -160,7 +160,7 @@
                 </a>
 
                 <a href="{{ route('super-admin.users.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.users.*') && !request()->routeIs('super-admin.users.bulk-email') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.users.*') && !request()->routeIs('super-admin.users.bulk-email') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Pengguna">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
@@ -168,7 +168,7 @@
                 </a>
 
                 <a href="{{ route('super-admin.users.bulk-email') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.users.bulk-email') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.users.bulk-email') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Kirim Email Massal">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
@@ -176,7 +176,7 @@
                 </a>
 
                 <a href="{{ route('super-admin.settings.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.settings.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.settings.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Pengaturan">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -184,7 +184,7 @@
                 </a>
 
                 <a href="{{ route('performance.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('performance.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('performance.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Evaluasi Kinerja">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
@@ -193,16 +193,16 @@
 
                 {{-- Group: Ramayana --}}
                 <div x-show="!collapsed" x-transition class="pt-4 pb-1 px-3">
-                    <div class="border-t border-white/10 pt-3">
-                        <p class="text-[10px] font-bold text-fuchsia-300/60 uppercase tracking-[0.2em]">Ramayana</p>
+                    <div class="border-t border-slate-800 pt-3">
+                        <p class="text-[9px] font-bold text-fuchsia-500/80 uppercase tracking-[0.2em]">Ramayana</p>
                     </div>
                 </div>
                 <div x-show="collapsed" x-transition class="pt-2 pb-1 px-2">
-                    <div class="border-t border-white/10"></div>
+                    <div class="border-t border-slate-800"></div>
                 </div>
 
                 <a href="{{ route('super-admin.locations.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.locations.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.locations.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Lokasi Counter">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -210,7 +210,7 @@
                 </a>
 
                 <a href="{{ route('super-admin.ramayana-stocks.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.ramayana-stocks.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.ramayana-stocks.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Manajemen Stok">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
@@ -218,7 +218,7 @@
                 </a>
 
                 <a href="{{ route('super-admin.sales-reports.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.sales-reports.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.sales-reports.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Laporan Penjualan">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -226,7 +226,7 @@
                 </a>
 
                 <a href="{{ route('super-admin.top-products.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.top-products.*') ? 'bg-amber-500/20 text-amber-300 shadow-sm' : 'text-amber-100/70 hover:bg-amber-500/10 hover:text-amber-300' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.top-products.*') ? 'bg-amber-600 text-white shadow-sm shadow-amber-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-amber-450' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Analisis Top Produk">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
@@ -237,14 +237,14 @@
             {{-- ============ HRD ============ --}}
             @if(Auth::user()->role->slug == 'hrd')
                 <a href="{{ route('hrd.attendance.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('hrd.attendance.index') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('hrd.attendance.index') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Monitor Absensi">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                     <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Monitor Absensi</span>
                 </a>
                 <a href="{{ route('hrd.attendance.recap') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('hrd.attendance.recap') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('hrd.attendance.recap') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Rekap Laporan">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
@@ -252,7 +252,7 @@
                 </a>
 
                 <a href="{{ route('hrd.attendance.payment-history') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('hrd.attendance.payment-history') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('hrd.attendance.payment-history') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Riwayat Pembayaran">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -264,21 +264,21 @@
             {{-- ============ PIC & PIC RAMAYANA ============ --}}
             @if(in_array(Auth::user()->role->slug, ['pic', 'pic_ramayana']))
                 <a href="{{ route(Auth::user()->role->slug . '.leave-approvals.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs(Auth::user()->role->slug . '.leave-approvals.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs(Auth::user()->role->slug . '.leave-approvals.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Persetujuan Izin">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Persetujuan Izin</span>
                 </a>
                 <a href="{{ route(Auth::user()->role->slug . '.employees.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs(Auth::user()->role->slug . '.employees.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs(Auth::user()->role->slug . '.employees.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Data Tim">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                     <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Data Tim</span>
                 </a>
                 <a href="{{ route(Auth::user()->role->slug . '.reports.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs(Auth::user()->role->slug . '.reports.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs(Auth::user()->role->slug . '.reports.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Laporan Absensi">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -286,7 +286,7 @@
                 </a>
                 
                 <a href="{{ route('performance.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('performance.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('performance.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Evaluasi Kinerja">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
@@ -294,14 +294,14 @@
                 </a>
                 @if(Auth::user()->role->slug == 'pic_ramayana')
                 <a href="{{ route('pic_ramayana.ramayana-stocks.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('pic_ramayana.ramayana-stocks.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('pic_ramayana.ramayana-stocks.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Manajemen Stok">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                     <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Manajemen Stok</span>
                 </a>
                 <a href="{{ route('pic_ramayana.sales-reports.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('pic_ramayana.sales-reports.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('pic_ramayana.sales-reports.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Laporan Penjualan">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -309,7 +309,7 @@
                 </a>
 
                 <a href="{{ route('pic_ramayana.top-products.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('pic_ramayana.top-products.*') ? 'bg-amber-500/20 text-amber-300 shadow-sm' : 'text-amber-100/70 hover:bg-amber-500/10 hover:text-amber-300' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('pic_ramayana.top-products.*') ? 'bg-amber-600 text-white shadow-sm shadow-amber-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-amber-450' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Analisis Top Produk">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
@@ -322,14 +322,14 @@
             @if(in_array(Auth::user()->role->slug, ['karyawan', 'karyawan_ramayana']))
                 @if(Auth::user()->role->slug == 'karyawan_ramayana')
                 <a href="{{ route('karyawan_ramayana.stocks.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('karyawan_ramayana.stocks.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('karyawan_ramayana.stocks.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Stok Masuk">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                     <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Stok Masuk</span>
                 </a>
                 <a href="{{ route('karyawan_ramayana.sales.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('karyawan_ramayana.sales.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('karyawan_ramayana.sales.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Penjualan (Sales)">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
@@ -337,14 +337,14 @@
                 </a>
                 @endif
                 <a href="{{ route(Auth::user()->role->slug . '.leave-requests.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs(Auth::user()->role->slug . '.leave-requests.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs(Auth::user()->role->slug . '.leave-requests.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Izin & Cuti">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Izin & Cuti</span>
                 </a>
                 <a href="{{ route(Auth::user()->role->slug . '.attendance.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs(Auth::user()->role->slug . '.attendance.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs(Auth::user()->role->slug . '.attendance.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Riwayat Absensi">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -354,7 +354,7 @@
             
             @if(Auth::user()->role->slug == 'karyawan')
                 <a href="{{ route('karyawan.profile.edit') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('*.profile.*') ? 'bg-white/20 text-white shadow-sm' : 'text-blue-100/70 hover:bg-white/10 hover:text-white' }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('*.profile.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                    title="Biodata Diri">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
@@ -363,13 +363,13 @@
             @endif
 
             <!-- Divider -->
-            <div class="border-t border-white/10 my-2"></div>
+            <div class="border-t border-slate-800 my-2.5"></div>
 
             <!-- Logout -->
             <form action="{{ route('logout') }}" method="POST">
                 @csrf
                 <button type="submit"
-                        class="flex items-center w-full rounded-lg transition-all duration-200 text-red-300/70 hover:bg-red-500/10 hover:text-red-300"
+                        class="flex items-center w-full rounded-lg transition-all duration-200 text-rose-400/80 hover:bg-rose-500/10 hover:text-rose-400"
                         :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                         title="Keluar">
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -379,9 +379,9 @@
         </nav>
 
         <!-- Toggle Collapse Button (panah) -->
-        <div class="py-6 flex" :class="collapsed ? 'justify-center' : 'justify-center'">
+        <div class="py-6 flex justify-center">
             <button @click="collapsed = !collapsed"
-                    class="w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all duration-300"
+                    class="w-10 h-10 bg-slate-900 border border-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-white rounded-full flex items-center justify-center transition-all duration-300"
                     :title="collapsed ? 'Buka Menu' : 'Kecilkan Menu'">
                 <svg class="w-5 h-5 transition-transform duration-300" 
                      :class="collapsed ? 'rotate-180' : ''"
@@ -393,16 +393,16 @@
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-w-0 pb-16 lg:pb-0 bg-white dark:bg-slate-950 relative">
+    <div class="flex-1 flex flex-col min-w-0 pb-16 lg:pb-0 bg-[#f8fafc] dark:bg-[#0c101a] relative">
         <!-- Top Header -->
-        <header class="h-16 border-b border-blue-200 dark:border-slate-800 flex items-center justify-between px-5 lg:px-8 shrink-0 bg-white dark:bg-slate-900/50 backdrop-blur-md shadow-sm sticky top-0 z-30">
+        <header class="h-16 border-b border-slate-200/50 dark:border-slate-800/80 flex items-center justify-between px-5 lg:px-8 shrink-0 bg-white/70 dark:bg-[#0c101a]/70 backdrop-blur-md shadow-sm sticky top-0 z-30">
             <div class="flex items-center space-x-3">
                 <img src="{{ asset('images/logo_record.png') }}" alt="Record Logo" class="w-8 h-8 object-contain lg:hidden">
-                <span class="text-sm font-semibold text-blue-900 dark:text-blue-100">Manajemen Sistem Karyawan</span>
+                <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">Manajemen Sistem Karyawan</span>
             </div>
             <div class="flex items-center space-x-4">
                 <!-- Theme Toggle -->
-                <button @click="toggleTheme()" class="p-2 rounded-xl bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-slate-700 transition-all active:scale-95" title="Ganti Tema">
+                <button @click="toggleTheme()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all active:scale-95 cursor-pointer" title="Ganti Tema">
                     <template x-if="!darkMode">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
                     </template>
@@ -413,11 +413,11 @@
 
                 <div class="flex items-center space-x-2">
                     <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span class="text-xs font-medium text-blue-600/80 dark:text-blue-400/80 hidden sm:inline">Sistem Aktif</span>
+                    <span class="text-xs font-medium text-slate-500 dark:text-slate-400 hidden sm:inline">Sistem Aktif</span>
                 </div>
-                <div class="bg-blue-50 dark:bg-slate-800 px-4 py-2 rounded-lg border border-blue-200 dark:border-slate-700">
-                    <span id="live-clock" class="text-sm font-bold text-blue-800 dark:text-blue-300 tabular-nums">00:00:00</span>
-                    <span class="text-xs font-medium text-blue-600/80 dark:text-blue-400/80 ml-1">WIB</span>
+                <div class="bg-slate-100 dark:bg-slate-900 px-4 py-2 rounded-xl border border-slate-200/60 dark:border-slate-850">
+                    <span id="live-clock" class="text-sm font-bold text-slate-800 dark:text-slate-200 tabular-nums">00:00:00</span>
+                    <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-1">WIB</span>
                 </div>
             </div>
         </header>

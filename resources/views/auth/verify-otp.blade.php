@@ -1,65 +1,56 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="{{ asset('images/logo_record.png') }}">
-    <link rel="shortcut icon" type="image/png" href="{{ asset('images/logo_record.png') }}">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verifikasi OTP - JMN Matrix</title>
-    @vite('resources/css/app.css')
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+@extends('layouts.app')
+
+@section('content')
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .otp-input {
+        .otp-input-field {
             width: 60px; height: 60px;
             text-align: center; font-size: 24px; font-weight: 800;
-            background: #0f172a; border: 2px solid #1e293b; border-radius: 16px;
+            background: #121824; border: 2px solid #1e293b; border-radius: 16px;
             color: #fff; outline: none; transition: all 0.3s;
         }
-        .otp-input:focus {
+        .otp-input-field:focus {
             border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
         }
     </style>
-</head>
-<body class="bg-[#0f172a] flex items-center justify-center min-h-screen selection:bg-blue-600 selection:text-white">
+
+    <!-- Subtle Background Elements -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none">
-        <div class="absolute top-[10%] left-[10%] w-[400px] h-[400px] bg-blue-600/5 rounded-full blur-[120px]"></div>
-        <div class="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px]"></div>
+        <div class="absolute top-[10%] left-[10%] w-[350px] h-[350px] bg-blue-600/5 rounded-full blur-[100px]"></div>
+        <div class="absolute bottom-[10%] right-[10%] w-[450px] h-[450px] bg-indigo-600/5 rounded-full blur-[120px]"></div>
     </div>
 
     <div class="relative z-10 w-full max-w-md p-6" x-data="{ loading: false }">
-        <div class="bg-[#1e293b]/50 backdrop-blur-xl p-8 md:p-10 rounded-3xl shadow-2xl border border-slate-800">
+        <div class="bg-[#0f131d]/70 backdrop-blur-xl p-8 md:p-10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-slate-800/80">
             <div class="text-center mb-8">
-                <div class="flex justify-center mb-4">
-                    <div class="bg-white/95 p-4 rounded-2xl shadow-xl shadow-blue-500/10 border border-white/20">
+                <div class="flex justify-center mb-5">
+                    <div class="bg-white/5 p-3.5 rounded-2xl shadow-inner border border-white/10 backdrop-blur-md">
                         <img src="{{ asset('images/logo.png') }}?v=1" alt="Logo Record" class="h-12 w-auto object-contain">
                     </div>
                 </div>
-                <h1 class="text-2xl font-bold text-white tracking-tight">Verifikasi OTP</h1>
-                <p class="text-slate-400 text-sm mt-2">Masukkan 4 digit kode yang telah dikirim ke email Anda.</p>
+                <h1 class="text-xl font-bold text-white tracking-tight">Verifikasi OTP</h1>
+                <p class="text-slate-400 text-xs mt-1.5 font-medium">Masukkan 4 digit kode yang telah dikirim ke email Anda.</p>
             </div>
 
             @if(session('success'))
-                <div class="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                <div class="mb-5 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
                     <p class="text-emerald-500 text-xs font-semibold">{{ session('success') }}</p>
                 </div>
             @endif
 
             @if($errors->any())
-                <div class="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+                <div class="mb-5 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
                     <p class="text-red-500 text-xs font-semibold">{{ $errors->first() }}</p>
                 </div>
             @endif
 
-            <form action="{{ route('password.verify-otp') }}" method="POST" @submit="loading = true" class="space-y-8" x-data="otpHandler()">
+            <form action="{{ route('password.verify-otp') }}" method="POST" @submit="loading = true" class="space-y-6" x-data="otpHandler()">
                 @csrf
                 <input type="hidden" name="otp" x-model="otpValue">
 
                 <div class="flex justify-center gap-4">
                     <template x-for="(digit, index) in digits" :key="index">
                         <input type="text" maxlength="1" inputmode="numeric"
-                            class="otp-input"
+                            class="otp-input-field"
                             x-model="digits[index]"
                             @input="handleInput($event, index)"
                             @keydown.backspace="handleBackspace($event, index)"
@@ -69,7 +60,7 @@
                 </div>
 
                 <button type="submit"
-                    class="w-full bg-blue-600 hover:bg-blue-50 text-white hover:text-blue-600 py-3.5 rounded-xl font-bold shadow-lg shadow-blue-600/10 transition-all active:scale-[0.98] flex items-center justify-center space-x-2"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-semibold shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition-all active:scale-[0.98] flex items-center justify-center space-x-2 cursor-pointer"
                     :class="loading ? 'opacity-70 cursor-not-allowed' : ''">
                     <span x-show="!loading">Verifikasi Kode</span>
                     <span x-show="loading" class="flex items-center">
@@ -99,13 +90,13 @@
                     const val = e.target.value.replace(/\D/g, '');
                     this.digits[index] = val;
                     if (val && index < 3) {
-                        const inputs = document.querySelectorAll('.otp-input');
+                        const inputs = document.querySelectorAll('.otp-input-field');
                         inputs[index + 1].focus();
                     }
                 },
                 handleBackspace(e, index) {
                     if (!this.digits[index] && index > 0) {
-                        const inputs = document.querySelectorAll('.otp-input');
+                        const inputs = document.querySelectorAll('.otp-input-field');
                         inputs[index - 1].focus();
                     }
                 },
@@ -119,5 +110,4 @@
             }
         }
     </script>
-</body>
-</html>
+@endsection

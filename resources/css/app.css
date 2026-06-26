@@ -1,6 +1,26 @@
 @import "tailwindcss";
-@custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    
+    --color-navy-50: #f0f4f8;
+    --color-navy-100: #d9e2ec;
+    --color-navy-200: #bcccdc;
+    --color-navy-300: #9fb3c8;
+    --color-navy-400: #829ab1;
+    --color-navy-500: #627d98;
+    --color-navy-600: #486581;
+    --color-navy-700: #334e68;
+    --color-navy-800: #243b53;
+    --color-navy-900: #102a43;
+    
+    --color-dark-sidebar: #090d16;
+    --color-dark-content: #0d111c;
+    --color-dark-card: #151b26;
+    --color-dark-hover: #3b82f6;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
 @source "../../storage/framework/views/*.php";
@@ -9,19 +29,90 @@
 
 @layer base {
     * {
-        @apply transition-colors duration-200;
+        @apply transition-all duration-200 ease-out;
+    }
+    
+    body {
+        font-family: var(--font-sans);
+        @apply antialiased tracking-tight bg-slate-50/50 text-slate-800 dark:bg-dark-content dark:text-slate-200;
+    }
+
+    /* Global Input & Select Styles */
+    input[type="text"], 
+    input[type="email"], 
+    input[type="password"], 
+    input[type="date"], 
+    input[type="time"], 
+    input[type="number"], 
+    select, 
+    textarea {
+        @apply w-full bg-white dark:bg-dark-card/60 border border-slate-200 dark:border-slate-800/80 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 text-sm placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all duration-200 shadow-sm shadow-slate-100/10;
+    }
+
+    /* Primary buttons styling helper */
+    .btn-premium-primary {
+        @apply inline-flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-5 py-3 rounded-xl shadow-md shadow-blue-500/10 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] transition-all duration-200 cursor-pointer;
+    }
+    
+    .btn-premium-secondary {
+        @apply inline-flex items-center justify-center space-x-2 bg-white dark:bg-dark-card hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-sm px-5 py-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm active:scale-[0.98] transition-all duration-200 cursor-pointer;
     }
 }
 
-/* Custom Scrollbar for Dark Mode */
-.dark ::-webkit-scrollbar {
-    width: 10px;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
 }
 
-.dark ::-webkit-scrollbar-track {
-    @apply bg-slate-900;
+::-webkit-scrollbar-track {
+    @apply bg-transparent;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-    @apply bg-slate-700 rounded-full border-2 border-slate-900 hover:bg-slate-600;
+::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 dark:bg-slate-800 rounded-full hover:bg-slate-300 dark:hover:bg-slate-700;
+}
+
+/* Glassmorphic elements */
+.glass-panel {
+    @apply bg-white/70 dark:bg-dark-card/70 border border-white/20 dark:border-slate-800/60 backdrop-blur-xl shadow-xl;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Global legibility adjustments for slate/gray text colors */
+.text-slate-400, .text-gray-400, .text-slate-350, .text-gray-350, .text-slate-450 {
+    color: #4b5563 !important; /* slate-600 */
+}
+
+.dark .text-slate-400,
+.dark .dark\:text-slate-400,
+.dark .text-gray-400,
+.dark .dark\:text-gray-400,
+.dark .text-slate-350,
+.dark .dark\:text-slate-350,
+.dark .text-slate-450,
+.dark .dark\:text-slate-450 {
+    color: #cbd5e1 !important; /* slate-300 */
+}
+
+.text-slate-500, .text-gray-500, .text-slate-550 {
+    color: #374151 !important; /* slate-700 */
+}
+
+.dark .text-slate-500,
+.dark .dark\:text-slate-500,
+.dark .text-gray-500,
+.dark .dark\:text-gray-500,
+.dark .text-slate-550,
+.dark .dark\:text-slate-550 {
+    color: #94a3b8 !important; /* slate-400 */
 }

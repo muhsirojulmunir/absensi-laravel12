@@ -2,76 +2,98 @@
 @section('title', 'Manajemen Lokasi Counter')
 @section('content')
 <div class="space-y-6" x-data="{ search: '{{ $query }}' }">
+    <!-- Header Section -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-            <h2 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Lokasi Counter</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola data lokasi absensi untuk Karyawan Ramayana.</p>
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Lokasi Counter</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Kelola data lokasi absensi geografis untuk Karyawan Ramayana.</p>
         </div>
-        <a href="{{ route('super-admin.locations.create') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-all shadow-sm hover:shadow-md">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        <a href="{{ route('super-admin.locations.create') }}" 
+           class="inline-flex items-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-indigo-900/10 hover:shadow-lg active:scale-[0.98]">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
+            </svg>
             Tambah Lokasi
         </a>
     </div>
 
     @if(session('success'))
-    <div class="p-4 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-xl border border-green-200 dark:border-green-800 flex items-start">
-        <svg class="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <p class="text-sm font-medium">{{ session('success') }}</p>
+    <div class="p-4 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-450 rounded-xl border border-emerald-100 dark:border-emerald-900/50 flex items-start shadow-xs animate-fade-in">
+        <svg class="w-5 h-5 mr-3 mt-0.5 shrink-0 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <p class="text-xs font-semibold leading-relaxed">{{ session('success') }}</p>
     </div>
     @endif
 
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden">
-        <div class="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        <!-- Search bar -->
+        <div class="p-4 border-b border-slate-100 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-950/20">
             <form action="{{ route('super-admin.locations.index') }}" method="GET" class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="w-5 h-5 text-slate-400 transition-colors" id="searchIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.637 10.637z"></path>
+                    </svg>
                 </div>
-                <input
-                    type="text"
-                    name="q"
-                    x-model="search"
-                    placeholder="Ketik untuk mencari lokasi counter..."
-                    class="block w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl leading-5 bg-white dark:bg-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all duration-200 ease-in-out shadow-sm dark:text-white"
-                >
+                <input type="text" name="q" x-model="search" placeholder="Cari nama lokasi counter atau koordinat..."
+                       class="block w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white placeholder-slate-450 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-inner">
             </form>
         </div>
 
+        <!-- Table -->
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
-                        <th class="p-4">Nama Counter</th>
-                        <th class="p-4">Latitude</th>
-                        <th class="p-4">Longitude</th>
-                        <th class="p-4">Radius (m)</th>
-                        <th class="p-4 text-right">Aksi</th>
+                    <tr class="bg-slate-50 dark:bg-slate-950/40 border-b border-slate-150 dark:border-slate-850 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold select-none">
+                        <th class="px-6 py-4">Nama Counter</th>
+                        <th class="px-6 py-4">Latitude</th>
+                        <th class="px-6 py-4">Longitude</th>
+                        <th class="px-6 py-4">Radius (m)</th>
+                        <th class="px-6 py-4 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody id="tableBody" class="divide-y divide-slate-200 dark:divide-slate-800">
+                <tbody id="tableBody" class="divide-y divide-slate-100 dark:divide-slate-850 text-sm">
                     @forelse($locations as $loc)
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" x-show="search === '' || '{{ strtolower(addslashes($loc->name ?? '') . ' ' . ($loc->latitude ?? '') . ' ' . ($loc->longitude ?? '')) }}'.includes(search.toLowerCase())">
-                        <td class="p-4">
-                            <div class="font-semibold text-slate-800 dark:text-slate-200">{{ $loc->name }}</div>
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-colors" 
+                        x-show="search === '' || '{{ strtolower(addslashes($loc->name ?? '') . ' ' . ($loc->latitude ?? '') . ' ' . ($loc->longitude ?? '')) }}'.includes(search.toLowerCase())">
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-slate-900 dark:text-white">{{ $loc->name }}</div>
                             @if($loc->google_maps_url)
-                                <a href="{{ $loc->google_maps_url }}" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-block">Lihat di Maps</a>
+                                <a href="{{ $loc->google_maps_url }}" target="_blank" 
+                                   class="text-[10px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 inline-flex items-center gap-1 mt-1.5 transition-colors font-medium">
+                                    <span>Lihat di Maps</span>
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"></path>
+                                    </svg>
+                                </a>
                             @endif
                         </td>
-                        <td class="p-4 text-sm text-slate-600 dark:text-slate-400">{{ $loc->latitude }}</td>
-                        <td class="p-4 text-sm text-slate-600 dark:text-slate-400">{{ $loc->longitude }}</td>
-                        <td class="p-4 text-sm text-slate-600 dark:text-slate-400 font-medium">{{ $loc->radius }}</td>
-                        <td class="p-4 flex items-center justify-end space-x-2">
-                            <a href="{{ route('super-admin.locations.edit', $loc->id) }}" class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Edit">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                            </a>
-                            <button onclick="deleteLocation({{ $loc->id }}, '{{ addslashes($loc->name) }}')" class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Hapus">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
+                        <td class="px-6 py-4 text-xs font-mono text-slate-600 dark:text-slate-450">{{ $loc->latitude }}</td>
+                        <td class="px-6 py-4 text-xs font-mono text-slate-600 dark:text-slate-450">{{ $loc->longitude }}</td>
+                        <td class="px-6 py-4 text-xs font-mono font-bold text-slate-700 dark:text-slate-300">{{ $loc->radius }} m</td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="inline-flex items-center space-x-1.5">
+                                <a href="{{ route('super-admin.locations.edit', $loc->id) }}" 
+                                   class="p-2 text-slate-450 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" 
+                                   title="Edit">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path>
+                                    </svg>
+                                </a>
+                                <button onclick="deleteLocation({{ $loc->id }}, '{{ addslashes($loc->name) }}')" 
+                                        class="p-2 text-slate-455 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-colors" 
+                                        title="Hapus">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9 9m12 6a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="p-8 text-center text-slate-500 dark:text-slate-400">
-                            Belum ada data lokasi counter.
+                        <td colspan="5" class="px-6 py-12 text-center text-xs text-slate-450">
+                            Belum ada data lokasi counter Ramayana.
                         </td>
                     </tr>
                     @endforelse
@@ -79,8 +101,9 @@
             </table>
         </div>
 
-        <div id="paginationContainer" class="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-4">
-            <div class="text-sm text-slate-600 dark:text-slate-400">
+        <!-- Pagination -->
+        <div id="paginationContainer" class="px-6 py-4 border-t border-slate-100 dark:border-slate-850 flex items-center justify-between flex-wrap gap-4 select-none">
+            <div class="text-xs text-slate-500 dark:text-slate-450">
                 <span id="paginationInfo">
                     @if($locations->total() > 0)
                         Menampilkan {{ $locations->firstItem() }} - {{ $locations->lastItem() }} dari {{ $locations->total() }} data
@@ -89,7 +112,7 @@
                     @endif
                 </span>
             </div>
-            <div class="flex gap-2 flex-wrap" id="paginationButtons">
+            <div class="flex gap-1" id="paginationButtons">
                 {{ $locations->appends(request()->query())->render() }}
             </div>
         </div>
