@@ -68,6 +68,16 @@ class User extends Authenticatable
         return $this->belongsTo(Location::class);
     }
 
+    public function bulkEmailLogs()
+    {
+        return $this->hasMany(BulkEmailLog::class);
+    }
+
+    public function latestBulkEmailLog()
+    {
+        return $this->hasOne(BulkEmailLog::class)->latestOfMany();
+    }
+
     public function salesInputs()
     {
         return $this->hasMany(SalesInput::class);

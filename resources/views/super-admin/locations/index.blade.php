@@ -26,6 +26,15 @@
     </div>
     @endif
 
+    @if(session('error'))
+    <div class="p-4 bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-400 rounded-xl border border-red-100 dark:border-red-900/50 flex items-start shadow-xs animate-fade-in">
+        <svg class="w-5 h-5 mr-3 mt-0.5 shrink-0 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"></path>
+        </svg>
+        <p class="text-xs font-semibold leading-relaxed">{{ session('error') }}</p>
+    </div>
+    @endif
+
     <div class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
         <!-- Search bar -->
         <div class="p-4 border-b border-slate-100 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-950/20">
@@ -80,7 +89,10 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path>
                                     </svg>
                                 </a>
-                                <button onclick="deleteLocation({{ $loc->id }}, '{{ addslashes($loc->name) }}')" 
+                                <form id="delete-form-{{ $loc->id }}" action="{{ route('super-admin.locations.delete', $loc->id) }}" method="POST" style="display: none;">
+                                    @csrf
+                                </form>
+                                <button onclick="if(confirm('Apakah Anda yakin ingin menghapus lokasi &quot;{{ addslashes($loc->name) }}&quot;?')) { document.getElementById('delete-form-{{ $loc->id }}').submit(); }" 
                                         class="p-2 text-slate-455 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-colors" 
                                         title="Hapus">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -103,7 +115,7 @@
 
         <!-- Pagination -->
         <div id="paginationContainer" class="px-6 py-4 border-t border-slate-100 dark:border-slate-850 flex items-center justify-between flex-wrap gap-4 select-none">
-            <div class="text-xs text-slate-500 dark:text-slate-450">
+            <div class="text-xs text-slate-500 dark:text-slate-455">
                 <span id="paginationInfo">
                     @if($locations->total() > 0)
                         Menampilkan {{ $locations->firstItem() }} - {{ $locations->lastItem() }} dari {{ $locations->total() }} data
@@ -118,33 +130,4 @@
         </div>
     </div>
 </div>
-
-<script>
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-
-function deleteLocation(locId, locName) {
-    if (!confirm(`Apakah Anda yakin ingin menghapus lokasi "${locName}"?`)) {
-        return;
-    }
-
-    fetch(`/super-admin/locations/${locId}`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRF-TOKEN': csrfToken,
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => {
-        if (response.ok) {
-            window.location.reload();
-        } else {
-            alert('Gagal menghapus lokasi');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Terjadi kesalahan saat menghapus');
-    });
-}
-</script>
 @endsection

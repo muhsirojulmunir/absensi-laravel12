@@ -57,6 +57,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Location Management
         Route::resource('locations', App\Http\Controllers\SuperAdmin\LocationController::class);
+        Route::post('locations/{location}/delete', [App\Http\Controllers\SuperAdmin\LocationController::class, 'destroy'])->name('locations.delete');
 
         // Holiday Management
         Route::resource('holidays', App\Http\Controllers\SuperAdmin\HolidayController::class)->only(['index', 'store', 'destroy']);

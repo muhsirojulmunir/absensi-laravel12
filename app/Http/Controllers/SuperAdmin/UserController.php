@@ -134,7 +134,20 @@ class UserController extends Controller
 
     public function showBulkEmailForm()
     {
-        return view('super-admin.users.bulk-email');
+        $employees = User::whereHas('role', function ($q) {
+            $q->whereIn('slug', ['karyawan', 'karyawan_ramayana']);
+        })
+        ->where('is_active', true)
+        ->with(['latestBulkEmailLog.sender', 'role'])
+        ->orderBy('name')
+        ->get();
+
+        $recentLogs = \App\Models\BulkEmailLog::with(['user', 'sender'])
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+
+        return view('super-admin.users.bulk-email', compact('employees', 'recentLogs'));
     }
 
     public function parseBulkEmailInput(Request $request)
@@ -267,12 +280,31 @@ class UserController extends Controller
                                     ->subject('Detail Kredensial Akun JMN Matrix');
                         }
                     );
+
+                    // Log success
+                    \App\Models\BulkEmailLog::create([
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                        'status' => 'success',
+                        'sent_by' => auth()->id(),
+                    ]);
                 }
 
                 $successCount++;
             } catch (\Exception $e) {
                 $errorCount++;
                 $errors[] = "User: {$user->name} ({$user->email}) - Error: " . $e->getMessage();
+
+                // Log failure if email sending was attempted
+                if ($sendEmail) {
+                    \App\Models\BulkEmailLog::create([
+                        'user_id' => $user->id,
+                        'email' => $user->email ?? '',
+                        'status' => 'failed',
+                        'error_message' => $e->getMessage(),
+                        'sent_by' => auth()->id(),
+                    ]);
+                }
             }
         }
 

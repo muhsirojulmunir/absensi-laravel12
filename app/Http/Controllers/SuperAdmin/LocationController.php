@@ -143,7 +143,16 @@ class LocationController extends Controller
 
     public function destroy(Location $location)
     {
-        $location->delete();
-        return redirect()->route('super-admin.locations.index')->with('success', 'Lokasi berhasil dihapus.');
+        try {
+            // Karena tabel menggunakan MyISAM (tidak support foreign key cascade),
+            // kita perlu set manual location_id user menjadi null sebelum hapus lokasi
+            \App\Models\User::where('location_id', $location->id)->update(['location_id' => null]);
+            
+            $location->delete();
+            
+            return redirect()->route('super-admin.locations.index')->with('success', 'Lokasi "' . $location->name . '" berhasil dihapus.');
+        } catch (\Exception $e) {
+            return redirect()->route('super-admin.locations.index')->with('error', 'Gagal menghapus lokasi: ' . $e->getMessage());
+        }
     }
 }

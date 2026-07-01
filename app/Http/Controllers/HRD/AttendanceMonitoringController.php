@@ -94,9 +94,9 @@ class AttendanceMonitoringController extends Controller
             $edo->id = null;
             $edo->name = 'Edo';
             
-            $edoDivision = new \stdClass();
+            $edoDivision = new \App\Models\Division();
             $edoDivision->name = 'Staff Kantor';
-            $edo->division = $edoDivision;
+            $edo->setRelation('division', $edoDivision);
             
             $edo->setRelation('attendances', collect());
             $edo->setRelation('leaveRequests', collect());
@@ -369,14 +369,12 @@ class AttendanceMonitoringController extends Controller
             $user->daily_allowances = $dailyAllowances;
 
             // Check if this period has been paid and update if needed (dynamic history)
-            $payment = \App\Models\MealAllowancePayment::where('user_id', $user->id)
-                ->where('start_date', $startDate->toDateString())
-                ->where('end_date', $endDate->toDateString())
-                ->first();
-
-            if ($payment) {
-                // Do not dynamically update the saved amount to prevent overwriting history
-                // $payment->update(['amount' => $calculatedAmount]);
+            $payment = null;
+            if ($user->id) {
+                $payment = \App\Models\MealAllowancePayment::where('user_id', $user->id)
+                    ->where('start_date', $startDate->toDateString())
+                    ->where('end_date', $endDate->toDateString())
+                    ->first();
             }
 
             $user->is_meal_paid = $payment ? true : false;
