@@ -805,9 +805,9 @@
                         <div style="background:rgba(236,72,153,0.15);border:1px solid rgba(236,72,153,0.3);border-radius:999px;padding:3px 14px;margin-bottom:8px;">
                             <span style="font-size:10px;font-weight:900;letter-spacing:0.1em;color:#be185d;">🎂 HARI ULANG TAHUN 🎂</span>
                         </div>
-                        <h3 class="text-slate-900 dark:text-white" style="font-size:1.1rem;font-weight:900;line-height:1.2;margin-bottom:4px;" x-text="selectedUser.name"></h3>
-                        <p class="text-indigo-600 dark:text-indigo-400" style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;" x-text="selectedUser.role_name"></p>
-                        <p class="text-slate-500 dark:text-slate-400" style="font-size:11px;font-weight:600;margin-top:2px;" x-text="selectedUser.division_name"></p>
+                        <h3 class="text-slate-900" style="font-size:1.1rem;font-weight:900;line-height:1.2;margin-bottom:4px;" x-text="selectedUser.name"></h3>
+                        <p class="text-indigo-600" style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;" x-text="selectedUser.role_name"></p>
+                        <p class="text-slate-600" style="font-size:11px;font-weight:600;margin-top:2px;" x-text="selectedUser.division_name"></p>
                     </div>
 
                     <!-- Navigation row (only if >1 person) -->
