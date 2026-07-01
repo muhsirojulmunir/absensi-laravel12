@@ -44,7 +44,7 @@ class RamayanaStockController extends Controller
                 : [$user->id];
 
             $rawStocks = SalesInput::select('sku',
-                DB::raw("SUM(CASE WHEN type = 'stock_in' THEN qty ELSE -qty END) as current_stock")
+                DB::raw("SUM(CASE WHEN type IN ('stock_in','incoming') THEN qty ELSE -qty END) as current_stock")
             )
             ->whereIn('user_id', $userIds)
             ->where('date', '<=', $filterDate)
@@ -110,7 +110,7 @@ class RamayanaStockController extends Controller
                 ];
             }
             
-            if ($stock->type === 'stock_in') {
+            if (in_array($stock->type, ['stock_in', 'incoming'])) {
                 $groupedStocks[$key]['has_stock_in'] = true;
             }
             
@@ -122,14 +122,14 @@ class RamayanaStockController extends Controller
                 $groupedStocks[$key]['satuan'] = $stock->satuan;
             }
 
-            $qty = $stock->type === 'stock_in' ? $stock->qty : -$stock->qty;
+            $qty = in_array($stock->type, ['stock_in', 'incoming']) ? $stock->qty : -$stock->qty;
             $groupedStocks[$key]['qty'] += $qty;
         }
 
         $flatStocks = [];
         
         foreach ($groupedStocks as $st) {
-            if ($st['has_stock_in']) {
+            if ($st['qty'] != 0) {
                 $flatStocks[] = $st;
                 $totalUniqueSkus[$st['sku']] = true;
                 $totalOverallStock += $st['qty'];
