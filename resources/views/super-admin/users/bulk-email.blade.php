@@ -1,117 +1,25 @@
 @extends('layouts.master')
 @section('title', 'Kirim Email Kredensial Karyawan Massal')
 @section('content')
-<div class="max-w-6xl mx-auto space-y-6" x-data="{
-    activeTab: 'send',
-    rawText: '',
-    parsedUsers: [],
-    isLoading: false,
-    showPreview: false,
-    results: null,
-    errorMsg: '',
-    globalUpdatePassword: true,
-    globalSendEmail: true,
-    employeeSearch: '',
-    
-    async parseText() {
-        if (!this.rawText.trim()) {
-            this.errorMsg = 'Silakan masukkan teks email dan password terlebih dahulu.';
-            return;
-        }
-        this.errorMsg = '';
-        this.isLoading = true;
-        this.results = null;
-        
-        try {
-            const response = await fetch('{{ route('super-admin.users.bulk-email.parse') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ raw_text: this.rawText })
-            });
-            
-            const res = await response.json();
-            if (res.success) {
-                this.parsedUsers = res.data.map(user => ({
-                    ...user,
-                    update_password: user.found,
-                    send_email: user.found && !!user.email
-                }));
-                this.showPreview = true;
-            } else {
-                this.errorMsg = res.message || 'Gagal memproses data input.';
-            }
-        } catch (err) {
-            this.errorMsg = 'Terjadi kesalahan saat menghubungi server.';
-            console.error(err);
-        } finally {
-            this.isLoading = false;
-        }
-    },
-    
-    toggleGlobalUpdatePassword() {
-        this.parsedUsers.forEach(u => {
-            if (u.found) u.update_password = this.globalUpdatePassword;
-        });
-    },
-    
-    toggleGlobalSendEmail() {
-        this.parsedUsers.forEach(u => {
-            if (u.found && u.email) u.send_email = this.globalSendEmail;
-        });
-    },
-    
-    get selectedCount() {
-        return this.parsedUsers.filter(u => u.found && (u.update_password || u.send_email)).length;
-    },
-    
-    async sendEmails() {
-        const selected = this.parsedUsers.filter(u => u.found && (u.update_password || u.send_email));
-        if (selected.length === 0) {
-            alert('Silakan pilih minimal 1 karyawan dengan opsi update password atau kirim email.');
-            return;
-        }
-        
-        if (!confirm(`Apakah Anda yakin ingin memproses ${selected.length} akun karyawan terpilih?`)) {
-            return;
-        }
-        
-        this.isLoading = true;
-        this.errorMsg = '';
-        
-        try {
-            const response = await fetch('{{ route('super-admin.users.bulk-email.send') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ users: selected })
-            });
-            
-            const res = await response.json();
-            if (res.success) {
-                this.results = res;
-                this.parsedUsers = [];
-                this.showPreview = false;
-                this.rawText = '';
-                // Reload page after a success message is shown so the history updates
-                setTimeout(() => {
-                    window.location.reload();
-                }, 4000);
-            } else {
-                this.errorMsg = res.message || 'Gagal memproses pengiriman email.';
-            }
-        } catch (err) {
-            this.errorMsg = 'Terjadi kesalahan sistem saat memproses data.';
-            console.error(err);
-        } finally {
-            this.isLoading = false;
-        }
-    }
-}">
+
+@php
+    $employeesJson = $employees->map(function($emp) {
+        return [
+            'id' => $emp->id,
+            'name' => $emp->name,
+            'role_name' => $emp->role->name ?? '-',
+            'username' => $emp->username,
+            'email' => $emp->email ?? 'Belum ada Email',
+            'has_email' => !empty($emp->email),
+            'status' => !$emp->latestBulkEmailLog ? 'not_sent' : ($emp->latestBulkEmailLog->status === 'success' ? 'sent' : 'failed'),
+            'error_message' => $emp->latestBulkEmailLog->error_message ?? null,
+            'sent_at' => $emp->latestBulkEmailLog ? $emp->latestBulkEmailLog->created_at->translatedFormat('d M Y, H:i') : '-',
+            'sender_name' => ($emp->latestBulkEmailLog && $emp->latestBulkEmailLog->sender) ? $emp->latestBulkEmailLog->sender->name : '-',
+        ];
+    })->values()->toJson();
+@endphp
+
+<div class="max-w-6xl mx-auto space-y-6" x-data="bulkEmailApp">
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div class="flex items-center space-x-4">
@@ -370,21 +278,85 @@
     </div>
 
     {{-- TAB 2: STATUS PENGIRIMAN KARYAWAN --}}
+    @php
+        $totalCount = $employees->count();
+        $sentCount = $employees->filter(fn($e) => $e->latestBulkEmailLog && $e->latestBulkEmailLog->status === 'success')->count();
+        $failedCount = $employees->filter(fn($e) => $e->latestBulkEmailLog && $e->latestBulkEmailLog->status === 'failed')->count();
+        $notSentCount = $employees->filter(fn($e) => !$e->latestBulkEmailLog)->count();
+    @endphp
     <div x-show="activeTab === 'status'" class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden" x-cloak>
-        <div class="p-6 border-b border-slate-100 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <!-- Stats Summary Grid -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-slate-850 border-b border-slate-100 dark:border-slate-850">
+            <!-- Total -->
+            <button @click="statusFilter = 'all'" 
+                    :class="statusFilter === 'all' ? 'bg-indigo-50/30 dark:bg-indigo-950/10' : ''"
+                    class="p-6 text-left hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-all focus:outline-none group">
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Total Karyawan</p>
+                <div class="flex items-baseline gap-2 mt-2">
+                    <span class="text-3xl font-extrabold text-slate-900 dark:text-white">{{ $totalCount }}</span>
+                    <span class="text-xs font-semibold text-slate-400">orang</span>
+                </div>
+            </button>
+            <!-- Terkirim -->
+            <button @click="statusFilter = 'sent'" 
+                    :class="statusFilter === 'sent' ? 'bg-emerald-50/30 dark:bg-emerald-950/10' : ''"
+                    class="p-6 text-left hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-all focus:outline-none group">
+                <p class="text-[10px] font-bold text-emerald-600 dark:text-emerald-450 uppercase tracking-widest transition-colors">Email Terkirim</p>
+                <div class="flex items-baseline gap-2 mt-2">
+                    <span class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-450">{{ $sentCount }}</span>
+                    <span class="text-xs font-semibold text-emerald-400">berhasil</span>
+                </div>
+            </button>
+            <!-- Gagal -->
+            <button @click="statusFilter = 'failed'" 
+                    :class="statusFilter === 'failed' ? 'bg-rose-50/30 dark:bg-rose-950/10' : ''"
+                    class="p-6 text-left hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-all focus:outline-none group">
+                <p class="text-[10px] font-bold text-rose-600 dark:text-rose-455 uppercase tracking-widest transition-colors">Gagal Kirim</p>
+                <div class="flex items-baseline gap-2 mt-2">
+                    <span class="text-3xl font-extrabold text-rose-600 dark:text-rose-455">{{ $failedCount }}</span>
+                    <span class="text-xs font-semibold text-slate-400">gagal</span>
+                </div>
+            </button>
+            <!-- Belum Terkirim -->
+            <button @click="statusFilter = 'not_sent'" 
+                    :class="statusFilter === 'not_sent' ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''"
+                    class="p-6 text-left hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-all focus:outline-none group">
+                <p class="text-[10px] font-bold text-amber-600 dark:text-amber-450 uppercase tracking-widest transition-colors">Belum Terkirim</p>
+                <div class="flex items-baseline gap-2 mt-2">
+                    <span class="text-3xl font-extrabold text-amber-600 dark:text-amber-450">{{ $notSentCount }}</span>
+                    <span class="text-xs font-semibold text-slate-400">belum</span>
+                </div>
+            </button>
+        </div>
+
+        <div class="p-6 border-b border-slate-100 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-950/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h3 class="text-base font-bold text-slate-900 dark:text-white">Status Log Email Karyawan</h3>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Daftar seluruh karyawan beserta status pengiriman email kredensial terakhir mereka.</p>
             </div>
-            <!-- Search field -->
-            <div class="relative w-full sm:w-72">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.637 10.637z"></path>
-                    </svg>
+            
+            <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <!-- Status Filter Dropdown -->
+                <div class="relative min-w-[160px]">
+                    <select x-model="statusFilter" 
+                            class="block w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold cursor-pointer">
+                        <option value="all">Semua Status</option>
+                        <option value="sent">Terkirim</option>
+                        <option value="failed">Gagal Kirim</option>
+                        <option value="not_sent">Belum Terkirim</option>
+                    </select>
                 </div>
-                <input type="text" x-model="employeeSearch" placeholder="Cari nama atau email..." 
-                       class="block w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white placeholder-slate-450 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium">
+                
+                <!-- Search field -->
+                <div class="relative w-full sm:w-64">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.637 10.637z"></path>
+                        </svg>
+                    </div>
+                    <input type="text" x-model="employeeSearch" placeholder="Cari nama atau email..." 
+                           class="block w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white placeholder-slate-450 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium">
+                </div>
             </div>
         </div>
 
@@ -400,62 +372,90 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-850 text-sm">
-                    @forelse($employees as $emp)
-                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-colors"
-                        x-show="employeeSearch === '' || '{{ strtolower(addslashes($emp->name) . ' ' . addslashes($emp->email ?? '') . ' ' . addslashes($emp->username)) }}'.includes(employeeSearch.toLowerCase())">
-                        <td class="px-6 py-4">
-                            <div class="font-bold text-slate-900 dark:text-white">{{ $emp->name }}</div>
-                            <div class="text-[10px] text-indigo-500 font-bold uppercase tracking-wide mt-0.5">{{ $emp->role->name ?? '-' }}</div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="font-mono text-xs text-slate-700 dark:text-slate-300 font-bold">{{ $emp->username }}</div>
-                            <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ $emp->email ?? 'Belum ada Email' }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            @if($emp->latestBulkEmailLog)
-                                @if($emp->latestBulkEmailLog->status === 'success')
+                    <template x-for="emp in paginatedEmployees" :key="emp.id">
+                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-colors">
+                            <td class="px-6 py-4">
+                                <div class="font-bold text-slate-900 dark:text-white" x-text="emp.name"></div>
+                                <div class="text-[10px] text-indigo-500 font-bold uppercase tracking-wide mt-0.5" x-text="emp.role_name"></div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-mono text-xs text-slate-700 dark:text-slate-300 font-bold" x-text="emp.username"></div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5" x-text="emp.email"></div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <template x-if="emp.status === 'sent'">
                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40">
                                         <span class="w-1 h-1 bg-emerald-500 rounded-full"></span>
                                         Terkirim
                                     </span>
-                                @else
+                                </template>
+                                <template x-if="emp.status === 'failed'">
                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/40" 
-                                          title="{{ $emp->latestBulkEmailLog->error_message }}">
+                                          :title="emp.error_message">
                                         <span class="w-1 h-1 bg-rose-500 rounded-full"></span>
                                         Gagal
                                     </span>
-                                @endif
-                            @else
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40">
-                                    <span class="w-1 h-1 bg-amber-500 rounded-full"></span>
-                                    Belum Terkirim
-                                </span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 text-xs font-medium text-slate-600 dark:text-slate-400">
-                            @if($emp->latestBulkEmailLog)
-                                {{ $emp->latestBulkEmailLog->created_at->translatedFormat('d M Y, H:i') }}
-                            @else
-                                <span class="text-slate-400 dark:text-slate-500 italic">-</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 text-xs font-semibold text-slate-700 dark:text-slate-350">
-                            @if($emp->latestBulkEmailLog && $emp->latestBulkEmailLog->sender)
-                                {{ $emp->latestBulkEmailLog->sender->name }}
-                            @else
-                                <span class="text-slate-400 dark:text-slate-500 italic">-</span>
-                            @endif
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="5" class="px-6 py-12 text-center text-xs text-slate-450">
-                            Tidak ada data karyawan aktif.
-                        </td>
-                    </tr>
-                    @endforelse
+                                </template>
+                                <template x-if="emp.status === 'not_sent'">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40">
+                                        <span class="w-1 h-1 bg-amber-500 rounded-full"></span>
+                                        Belum Terkirim
+                                    </span>
+                                </template>
+                            </td>
+                            <td class="px-6 py-4 text-xs font-medium text-slate-600 dark:text-slate-400" x-text="emp.sent_at"></td>
+                            <td class="px-6 py-4 text-xs font-semibold text-slate-700 dark:text-slate-350" x-text="emp.sender_name"></td>
+                        </tr>
+                    </template>
+                    
+                    <template x-if="filteredEmployees.length === 0">
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-xs text-slate-450">
+                                Tidak ada data karyawan aktif.
+                            </td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-850 flex items-center justify-between flex-wrap gap-4 select-none">
+            <div class="text-xs text-slate-500 dark:text-slate-455">
+                <span>
+                    Menampilkan <span class="font-bold" x-text="filteredEmployees.length > 0 ? (employeePage - 1) * employeePerPage + 1 : 0"></span> - 
+                    <span class="font-bold" x-text="Math.min(employeePage * employeePerPage, filteredEmployees.length)"></span> dari 
+                    <span class="font-bold" x-text="filteredEmployees.length"></span> data
+                </span>
+            </div>
+            <div class="flex gap-1 items-center" x-show="totalPages > 1">
+                <!-- Prev Button -->
+                <button @click="if (employeePage > 1) employeePage--" 
+                        :disabled="employeePage === 1"
+                        class="p-2 text-slate-450 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path>
+                    </svg>
+                </button>
+                
+                <!-- Page Numbers -->
+                <template x-for="p in totalPages" :key="p">
+                    <button @click="employeePage = p" 
+                            :class="employeePage === p ? 'bg-indigo-600 text-white font-bold' : 'text-slate-650 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors"
+                            x-text="p">
+                    </button>
+                </template>
+                
+                <!-- Next Button -->
+                <button @click="if (employeePage < totalPages) employeePage++" 
+                        :disabled="employeePage === totalPages"
+                        class="p-2 text-slate-455 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -520,4 +520,152 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('bulkEmailApp', () => ({
+        activeTab: 'send',
+        rawText: '',
+        parsedUsers: [],
+        isLoading: false,
+        showPreview: false,
+        results: null,
+        errorMsg: '',
+        globalUpdatePassword: true,
+        globalSendEmail: true,
+        employeeSearch: '',
+        statusFilter: 'all',
+        employeesList: {!! $employeesJson !!},
+        employeePage: 1,
+        employeePerPage: 10,
+        
+        init() {
+            this.$watch('employeeSearch', () => this.employeePage = 1);
+            this.$watch('statusFilter', () => this.employeePage = 1);
+        },
+        
+        get filteredEmployees() {
+            return this.employeesList.filter(emp => {
+                const searchLower = this.employeeSearch.toLowerCase();
+                const matchesSearch = this.employeeSearch === '' || 
+                    (emp.name && emp.name.toLowerCase().includes(searchLower)) || 
+                    (emp.email && emp.email.toLowerCase().includes(searchLower)) || 
+                    (emp.username && emp.username.toLowerCase().includes(searchLower));
+                
+                const matchesStatus = this.statusFilter === 'all' || emp.status === this.statusFilter;
+                
+                return matchesSearch && matchesStatus;
+            });
+        },
+        
+        get paginatedEmployees() {
+            const start = (this.employeePage - 1) * this.employeePerPage;
+            return this.filteredEmployees.slice(start, start + this.employeePerPage);
+        },
+        
+        get totalPages() {
+            return Math.ceil(this.filteredEmployees.length / this.employeePerPage);
+        },
+        
+        async parseText() {
+            if (!this.rawText.trim()) {
+                this.errorMsg = 'Silakan masukkan teks email dan password terlebih dahulu.';
+                return;
+            }
+            this.errorMsg = '';
+            this.isLoading = true;
+            this.results = null;
+            
+            try {
+                const response = await fetch('{{ route('super-admin.users.bulk-email.parse') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ raw_text: this.rawText })
+                });
+                
+                const res = await response.json();
+                if (res.success) {
+                    this.parsedUsers = res.data.map(user => ({
+                        ...user,
+                        update_password: user.found,
+                        send_email: user.found && !!user.email
+                    }));
+                    this.showPreview = true;
+                } else {
+                    this.errorMsg = res.message || 'Gagal memproses data input.';
+                }
+            } catch (err) {
+                this.errorMsg = 'Terjadi kesalahan saat menghubungi server.';
+                console.error(err);
+            } finally {
+                this.isLoading = false;
+            }
+        },
+        
+        toggleGlobalUpdatePassword() {
+            this.parsedUsers.forEach(u => {
+                if (u.found) u.update_password = this.globalUpdatePassword;
+            });
+        },
+        
+        toggleGlobalSendEmail() {
+            this.parsedUsers.forEach(u => {
+                if (u.found && u.email) u.send_email = this.globalSendEmail;
+            });
+        },
+        
+        get selectedCount() {
+            return this.parsedUsers.filter(u => u.found && (u.update_password || u.send_email)).length;
+        },
+        
+        async sendEmails() {
+            const selected = this.parsedUsers.filter(u => u.found && (u.update_password || u.send_email));
+            if (selected.length === 0) {
+                alert('Silakan pilih minimal 1 karyawan dengan opsi update password atau kirim email.');
+                return;
+            }
+            
+            if (!confirm(`Apakah Anda yakin ingin memproses ${selected.length} akun karyawan terpilih?`)) {
+                return;
+            }
+            
+            this.isLoading = true;
+            this.errorMsg = '';
+            
+            try {
+                const response = await fetch('{{ route('super-admin.users.bulk-email.send') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ users: selected })
+                });
+                
+                const res = await response.json();
+                if (res.success) {
+                    this.results = res;
+                    this.parsedUsers = [];
+                    this.showPreview = false;
+                    this.rawText = '';
+                    // Reload page after a success message is shown so the history updates
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 4000);
+                } else {
+                    this.errorMsg = res.message || 'Gagal memproses pengiriman email.';
+                }
+            } catch (err) {
+                this.errorMsg = 'Terjadi kesalahan sistem saat memproses data.';
+                console.error(err);
+            } finally {
+                this.isLoading = false;
+            }
+        }
+    }));
+});
+</script>
 @endsection

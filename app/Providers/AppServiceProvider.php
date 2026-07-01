@@ -26,5 +26,31 @@ class AppServiceProvider extends ServiceProvider
         if (!in_array($host, ['localhost', '127.0.0.1', '::1']) && !str_ends_with($host, '.test')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
+
+        // View Composer untuk mendeteksi Ulang Tahun secara global di layouts.master
+        view()->composer('layouts.master', function ($view) {
+            if (\Illuminate\Support\Facades\Auth::check()) {
+                $todayMonth = now()->month;
+                $todayDay = now()->day;
+                $currentYear = now()->year;
+
+                $birthdayUsers = \App\Models\User::where('is_active', true)
+                    ->whereNotNull('birth_date')
+                    ->whereMonth('birth_date', $todayMonth)
+                    ->whereDay('birth_date', $todayDay)
+                    ->with([
+                        'birthdayGreetingsReceived' => function ($query) use ($currentYear) {
+                            $query->where('year', $currentYear)->with('sender')->latest();
+                        },
+                        'role',
+                        'division'
+                    ])
+                    ->get();
+
+                $view->with('birthdayUsers', $birthdayUsers);
+            } else {
+                $view->with('birthdayUsers', collect());
+            }
+        });
     }
 }

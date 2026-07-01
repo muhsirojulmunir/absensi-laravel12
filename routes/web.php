@@ -39,6 +39,9 @@ Route::middleware(['auth'])->group(function () {
     // Performance Evaluation (Accessible by multiple roles)
     Route::get('/performance-evaluation', [App\Http\Controllers\PerformanceEvaluationController::class, 'index'])->name('performance.index');
     Route::get('/performance-evaluation/{id}', [App\Http\Controllers\PerformanceEvaluationController::class, 'show'])->name('performance.show');
+    
+    // Birthday Greetings
+    Route::post('/birthday-greetings', [App\Http\Controllers\Shared\BirthdayGreetingController::class, 'store'])->name('birthday-greetings.store');
 
     Route::prefix('super-admin')->name('super-admin.')->group(function () {
         Route::get('/dashboard', [App\Http\Controllers\SuperAdmin\DashboardController::class, 'index'])->name('dashboard');

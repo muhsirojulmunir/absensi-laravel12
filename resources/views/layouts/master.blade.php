@@ -682,7 +682,421 @@
         .animate-slide-in {
             animation: slide-in 0.4s ease-out;
         }
+
+        @keyframes float-drift {
+            0%   { transform: translateY(110vh) rotate(0deg); }
+            100% { transform: translateY(-20vh) rotate(var(--float-rotate, 10deg)); }
+        }
+        .animate-float-greeting {
+            position: absolute;
+            bottom: 0;
+            animation: float-drift var(--float-duration, 18s) linear infinite;
+            animation-delay: var(--float-delay, 0s);
+            font-size: var(--float-size, 12px);
+            left: var(--float-left, 10%);
+            pointer-events: none;
+            will-change: transform;
+        }
+
+        @keyframes avatar-float {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            33%       { transform: translateY(-8px) scale(1.03); }
+            66%       { transform: translateY(-4px) scale(1.01); }
+        }
+        .animate-avatar-float {
+            animation: avatar-float 3s ease-in-out infinite;
+        }
+
+        @keyframes crown-wiggle {
+            0%, 100% { transform: rotate(8deg) scale(1); }
+            50%       { transform: rotate(-8deg) scale(1.15); }
+        }
+        .animate-crown {
+            display: inline-block;
+            animation: crown-wiggle 1.8s ease-in-out infinite;
+        }
     </style>
+
+    @if(isset($birthdayUsers) && $birthdayUsers->count() > 0)
+    <!-- Birthday Celebration Feature -->
+    <div x-data="birthdayCelebrationApp" x-cloak>
+        <!-- Floating Gift Button to re-open the birthday celebrations modal -->
+        <button @click="openModal()" 
+                class="fixed bottom-6 right-6 z-[9999] p-4 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300 animate-bounce flex items-center justify-center border border-white/20"
+                title="Ada yang Ulang Tahun Hari Ini! 🎉">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625A2.625 2.625 0 1114.625 7.5H12m0-2.625V7.5m-9 3.75h18M12 7.5v13.5"></path>
+            </svg>
+            <span class="absolute -top-1 -right-1 flex h-4.5 w-4.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-4.5 w-4.5 bg-pink-500 text-[10px] items-center justify-center font-bold text-white leading-none">{{ $birthdayUsers->count() }}</span>
+            </span>
+        </button>
+
+        <!-- Main Modal Backdrop -->
+        <div x-show="show" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-md overflow-hidden">
+
+            <!-- Floating greetings background -->
+            <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                <template x-for="fg in floatingGreetings" :key="fg.id">
+                    <div class="animate-float-greeting font-semibold whitespace-nowrap px-4 py-2 rounded-2xl border shadow-md select-none"
+                         :style="`--float-duration: ${fg.duration}s; --float-delay: ${fg.delay}s; --float-left: ${fg.left}%; --float-size: ${fg.size}px; --float-rotate: ${fg.rotate}deg; background:${fg.bg}; color:${fg.color}; border-color:${fg.border};`"
+                         x-text="fg.message">
+                    </div>
+                </template>
+            </div>
+
+            <!-- Centered card wrapper -->
+            <div class="absolute inset-0 flex items-center justify-center p-4 z-10 overflow-y-auto">
+                <div x-show="show"
+                     x-transition:enter="transition ease-out duration-400 transform"
+                     x-transition:enter-start="opacity-0 scale-75"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-200 transform"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-75"
+                     style="position:relative;"
+                     class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-xs mx-auto border border-slate-100 dark:border-slate-800 overflow-hidden">
+
+                    <!-- ✕ Close inside card, top-right -->
+                    <button @click="closeModal()" type="button"
+                            style="position:absolute; top:12px; right:12px; z-index:50;"
+                            class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-pink-100 dark:hover:bg-pink-950 hover:text-pink-600 dark:hover:text-pink-400 transition-all shadow-sm focus:outline-none">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+
+                    <!-- Avatar section -->
+                    <div class="relative flex flex-col items-center pt-8 pb-5 px-6"
+                         style="background: linear-gradient(160deg, #fdf2f8 0%, #ede9fe 50%, #dbeafe 100%);"
+                         class="dark:!bg-none dark:bg-gradient-to-b dark:from-pink-950/30 dark:to-indigo-950/20">
+
+                        <!-- Decorative circles -->
+                        <div style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;pointer-events:none;">
+                            <div style="position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(236,72,153,0.12);top:-30px;left:-30px;"></div>
+                            <div style="position:absolute;width:80px;height:80px;border-radius:50%;background:rgba(139,92,246,0.10);bottom:-20px;right:-20px;"></div>
+                        </div>
+
+                        <!-- Animated Avatar -->
+                        <div class="animate-avatar-float relative mb-4" style="z-index:1;">
+                            <span class="animate-crown" style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:1.6rem;z-index:2;">👑</span>
+                            <div style="width:88px;height:88px;border-radius:50%;padding:3px;background:linear-gradient(135deg,#ec4899,#8b5cf6,#6366f1);box-shadow:0 8px 32px rgba(139,92,246,0.35);">
+                                <template x-if="selectedUser.avatar">
+                                    <img :src="'/storage/' + selectedUser.avatar"
+                                         style="width:100%;height:100%;object-fit:cover;border-radius:50%;background:#fff;">
+                                </template>
+                                <template x-if="!selectedUser.avatar">
+                                    <div style="width:100%;height:100%;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:900;color:#334155;">
+                                        <span x-text="selectedUser.name ? selectedUser.name.substring(0,1) : '?'"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Badge + Name -->
+                        <div style="background:rgba(236,72,153,0.15);border:1px solid rgba(236,72,153,0.3);border-radius:999px;padding:3px 14px;margin-bottom:8px;">
+                            <span style="font-size:10px;font-weight:900;letter-spacing:0.1em;color:#be185d;">🎂 HARI ULANG TAHUN 🎂</span>
+                        </div>
+                        <h3 class="text-slate-900 dark:text-white" style="font-size:1.1rem;font-weight:900;line-height:1.2;margin-bottom:4px;" x-text="selectedUser.name"></h3>
+                        <p class="text-indigo-600 dark:text-indigo-400" style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;" x-text="selectedUser.role_name"></p>
+                        <p class="text-slate-500 dark:text-slate-400" style="font-size:11px;font-weight:600;margin-top:2px;" x-text="selectedUser.division_name"></p>
+                    </div>
+
+                    <!-- Navigation row (only if >1 person) -->
+                    <div x-show="birthdayUsers.length > 1"
+                         class="border-t border-slate-100 dark:border-slate-800 flex items-center justify-between px-4 py-3">
+                        <button @click="prevUser()" type="button"
+                                class="w-11 h-11 flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:text-pink-600 dark:hover:text-pink-400 hover:bg-pink-50 dark:hover:bg-slate-800 transition-all active:scale-90 focus:outline-none"
+                                style="cursor:pointer;border:none;background:transparent;">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path>
+                            </svg>
+                        </button>
+                        <span class="text-slate-400 dark:text-slate-500 font-black tracking-widest"
+                              style="font-size:11px;letter-spacing:0.12em;"
+                              x-text="`${selectedIdx + 1} / ${birthdayUsers.length}`"></span>
+                        <button @click="nextUser()" type="button"
+                                class="w-11 h-11 flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:text-pink-600 dark:hover:text-pink-400 hover:bg-pink-50 dark:hover:bg-slate-800 transition-all active:scale-90 focus:outline-none"
+                                style="cursor:pointer;border:none;background:transparent;">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Input form -->
+                    <form @submit.prevent="submitGreeting()"
+                          class="border-t border-slate-100 dark:border-slate-800"
+                          style="display:flex;align-items:center;gap:8px;padding:12px 14px 14px;">
+                        <input x-model="newMessage"
+                               type="text"
+                               maxlength="150"
+                               placeholder="Tulis ucapan selamat... 🎉"
+                               class="text-slate-900 dark:text-white placeholder-slate-400"
+                               style="flex:1;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;font-size:12px;padding:10px 14px;outline:none;transition:border-color 0.2s;min-width:0;"
+                               onfocus="this.style.borderColor='#ec4899';"
+                               onblur="this.style.borderColor='#e2e8f0';" />
+                        <button type="submit"
+                                :disabled="!newMessage.trim() || isSubmitting"
+                                style="flex-shrink:0;background:linear-gradient(135deg,#ec4899,#8b5cf6);color:white;border:none;border-radius:12px;padding:10px 16px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity 0.15s,transform 0.1s;box-shadow:0 4px 12px rgba(139,92,246,0.35);"
+                                :style="(!newMessage.trim() || isSubmitting) ? 'opacity:0.45;cursor:not-allowed;' : 'opacity:1;'">
+                            <svg x-show="!isSubmitting" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"></path>
+                            </svg>
+                            <div x-show="isSubmitting" style="width:14px;height:14px;border:2px solid white;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div>
+                            <span x-show="!isSubmitting">Kirim</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    <!-- Canvas Confetti Library & script integration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('birthdayCelebrationApp', () => ({
+            show: false,
+            selectedIdx: 0,
+            newMessage: '',
+            isSubmitting: false,
+            birthdayUsers: [],
+            floatingGreetings: [],
+
+            init() {
+                this.birthdayUsers = [
+                    @foreach($birthdayUsers as $bu)
+                    {
+                        id: {{ $bu->id }},
+                        name: {!! json_encode($bu->name) !!},
+                        avatar: "{{ $bu->avatar }}",
+                        role_name: {!! json_encode($bu->role->name ?? '-') !!},
+                        division_name: {!! json_encode($bu->division?->name ?? '-') !!},
+                        age: {{ \Carbon\Carbon::parse($bu->birth_date)->age }},
+                        greetings: [
+                            @foreach($bu->birthdayGreetingsReceived as $bg)
+                            {
+                                id: {{ $bg->id }},
+                                sender_name: {!! json_encode($bg->sender->name) !!},
+                                sender_avatar: "{{ $bg->sender->avatar ? asset('storage/' . $bg->sender->avatar) : '' }}",
+                                sender_initial: "{{ substr($bg->sender->name, 0, 1) }}",
+                                message: {!! json_encode($bg->message) !!},
+                                created_at: "{{ $bg->created_at->diffForHumans() }}",
+                            },
+                            @endforeach
+                        ]
+                    },
+                    @endforeach
+                ];
+
+                // Inisialisasi ucapan acak campuran untuk setiap pengguna
+                this.birthdayUsers.forEach(user => {
+                    this.mixGreetings(user);
+                });
+
+                if (this.birthdayUsers.length > 0) {
+                    this.generateFloatingGreetings();
+
+                    // Muncul sekali per sesi login (reset otomatis ketika login ulang)
+                    const sessionKey = 'birthday_shown_{{ session()->getId() }}';
+                    if (!sessionStorage.getItem(sessionKey)) {
+                        sessionStorage.setItem(sessionKey, '1');
+                        setTimeout(() => {
+                            this.openModal();
+                        }, 800);
+                    }
+                }
+            },
+
+            get selectedUser() {
+                return this.birthdayUsers[this.selectedIdx] || { name: '', greetings: [], mixedGreetings: [] };
+            },
+
+            openModal() {
+                this.show = true;
+                this.selectedIdx = 0;
+                this.triggerConfetti();
+            },
+
+            closeModal() {
+                this.show = false;
+            },
+
+            selectUser(idx) {
+                this.selectedIdx = idx;
+                this.newMessage = '';
+                this.generateFloatingGreetings();
+            },
+
+            nextUser() {
+                if (this.birthdayUsers.length <= 1) return;
+                this.selectedIdx = (this.selectedIdx + 1) % this.birthdayUsers.length;
+                this.newMessage = '';
+                this.generateFloatingGreetings();
+                this.triggerConfetti();
+            },
+
+            prevUser() {
+                if (this.birthdayUsers.length <= 1) return;
+                this.selectedIdx = (this.selectedIdx - 1 + this.birthdayUsers.length) % this.birthdayUsers.length;
+                this.newMessage = '';
+                this.generateFloatingGreetings();
+                this.triggerConfetti();
+            },
+
+            mixGreetings(user) {
+                const dummies = [
+                    { id: 'd1', message: "Selamat ulang tahun! Semoga hari-harimu selalu dipenuhi kebahagiaan dan keceriaan! 🎉" },
+                    { id: 'd2', message: "Selamat ulang tahun ya! Semoga panjang umur, sehat selalu, dan dilancarkan segala urusannya. 🎂" },
+                    { id: 'd3', message: "Barakallah fii umrik, semoga bertambahnya usia membawa berkah, kebahagiaan, dan kemudahan dalam karir! 😇" },
+                    { id: 'd4', message: "Happy birthday! Wish you all the best and a fantastic year ahead! ✨" },
+                    { id: 'd5', message: "Selamat hari spesial! Semoga semua mimpi dan cita-citamu tercapai dengan sukses! 🎈" },
+                    { id: 'd6', message: "Selamat ulang tahun! Tetap semangat, semoga sukses selalu menyertai setiap langkahmu! 🌟" },
+                    { id: 'd7', message: "HBD! Semoga dilimpahkan rezeki, kesehatan, dan kebahagiaan yang melimpah selalu! 💖" },
+                    { id: 'd8', message: "Selamat ulang tahun! Semoga menjadi pribadi yang semakin sukses, bijaksana, dan bahagia selalu! 🌸" }
+                ];
+                
+                const realGreetings = user.greetings || [];
+                // Gabung dan acak urutannya
+                user.mixedGreetings = [...realGreetings, ...dummies].sort(() => Math.random() - 0.5);
+            },
+
+            // Palet warna kontras selalu terlihat di background gelap apapun mode
+            _pillStyles() {
+                const palettes = [
+                    { bg: 'rgba(255,255,255,0.88)', color: '#1e293b', border: 'rgba(203,213,225,0.8)' },
+                    { bg: 'rgba(255,255,255,0.88)', color: '#7c3aed', border: 'rgba(196,181,253,0.7)' },
+                    { bg: 'rgba(255,255,255,0.88)', color: '#db2777', border: 'rgba(249,168,212,0.7)' },
+                    { bg: 'rgba(30,41,59,0.90)',    color: '#f1f5f9', border: 'rgba(51,65,85,0.8)'   },
+                    { bg: 'rgba(30,41,59,0.90)',    color: '#a78bfa', border: 'rgba(109,40,217,0.5)' },
+                    { bg: 'rgba(30,41,59,0.90)',    color: '#f9a8d4', border: 'rgba(219,39,119,0.4)' },
+                ];
+                return palettes[Math.floor(Math.random() * palettes.length)];
+            },
+
+            generateFloatingGreetings() {
+                const list = [];
+                const messages = this.selectedUser.mixedGreetings ? this.selectedUser.mixedGreetings.map(g => g.message) : [];
+                const total = 18;
+                const baseDuration = 20;
+
+                for (let i = 0; i < total; i++) {
+                    const msg = messages[i % messages.length] || '';
+                    const dur = baseDuration + Math.random() * 10;
+                    const delay = -((i / total) * dur) - Math.random() * 3;
+                    const style = this._pillStyles();
+                    list.push({
+                        id: i,
+                        message: msg.length > 38 ? msg.substring(0, 38) + '...' : msg,
+                        duration: dur,
+                        delay: delay,
+                        left: 2 + (i * 5.5) % 90 + Math.random() * 3,
+                        size: 11 + Math.random() * 5,
+                        rotate: -12 + Math.random() * 24,
+                        ...style,
+                    });
+                }
+                this.floatingGreetings = list;
+            },
+
+            addFloatingMessage(msg) {
+                // Tambahkan ucapan baru langsung ke layar sebagai pill baru
+                const short = msg.length > 38 ? msg.substring(0, 38) + '...' : msg;
+                const style = this._pillStyles();
+                const newId = Date.now();
+                this.floatingGreetings.push({
+                    id: newId,
+                    message: short,
+                    duration: 22 + Math.random() * 6,
+                    delay: 0,
+                    left: 5 + Math.random() * 80,
+                    size: 13 + Math.random() * 3,
+                    rotate: -8 + Math.random() * 16,
+                    ...style,
+                });
+            },
+
+            triggerConfetti() {
+                const duration = 2.5 * 1000;
+                const animationEnd = Date.now() + duration;
+                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100000 };
+
+                const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+                const interval = setInterval(function() {
+                    const timeLeft = animationEnd - Date.now();
+
+                    if (timeLeft <= 0) {
+                        return clearInterval(interval);
+                    }
+
+                    const particleCount = 50 * (timeLeft / duration);
+                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+                }, 250);
+            },
+
+            async submitGreeting() {
+                if (!this.newMessage.trim() || this.isSubmitting) return;
+
+                this.isSubmitting = true;
+                
+                try {
+                    const response = await fetch('{{ route('birthday-greetings.store') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            birthday_user_id: this.selectedUser.id,
+                            message: this.newMessage
+                        })
+                    });
+
+                    const res = await response.json();
+
+                    if (res.success) {
+                        const sentMsg = this.newMessage.trim();
+                        this.selectedUser.greetings.unshift(res.data);
+                        this.mixGreetings(this.selectedUser);
+                        this.newMessage = '';
+                        // Langsung tambahkan ke floating background tanpa reset semua
+                        this.addFloatingMessage(sentMsg);
+                        
+                        confetti({
+                            particleCount: 60,
+                            spread: 70,
+                            origin: { y: 0.6 },
+                            zIndex: 100000
+                        });
+                    } else {
+                        alert(res.message || 'Gagal mengirim ucapan.');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Terjadi kesalahan koneksi.');
+                } finally {
+                    this.isSubmitting = false;
+                    setTimeout(() => {
+                        const feed = document.getElementById('greetings-feed');
+                        if (feed) feed.scrollTop = 0;
+                    }, 50);
+                }
+            }
+        }));
+    });
+    </script>
+    @endif
 
     @stack('scripts')
 </body>

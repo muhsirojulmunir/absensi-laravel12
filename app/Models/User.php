@@ -78,6 +78,16 @@ class User extends Authenticatable
         return $this->hasOne(BulkEmailLog::class)->latestOfMany();
     }
 
+    public function birthdayGreetingsReceived()
+    {
+        return $this->hasMany(BirthdayGreeting::class, 'birthday_user_id');
+    }
+
+    public function birthdayGreetingsSent()
+    {
+        return $this->hasMany(BirthdayGreeting::class, 'sender_id');
+    }
+
     public function salesInputs()
     {
         return $this->hasMany(SalesInput::class);
