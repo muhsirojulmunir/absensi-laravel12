@@ -39,6 +39,7 @@ class RamayanaStockController extends Controller
         $users = $query->get();
         $counterStats = [];
         $totalOverallStock = 0;
+        $seenLocations = []; // Hindari double-counting jika 1 toko punya beberapa karyawan
         
         foreach ($users as $user) {
             $userIds = $user->location_id 
@@ -53,12 +54,9 @@ class RamayanaStockController extends Controller
             ->groupBy('sku', 'satuan')
             ->get();
             
-            $counterTotalStock = $rawStocks->sum(function($item) {
-                return abs($item->current_stock);
-            });
-            $counterTotalSku = $rawStocks->filter(function($item) {
-                return $item->current_stock != 0;
-            })->count();
+            // Hanya jumlah stok yang positif (tersedia)
+            $counterTotalStock = $rawStocks->where('current_stock', '>', 0)->sum('current_stock');
+            $counterTotalSku = $rawStocks->where('current_stock', '>', 0)->count();
             
             $counterStats[] = [
                 'user_id' => $user->id,
@@ -68,7 +66,12 @@ class RamayanaStockController extends Controller
                 'total_sku' => $counterTotalSku
             ];
             
-            $totalOverallStock += $counterTotalStock;
+            // Hanya tambahkan ke total keseluruhan sekali per lokasi/toko
+            $locationKey = $user->location_id ? 'loc_' . $user->location_id : 'user_' . $user->id;
+            if (!isset($seenLocations[$locationKey])) {
+                $seenLocations[$locationKey] = true;
+                $totalOverallStock += $counterTotalStock;
+            }
         }
 
         $locations = Location::all();
