@@ -35,7 +35,10 @@ class SalesController extends Controller
 
     public function create()
     {
-        $userId = Auth::id();
+        $user = Auth::user();
+        $userIds = $user->location_id 
+            ? \App\Models\User::where('location_id', $user->location_id)->pluck('id')->toArray() 
+            : [$user->id];
 
         // Calculate available stock per SKU, Warna, Size
         $availableStocks = SalesInput::select(
@@ -44,7 +47,7 @@ class SalesController extends Controller
             'satuan',
             DB::raw("SUM(CASE WHEN type IN ('stock_in', 'incoming') THEN qty ELSE -qty END) as total_qty")
         )
-        ->where('user_id', $userId)
+        ->whereIn('user_id', $userIds)
         ->groupBy('sku', DB::raw("IFNULL(size, '')"), 'satuan')
         ->get();
 
@@ -62,7 +65,10 @@ class SalesController extends Controller
         ]);
 
         $date = $request->date;
-        $userId = Auth::id();
+        $user = Auth::user();
+        $userIds = $user->location_id 
+            ? \App\Models\User::where('location_id', $user->location_id)->pluck('id')->toArray() 
+            : [$user->id];
         $insertData = [];
         $errors = [];
 
@@ -78,8 +84,8 @@ class SalesController extends Controller
             
             $qty = (int)$item['qty'];
 
-            // Cek ketersediaan stok secara persis
-            $stockInQuery = SalesInput::where('user_id', '=', $userId, 'and')
+            // Cek ketersediaan stok secara persis di seluruh user dalam toko yang sama
+            $stockInQuery = SalesInput::whereIn('user_id', $userIds)
                 ->where('sku', '=', $sku, 'and')
                 ->whereIn('type', ['stock_in', 'incoming']);
                 
@@ -92,7 +98,7 @@ class SalesController extends Controller
             }
             $stockIn = $stockInQuery->sum('qty');
 
-            $stockOutQuery = SalesInput::where('user_id', '=', $userId, 'and')
+            $stockOutQuery = SalesInput::whereIn('user_id', $userIds)
                 ->where('sku', '=', $sku, 'and')
                 ->where('type', '=', 'sale', 'and');
             if ($size) {
@@ -118,7 +124,7 @@ class SalesController extends Controller
             }
 
             $insertData[] = [
-                'user_id' => $userId,
+                'user_id' => $user->id,
                 'type' => 'sale',
                 'date' => $date,
                 'sku' => $sku,

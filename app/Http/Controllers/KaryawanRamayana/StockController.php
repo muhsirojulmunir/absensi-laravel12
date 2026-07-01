@@ -13,16 +13,18 @@ class StockController extends Controller
 {
     public function index(Request $request)
     {
-        $userId = Auth::id();
         $user = Auth::user();
+        $userIds = $user->location_id 
+            ? \App\Models\User::where('location_id', $user->location_id)->pluck('id')->toArray() 
+            : [$user->id];
         
-        // Group stock for this specific user
+        // Group stock for this specific store (users in the same location)
         $rawStocks = SalesInput::select('sku', DB::raw('MAX(kode_barang) as kode_barang'), DB::raw("IFNULL(size, '') as size"), 'satuan',
                 DB::raw("SUM(CASE WHEN type = 'stock_in' THEN qty ELSE 0 END) as total_in"),
                 DB::raw("SUM(CASE WHEN type = 'sale' THEN qty ELSE 0 END) as total_out"),
                 DB::raw("SUM(CASE WHEN type = 'stock_in' THEN qty ELSE -qty END) as current_stock")
             )
-            ->where('user_id', $userId)
+            ->whereIn('user_id', $userIds)
             ->groupBy('sku', DB::raw("IFNULL(size, '')"), 'satuan')
             ->get();
 
@@ -116,7 +118,10 @@ class StockController extends Controller
 
     public function editCatalog(Request $request)
     {
-        $userId = Auth::id();
+        $user = Auth::user();
+        $userIds = $user->location_id 
+            ? \App\Models\User::where('location_id', $user->location_id)->pluck('id')->toArray() 
+            : [$user->id];
         $sku = ucwords(strtolower(trim($request->query('sku'))));
 
         if (!$sku) abort(404);
@@ -127,7 +132,7 @@ class StockController extends Controller
                 DB::raw("SUM(CASE WHEN type = 'sale' THEN qty ELSE 0 END) as total_out"),
                 DB::raw("SUM(CASE WHEN type = 'stock_in' THEN qty ELSE -qty END) as current_stock")
             )
-            ->where('user_id', $userId)
+            ->whereIn('user_id', $userIds)
             ->where('sku', $sku)
             ->groupBy('size')
             ->get();
@@ -148,12 +153,15 @@ class StockController extends Controller
             'sizes' => 'required|array'
         ]);
 
-        $userId = Auth::id();
+        $user = Auth::user();
+        $userIds = $user->location_id 
+            ? \App\Models\User::where('location_id', $user->location_id)->pluck('id')->toArray() 
+            : [$user->id];
         $sku = ucwords(strtolower(trim($request->sku)));
 
         // Fetch total_out (sales) to know how much stock_in is needed for the new current_stock
         $sales = SalesInput::select('size', DB::raw("SUM(qty) as total_out"))
-            ->where('user_id', $userId)
+            ->whereIn('user_id', $userIds)
             ->where('sku', $sku)
             ->where('type', 'sale')
             ->groupBy('size')
@@ -161,7 +169,7 @@ class StockController extends Controller
             ->keyBy('size');
 
         // Delete existing stock_in for this SKU/Warna to rebuild it cleanly
-        SalesInput::where('user_id', $userId)
+        SalesInput::whereIn('user_id', $userIds)
             ->where('sku', $sku)
             ->where('type', 'stock_in')
             ->delete();
@@ -178,7 +186,7 @@ class StockController extends Controller
 
             if ($requiredStockIn >= 0) {
                 $insertData[] = [
-                    'user_id' => $userId,
+                    'user_id' => $user->id,
                     'type' => 'stock_in',
                     'date' => $now->toDateString(),
                     'sku' => $sku,
@@ -201,10 +209,13 @@ class StockController extends Controller
 
     public function deleteCatalog(Request $request)
     {
-        $userId = Auth::id();
+        $user = Auth::user();
+        $userIds = $user->location_id 
+            ? \App\Models\User::where('location_id', $user->location_id)->pluck('id')->toArray() 
+            : [$user->id];
         $sku = ucwords(strtolower(trim($request->query('sku'))));
 
-        SalesInput::where('user_id', $userId)
+        SalesInput::whereIn('user_id', $userIds)
             ->where('sku', $sku)
             ->delete();
 

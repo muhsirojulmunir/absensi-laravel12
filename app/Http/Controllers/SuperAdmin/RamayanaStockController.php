@@ -41,10 +41,14 @@ class RamayanaStockController extends Controller
         $totalOverallStock = 0;
         
         foreach ($users as $user) {
+            $userIds = $user->location_id 
+                ? User::where('location_id', $user->location_id)->pluck('id')->toArray() 
+                : [$user->id];
+
             $rawStocks = SalesInput::select(DB::raw('MAX(kode_barang) as kode_barang'), 'sku', 'satuan',
                 DB::raw("SUM(CASE WHEN type IN ('stock_in','incoming') THEN qty ELSE -qty END) as current_stock")
             )
-            ->where('user_id', $user->id)
+            ->whereIn('user_id', $userIds)
             ->where('date', '<=', $filterDate)
             ->groupBy('sku', 'satuan')
             ->get();
@@ -78,7 +82,11 @@ class RamayanaStockController extends Controller
         $search = $request->query('search', '');
         $filterDate = $request->query('date', Carbon::today()->toDateString());
 
-        $query = SalesInput::where('user_id', $user->id)
+        $userIds = $user->location_id 
+            ? User::where('location_id', $user->location_id)->pluck('id')->toArray() 
+            : [$user->id];
+
+        $query = SalesInput::whereIn('user_id', $userIds)
             ->where('date', '<=', $filterDate);
 
         if (!empty($search)) {
