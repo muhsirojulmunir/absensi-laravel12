@@ -840,10 +840,12 @@
                                type="text"
                                maxlength="150"
                                placeholder="Tulis ucapan selamat... 🎉"
-                               class="text-slate-900 dark:text-white placeholder-slate-400"
-                               style="flex:1;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;font-size:12px;padding:10px 14px;outline:none;transition:border-color 0.2s;min-width:0;"
+                               :style="document.documentElement.classList.contains('dark')
+                                   ? 'flex:1;background:#1e293b;border:1.5px solid #475569;border-radius:12px;font-size:12px;padding:10px 14px;outline:none;transition:border-color 0.2s;min-width:0;color:#f1f5f9;'
+                                   : 'flex:1;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;font-size:12px;padding:10px 14px;outline:none;transition:border-color 0.2s;min-width:0;color:#1e293b;'"
+                               style="flex:1;min-width:0;"
                                onfocus="this.style.borderColor='#ec4899';"
-                               onblur="this.style.borderColor='#e2e8f0';" />
+                               onblur="this.style.borderColor=document.documentElement.classList.contains('dark')?'#475569':'#e2e8f0';" />
                         <button type="submit"
                                 :disabled="!newMessage.trim() || isSubmitting"
                                 style="flex-shrink:0;background:linear-gradient(135deg,#ec4899,#8b5cf6);color:white;border:none;border-radius:12px;padding:10px 16px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity 0.15s,transform 0.1s;box-shadow:0 4px 12px rgba(139,92,246,0.35);"
