@@ -155,7 +155,16 @@ class AttendanceController extends Controller
 
         $isPulangCepat = false;
 
-        if (str_contains($userDivision, 'gudang')) {
+        if ($user->role->slug === 'karyawan_ramayana') {
+            if ($attendance && $attendance->check_in) {
+                $dateStr = $attendance->date instanceof \Carbon\Carbon ? $attendance->date->format('Y-m-d') : explode(' ', (string)$attendance->date)[0];
+                $clockInTime = \Carbon\Carbon::parse($dateStr . ' ' . $attendance->check_in);
+                $minutesWorked = $clockInTime->diffInMinutes($now);
+                $isPulangCepat = $minutesWorked < (7 * 60);
+            } else {
+                $isPulangCepat = false;
+            }
+        } elseif (str_contains($userDivision, 'gudang')) {
             $isPulangCepat = $now->format('H:i') < '18:00';
         } else {
             if ($attendance && $attendance->check_in) {

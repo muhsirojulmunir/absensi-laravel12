@@ -285,7 +285,17 @@ class AttendanceMonitoringController extends Controller
         $isPulangCepat = false;
         $checkOutTime  = Carbon::parse($targetDate . ' ' . $request->check_out . ':00');
 
-        if (str_contains($userDivision, 'gudang')) {
+        if ($employee->role->slug === 'karyawan_ramayana') {
+            if (!empty($attendance->check_in)) {
+                $attendanceDateStr = $attendance->date instanceof Carbon
+                    ? $attendance->date->toDateString()
+                    : explode(' ', (string) $attendance->date)[0];
+
+                $clockInTime   = Carbon::parse($attendanceDateStr . ' ' . $attendance->check_in);
+                $minutesWorked = (int) $clockInTime->diffInMinutes($checkOutTime);
+                $isPulangCepat = $minutesWorked < (7 * 60);
+            }
+        } elseif (str_contains($userDivision, 'gudang')) {
             $isPulangCepat = $request->check_out < '18:00';
         } elseif (!empty($attendance->check_in)) {
             $attendanceDateStr = $attendance->date instanceof Carbon

@@ -146,7 +146,18 @@
                     </div>
                     <span class="text-sm font-bold text-slate-800 dark:text-slate-200" x-text="distanceText">-- m</span>
                 </div>
-                <p class="text-[9px] text-slate-400 dark:text-slate-600 text-center font-medium tracking-wide">* Radius absensi maksimal {{ $settings['office_radius'] ?? 50 }}m.</p>
+                @if(Auth::user()->role->slug == 'karyawan_ramayana')
+                <p class="text-[9px] text-slate-400 dark:text-slate-600 text-center font-medium tracking-wide">
+                    * Radius jangkauan: 
+                    @forelse(Auth::user()->all_locations as $loc)
+                        {{ $loc->name }} ({{ $loc->radius }}m){{ !$loop->last ? ',' : '' }}
+                    @empty
+                        Tidak ada lokasi ditugaskan
+                    @endforelse
+                </p>
+                @else
+                <p class="text-[9px] text-slate-400 dark:text-slate-600 text-center font-medium tracking-wide">* Radius jangkauan maksimal {{ $settings['office_radius'] ?? 50 }}m.</p>
+                @endif
             </div>
 
             <!-- Right: Stats + History -->
@@ -401,15 +412,26 @@
                 hasCheckedIn: {{ $todayAttendance ? 'true' : 'false' }},
                 hasCheckedOut: {{ ($todayAttendance && $todayAttendance->check_out) ? 'true' : 'false' }},
                 checkInTime: '{{ $todayAttendance ? $todayAttendance->check_in : '' }}',
-                @if(Auth::user()->role->slug == 'karyawan_ramayana' && Auth::user()->location_id)
-                officeLat: {{ Auth::user()->location->latitude ?? -7.232539 }},
-                officeLong: {{ Auth::user()->location->longitude ?? 112.776228 }},
-                officeRadius: {{ Auth::user()->location->radius ?? 50 }},
-                @else
-                officeLat: {{ $settings['office_latitude'] ?? -7.232539 }},
-                officeLong: {{ $settings['office_longitude'] ?? 112.776228 }},
-                officeRadius: {{ $settings['office_radius'] ?? 50 }},
-                @endif
+                requiredHours: {{ Auth::user()->role->slug === 'karyawan_ramayana' ? 7 : 8 }},
+                locations: [
+                    @if(Auth::user()->role->slug == 'karyawan_ramayana')
+                        @foreach(Auth::user()->all_locations as $loc)
+                        {
+                            name: {!! json_encode($loc->name) !!},
+                            lat: {{ $loc->latitude }},
+                            long: {{ $loc->longitude }},
+                            radius: {{ $loc->radius }}
+                        },
+                        @endforeach
+                    @else
+                        {
+                            name: 'Kantor Pusat',
+                            lat: {{ $settings['office_latitude'] ?? -7.232539 }},
+                            long: {{ $settings['office_longitude'] ?? 112.776228 }},
+                            radius: {{ $settings['office_radius'] ?? 50 }}
+                        }
+                    @endif
+                ],
                 userLat: null,
                 userLong: null,
 
@@ -428,7 +450,7 @@
                     const [h, m, s] = this.checkInTime.split(':');
                     const checkInDate = new Date();
                     checkInDate.setHours(h, m, s || 0, 0);
-                    const estDate = new Date(checkInDate.getTime() + (8 * 60 * 60 * 1000));
+                    const estDate = new Date(checkInDate.getTime() + (this.requiredHours * 60 * 60 * 1000));
                     const estH = String(estDate.getHours()).padStart(2, '0');
                     const estM = String(estDate.getMinutes()).padStart(2, '0');
                     this.estimatedOutText = `Estimasi jam pulang: ${estH}:${estM}`;
@@ -438,7 +460,7 @@
                         checkInDate.setHours(h, m, s || 0, 0);
 
                         const diffMs = now - checkInDate;
-                        const requiredMs = 8 * 60 * 60 * 1000;
+                        const requiredMs = this.requiredHours * 60 * 60 * 1000;
                         const remainingMs = requiredMs - diffMs;
 
                         if (remainingMs > 0) {
@@ -450,7 +472,7 @@
                             this.timeLeftText = `Sisa ${remH} Jam ${remM} Menit ${remS} Detik Lagi`;
                         } else {
                             this.isEarlyLeave = false;
-                            this.timeLeftText = '8 Jam Terpenuhi ✨ (Luar Biasa, Tetap Semangat {{ explode(' ', Auth::user()->name)[0] }}! 💪)';
+                            this.timeLeftText = `${this.requiredHours} Jam Terpenuhi ✨ (Luar Biasa, Tetap Semangat {{ explode(' ', Auth::user()->name)[0] }}! 💪)`;
                         }
                     };
                     updateTime();
@@ -478,26 +500,49 @@
                 },
 
                 calculateDistance() {
+                    if (this.locations.length === 0) {
+                        this.distanceText = '-- m';
+                        this.isWithinRange = false;
+                        this.locationStatus = 'Tidak ada lokasi absen ditugaskan';
+                        return;
+                    }
+
                     const R = 6371e3;
                     const p1 = this.userLat * Math.PI / 180;
-                    const p2 = this.officeLat * Math.PI / 180;
-                    const dp = (this.officeLat - this.userLat) * Math.PI / 180;
-                    const dl = (this.officeLong - this.userLong) * Math.PI / 180;
+                    
+                    let minDistance = null;
+                    let isWithinAny = false;
+                    let nearestRadius = 0;
 
-                    const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
-                        Math.cos(p1) * Math.cos(p2) *
-                        Math.sin(dl / 2) * Math.sin(dl / 2);
-                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    this.locations.forEach(loc => {
+                        const p2 = loc.lat * Math.PI / 180;
+                        const dp = (loc.lat - this.userLat) * Math.PI / 180;
+                        const dl = (loc.long - this.userLong) * Math.PI / 180;
 
-                    const distance = Math.round(c * R);
-                    this.distanceText = `${distance} m`;
+                        const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+                            Math.cos(p1) * Math.cos(p2) *
+                            Math.sin(dl / 2) * Math.sin(dl / 2);
+                        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                        const distance = Math.round(c * R);
 
-                    if (distance <= this.officeRadius) {
+                        if (minDistance === null || distance < minDistance) {
+                            minDistance = distance;
+                            nearestRadius = loc.radius;
+                        }
+
+                        if (distance <= loc.radius) {
+                            isWithinAny = true;
+                        }
+                    });
+
+                    this.distanceText = `${minDistance} m`;
+
+                    if (isWithinAny) {
                         this.isWithinRange = true;
                         this.locationStatus = 'Siap Absen ✨';
                     } else {
                         this.isWithinRange = false;
-                        this.locationStatus = `Di Luar Radius (Min ${this.officeRadius}m)`;
+                        this.locationStatus = `Di Luar Radius (Min ${nearestRadius}m)`;
                     }
                 },
 
@@ -571,7 +616,7 @@
                     if (type === 'out' && this.isEarlyLeave) {
                         Swal.fire({
                             title: 'Pulang Cepat?',
-                            text: 'Anda belum bekerja 8 jam hari ini. Jika absen pulang sekarang, Anda akan tercatat "Pulang Cepat". Lanjutkan?',
+                            text: `Anda belum bekerja ${this.requiredHours} jam hari ini. Jika absen pulang sekarang, Anda akan tercatat "Pulang Cepat". Lanjutkan?`,
                             icon: 'warning',
                             showCancelButton: true,
                             confirmButtonColor: '#ef4444',

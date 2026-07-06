@@ -806,8 +806,27 @@
                             <span style="font-size:10px;font-weight:900;letter-spacing:0.1em;color:#be185d;">🎂 HARI ULANG TAHUN 🎂</span>
                         </div>
                         <h3 class="text-slate-900" style="font-size:1.1rem;font-weight:900;line-height:1.2;margin-bottom:4px;" x-text="selectedUser.name"></h3>
-                        <p class="text-indigo-600" style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;" x-text="selectedUser.role_name"></p>
-                        <p class="text-slate-600" style="font-size:11px;font-weight:600;margin-top:2px;" x-text="selectedUser.division_name"></p>
+                        <template x-if="selectedUser.role_slug === 'karyawan_ramayana'">
+                            <div>
+                                <p class="text-indigo-600" style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;" x-text="selectedUser.locations_text || 'Tidak Ada Counter'"></p>
+                            </div>
+                        </template>
+                        <template x-if="selectedUser.role_slug !== 'karyawan_ramayana' && (selectedUser.division_name && selectedUser.division_name.toLowerCase().includes('staff kantor'))">
+                            <div>
+                                <p class="text-indigo-600" style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;">Staff Kantor</p>
+                            </div>
+                        </template>
+                        <template x-if="selectedUser.role_slug !== 'karyawan_ramayana' && (selectedUser.division_name && (selectedUser.division_name.toLowerCase().includes('live streaming') || selectedUser.division_name.toLowerCase().includes('streamer')))">
+                            <div>
+                                <p class="text-indigo-600" style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;">Live Streamer</p>
+                            </div>
+                        </template>
+                        <template x-if="selectedUser.role_slug !== 'karyawan_ramayana' && !(selectedUser.division_name && (selectedUser.division_name.toLowerCase().includes('staff kantor') || selectedUser.division_name.toLowerCase().includes('live streaming') || selectedUser.division_name.toLowerCase().includes('streamer')))">
+                            <div>
+                                <p class="text-indigo-600" style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;" x-text="selectedUser.role_name"></p>
+                                <p class="text-slate-600" style="font-size:11px;font-weight:600;margin-top:2px;" x-text="selectedUser.division_name"></p>
+                            </div>
+                        </template>
                     </div>
 
                     <!-- Navigation row (only if >1 person) -->
@@ -880,8 +899,10 @@
                         id: {{ $bu->id }},
                         name: {!! json_encode($bu->name) !!},
                         avatar: "{{ $bu->avatar }}",
+                        role_slug: "{{ $bu->role->slug ?? '' }}",
                         role_name: {!! json_encode($bu->role->name ?? '-') !!},
                         division_name: {!! json_encode($bu->division?->name ?? '-') !!},
+                        locations_text: {!! json_encode(implode(' & ', $bu->all_locations->pluck('name')->toArray())) !!},
                         age: {{ \Carbon\Carbon::parse($bu->birth_date)->age }},
                         greetings: [
                             @foreach($bu->birthdayGreetingsReceived as $bg)

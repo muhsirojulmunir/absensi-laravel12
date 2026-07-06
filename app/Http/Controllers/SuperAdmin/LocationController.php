@@ -148,6 +148,15 @@ class LocationController extends Controller
             // kita perlu set manual location_id user menjadi null sebelum hapus lokasi
             \App\Models\User::where('location_id', $location->id)->update(['location_id' => null]);
             
+            // Bersihkan juga dari additional_location_ids
+            $usersWithAdditional = \App\Models\User::whereNotNull('additional_location_ids')->get();
+            foreach ($usersWithAdditional as $u) {
+                if (is_array($u->additional_location_ids) && in_array($location->id, $u->additional_location_ids)) {
+                    $u->additional_location_ids = array_values(array_diff($u->additional_location_ids, [$location->id]));
+                    $u->save();
+                }
+            }
+            
             $location->delete();
             
             return redirect()->route('super-admin.locations.index')->with('success', 'Lokasi "' . $location->name . '" berhasil dihapus.');

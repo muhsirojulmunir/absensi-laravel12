@@ -52,7 +52,20 @@ class LeaveRequestController extends Controller
 
         $request->validate([
             'type' => 'required|in:Sakit,Izin Tidak Masuk,Izin Masuk Siang,Libur,Lupa Absen,Absen Diluar',
-            'sub_type' => 'nullable|required_if:type,Lupa Absen|required_if:type,Absen Diluar|in:Absen Masuk,Absen Pulang',
+            'sub_type' => [
+                'nullable',
+                'required_if:type,Lupa Absen',
+                'required_if:type,Absen Diluar',
+                'required_if:type,Izin Tidak Masuk',
+                function ($attribute, $value, $fail) use ($request) {
+                    if (in_array($request->type, ['Lupa Absen', 'Absen Diluar']) && !in_array($value, ['Absen Masuk', 'Absen Pulang'])) {
+                        $fail('Sub tipe tidak valid untuk Lupa Absen atau Absen Diluar.');
+                    }
+                    if ($request->type === 'Izin Tidak Masuk' && !in_array($value, ['Sakit', 'Izin Tidak Masuk'])) {
+                        $fail('Sub tipe tidak valid untuk Izin Tidak Masuk.');
+                    }
+                }
+            ],
             // Lupa Absen: boleh tanggal lampau dalam bulan ini.
             // Absen Diluar: hari ini ke depan.
             // Lainnya: hari ini ke depan.

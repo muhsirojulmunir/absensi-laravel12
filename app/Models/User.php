@@ -41,6 +41,7 @@ class User extends Authenticatable
         'fcm_token',
         'is_active',
         'location_id',
+        'additional_location_ids',
     ];
 
     public function role()
@@ -127,6 +128,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'last_login_at' => 'datetime',
             'otp_expires_at' => 'datetime',
+            'additional_location_ids' => 'array',
         ];
     }
 
@@ -159,5 +161,18 @@ class User extends Authenticatable
         $nextNumber = $lastNumber + 1;
 
         return $prefix . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+    }
+
+    public function getAllLocationsAttribute()
+    {
+        $locations = collect();
+        if ($this->location) {
+            $locations->push($this->location);
+        }
+        if (!empty($this->additional_location_ids) && is_array($this->additional_location_ids)) {
+            $additional = Location::whereIn('id', $this->additional_location_ids)->get();
+            $locations = $locations->merge($additional);
+        }
+        return $locations->unique('id');
     }
 }
