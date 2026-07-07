@@ -434,6 +434,7 @@
                 ],
                 userLat: null,
                 userLong: null,
+                gpsAlertShown: false,
 
                 isEarlyLeave: false,
                 timeLeftText: '',
@@ -489,13 +490,47 @@
                         (position) => {
                             this.userLat = position.coords.latitude;
                             this.userLong = position.coords.longitude;
+                            this.gpsAlertShown = false; // Reset status alert saat berhasil mendapat lokasi
                             this.calculateDistance();
                         },
                         (err) => {
                             console.error("GPS error:", err);
-                            this.locationStatus = 'GPS Mati / Tidak Diizinkan';
+                            
+                            let title = 'Deteksi Lokasi Gagal 📍';
+                            let text = 'Pastikan GPS Anda aktif dan berikan izin lokasi untuk website ini.';
+                            
+                            if (err.code === 1) { // PERMISSION_DENIED
+                                this.locationStatus = 'IZIN LOKASI DITOLAK';
+                                text = 'Izin lokasi diblokir oleh browser. Harap aktifkan izin lokasi di Pengaturan Browser (Google Chrome / Safari) Anda.';
+                            } else if (err.code === 3) { // TIMEOUT
+                                this.locationStatus = 'TIMEOUT PENCARIAN LOKASI';
+                                text = 'Waktu pencarian lokasi habis (Timeout). Pastikan koneksi internet stabil, hidupkan kembali GPS Anda, dan pindah ke area terbuka (tidak terhalang gedung tebal).';
+                            } else {
+                                this.locationStatus = 'GPS MATI / TIDAK AKTIF';
+                                text = 'Gagal mendeteksi lokasi. Pastikan GPS/Location Service di HP Anda aktif.';
+                            }
+
+                            if (!this.gpsAlertShown) {
+                                this.gpsAlertShown = true;
+                                Swal.fire({
+                                    title: title,
+                                    text: text,
+                                    icon: 'warning',
+                                    background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff',
+                                    color: document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#1e293b',
+                                    confirmButtonColor: '#2563eb',
+                                    customClass: {
+                                        popup: 'rounded-2xl',
+                                        confirmButton: 'rounded-lg px-6'
+                                    }
+                                });
+                            }
                         },
-                        { enableHighAccuracy: true }
+                        { 
+                            enableHighAccuracy: true,
+                            timeout: 10000, // Timeout 10 detik agar tidak menggantung selamanya
+                            maximumAge: 5000 // Mengizinkan cache lokasi jika baru berumur maksimal 5 detik
+                        }
                     );
                 },
 
