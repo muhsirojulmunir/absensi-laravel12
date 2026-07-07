@@ -8,26 +8,34 @@
                 <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
                     Halo, <span class="text-blue-600 dark:text-blue-400">{{ explode(' ', Auth::user()->name)[0] }}</span>
                 </h1>
-                <p class="text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide leading-tight">Siap untuk memberikan dampak positif hari ini? ✨</p>
+                <p class="text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide leading-tight">Siap untuk
+                    memberikan dampak positif hari ini? ✨</p>
             </div>
 
             <!-- Date Info: Premium Badge -->
-            <div class="inline-flex items-center space-x-3.5 bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 px-5 py-3 rounded-2xl shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <div
+                class="inline-flex items-center space-x-3.5 bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 px-5 py-3 rounded-2xl shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
                 <div class="bg-blue-50 dark:bg-blue-950/40 p-2 rounded-xl text-blue-600 dark:text-blue-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                        </path>
                     </svg>
                 </div>
                 <div>
-                    <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">Hari Ini</p>
-                    <p class="text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight">{{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}</p>
+                    <p
+                        class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">
+                        Hari Ini</p>
+                    <p class="text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight">
+                        {{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}
+                    </p>
                 </div>
             </div>
         </div>
 
         @php
             $upcomingHolidays = \App\Models\Holiday::whereDate('date', '>=', \Carbon\Carbon::today())
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->whereNull('division_id')->orWhere('division_id', Auth::user()->division_id);
                 })
                 ->orderBy('date', 'asc')
@@ -35,48 +43,56 @@
         @endphp
 
         @if($upcomingHolidays->count() > 0)
-        <!-- Holiday Announcement Banner -->
-        <div class="space-y-3">
-            @foreach($upcomingHolidays as $holiday)
-                @php
-                    $isToday = \Carbon\Carbon::parse($holiday->date)->isToday();
-                    $dateStr = \Carbon\Carbon::parse($holiday->date)->translatedFormat('d F Y');
-                    $bgStyle = $isToday ? 'background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);' : 'background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);';
-                    $shadowColor = $isToday ? 'rgba(99, 102, 241, 0.15)' : 'rgba(59, 130, 246, 0.15)';
-                @endphp
-                <div class="rounded-2xl p-4 md:p-5 text-white flex items-center justify-between shadow-lg" style="{{ $bgStyle }} box-shadow: 0 10px 25px -5px {{ $shadowColor }}; animate: fadeIn 0.4s ease-out;">
-                    <div class="flex items-center space-x-4">
-                        <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-md shadow-inner border border-white/10">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-xs font-bold uppercase tracking-widest text-white/90">Hari Libur</h3>
-                            <p class="text-sm text-white font-medium mt-0.5">
-                                @if($isToday)
-                                    Hari ini ditetapkan sebagai hari libur: <strong class="text-white font-bold">{{ $holiday->description }}</strong>
-                                @else
-                                    Tanggal <strong class="text-white font-bold">{{ $dateStr }}</strong> ditetapkan sebagai <strong class="text-white font-bold">{{ $holiday->description }}</strong>
-                                @endif
-                            </p>
+            <!-- Holiday Announcement Banner -->
+            <div class="space-y-3">
+                @foreach($upcomingHolidays as $holiday)
+                    @php
+                        $isToday = \Carbon\Carbon::parse($holiday->date)->isToday();
+                        $dateStr = \Carbon\Carbon::parse($holiday->date)->translatedFormat('d F Y');
+                        $bgStyle = $isToday ? 'background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);' : 'background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);';
+                        $shadowColor = $isToday ? 'rgba(99, 102, 241, 0.15)' : 'rgba(59, 130, 246, 0.15)';
+                    @endphp
+                    <div class="rounded-2xl p-4 md:p-5 text-white flex items-center justify-between shadow-lg"
+                        style="{{ $bgStyle }} box-shadow: 0 10px 25px -5px {{ $shadowColor }}; animate: fadeIn 0.4s ease-out;">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-md shadow-inner border border-white/10">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-bold uppercase tracking-widest text-white/90">Hari Libur</h3>
+                                <p class="text-sm text-white font-medium mt-0.5">
+                                    @if($isToday)
+                                        Hari ini ditetapkan sebagai hari libur: <strong
+                                            class="text-white font-bold">{{ $holiday->description }}</strong>
+                                    @else
+                                        Tanggal <strong class="text-white font-bold">{{ $dateStr }}</strong> ditetapkan sebagai <strong
+                                            class="text-white font-bold">{{ $holiday->description }}</strong>
+                                    @endif
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            @endforeach
-        </div>
+                @endforeach
+            </div>
         @endif
 
         <!-- Main Grid -->
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
             <!-- Left: Attendance Card -->
-            <div class="bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[360px]">
+            <div
+                class="bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[360px]">
                 <!-- Accent Decoration -->
-                <div class="absolute -left-10 -top-10 w-24 h-24 bg-blue-50/50 dark:bg-blue-950/10 rounded-full blur-2xl"></div>
+                <div class="absolute -left-10 -top-10 w-24 h-24 bg-blue-50/50 dark:bg-blue-950/10 rounded-full blur-2xl">
+                </div>
 
                 <div class="text-center relative z-10">
-                    <h2 class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-3">Status Kehadiran</h2>
+                    <h2 class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-3">Status
+                        Kehadiran</h2>
                     <div class="inline-block px-4 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-[10px] font-bold uppercase tracking-widest"
                         x-text="locationStatus">Mencari Lokasi...</div>
                 </div>
@@ -86,40 +102,49 @@
                     <!-- Clock In -->
                     <button @click="submitAttendance('in')" :disabled="!isWithinRange || isSubmitting || hasCheckedIn"
                         :class="{
-                            'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/10 active:scale-95': isWithinRange && !hasCheckedIn && !isSubmitting,
-                            'bg-slate-50 dark:bg-slate-900/60 text-slate-350 dark:text-slate-700 border border-slate-200/30 dark:border-slate-850 cursor-not-allowed': !isWithinRange || hasCheckedIn,
-                            'opacity-60 cursor-wait': isSubmitting
-                        }"
+                                        'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/10 active:scale-95': isWithinRange && !hasCheckedIn && !isSubmitting,
+                                        'bg-slate-50 dark:bg-slate-900/60 text-slate-350 dark:text-slate-700 border border-slate-200/30 dark:border-slate-850 cursor-not-allowed': !isWithinRange || hasCheckedIn,
+                                        'opacity-60 cursor-wait': isSubmitting
+                                    }"
                         class="relative aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all duration-350 group cursor-pointer">
-                        <svg class="w-7 h-7 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        <svg class="w-7 h-7 transition-transform group-hover:scale-110" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                         </svg>
                         <span class="text-[10px] font-bold uppercase tracking-widest">Absen Masuk</span>
-                        <div x-show="hasCheckedIn" class="absolute inset-0 bg-emerald-500/5 backdrop-blur-[0.5px] rounded-2xl flex items-center justify-center">
+                        <div x-show="hasCheckedIn"
+                            class="absolute inset-0 bg-emerald-500/5 backdrop-blur-[0.5px] rounded-2xl flex items-center justify-center">
                             <div class="bg-emerald-500 rounded-full p-2 shadow-md shadow-emerald-500/30">
                                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                        d="M5 13l4 4L19 7"></path>
                                 </svg>
                             </div>
                         </div>
                     </button>
 
                     <!-- Clock Out -->
-                    <button @click="submitAttendance('out')" :disabled="!isWithinRange || isSubmitting || !hasCheckedIn || hasCheckedOut"
-                        :class="{
-                            'bg-orange-500 text-white hover:bg-orange-600 shadow-md shadow-orange-500/10 active:scale-95': isWithinRange && hasCheckedIn && !hasCheckedOut && !isSubmitting,
-                            'bg-slate-50 dark:bg-slate-900/60 text-slate-350 dark:text-slate-700 border border-slate-200/30 dark:border-slate-850 cursor-not-allowed': !isWithinRange || !hasCheckedIn || hasCheckedOut,
-                            'opacity-60 cursor-wait': isSubmitting
-                        }"
+                    <button @click="submitAttendance('out')"
+                        :disabled="!isWithinRange || isSubmitting || !hasCheckedIn || hasCheckedOut" :class="{
+                                        'bg-orange-500 text-white hover:bg-orange-600 shadow-md shadow-orange-500/10 active:scale-95': isWithinRange && hasCheckedIn && !hasCheckedOut && !isSubmitting,
+                                        'bg-slate-50 dark:bg-slate-900/60 text-slate-350 dark:text-slate-700 border border-slate-200/30 dark:border-slate-850 cursor-not-allowed': !isWithinRange || !hasCheckedIn || hasCheckedOut,
+                                        'opacity-60 cursor-wait': isSubmitting
+                                    }"
                         class="relative aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all duration-350 group cursor-pointer">
-                        <svg class="w-7 h-7 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        <svg class="w-7 h-7 transition-transform group-hover:scale-110" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                            </path>
                         </svg>
                         <span class="text-[10px] font-bold uppercase tracking-widest">Absen Keluar</span>
-                        <div x-show="hasCheckedOut" class="absolute inset-0 bg-emerald-500/5 backdrop-blur-[0.5px] rounded-2xl flex items-center justify-center">
+                        <div x-show="hasCheckedOut"
+                            class="absolute inset-0 bg-emerald-500/5 backdrop-blur-[0.5px] rounded-2xl flex items-center justify-center">
                             <div class="bg-emerald-500 rounded-full p-2 shadow-md shadow-emerald-500/30">
                                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                        d="M5 13l4 4L19 7"></path>
                                 </svg>
                             </div>
                         </div>
@@ -130,70 +155,94 @@
                 <div x-show="hasCheckedIn && !hasCheckedOut" style="display:none;"
                     class="text-center mb-4 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 flex flex-col items-center justify-center gap-1">
                     <div class="flex items-center justify-center gap-2">
-                        <span class="w-2 h-2 rounded-full animate-pulse" :class="isEarlyLeave ? 'bg-orange-500' : 'bg-emerald-500'"></span>
-                        <span class="text-[10px] font-bold uppercase tracking-wider" :class="isEarlyLeave ? 'text-orange-500' : 'text-emerald-500'" x-text="timeLeftText"></span>
+                        <span class="w-2 h-2 rounded-full animate-pulse"
+                            :class="isEarlyLeave ? 'bg-orange-500' : 'bg-emerald-500'"></span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider"
+                            :class="isEarlyLeave ? 'text-orange-500' : 'text-emerald-500'" x-text="timeLeftText"></span>
                     </div>
-                    <span class="text-[9px] font-semibold text-slate-450 uppercase tracking-widest" x-show="isEarlyLeave" x-text="estimatedOutText"></span>
+                    <span class="text-[9px] font-semibold text-slate-450 uppercase tracking-widest" x-show="isEarlyLeave"
+                        x-text="estimatedOutText"></span>
                 </div>
 
                 <!-- Distance Info -->
-                <div class="bg-slate-50 dark:bg-slate-900 rounded-xl px-5 py-3.5 border border-slate-250/20 dark:border-slate-800/80 flex items-center justify-between mb-2 relative z-10">
+                <div
+                    class="bg-slate-50 dark:bg-slate-900 rounded-xl px-5 py-3.5 border border-slate-250/20 dark:border-slate-800/80 flex items-center justify-between mb-2 relative z-10">
                     <div class="flex items-center gap-2">
                         <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z">
+                            </path>
                         </svg>
-                        <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Jarak ke Kantor</span>
+                        <span
+                            class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Jarak
+                            ke Kantor</span>
                     </div>
                     <span class="text-sm font-bold text-slate-800 dark:text-slate-200" x-text="distanceText">-- m</span>
                 </div>
                 @if(Auth::user()->role->slug == 'karyawan_ramayana')
-                <p class="text-[9px] text-slate-400 dark:text-slate-600 text-center font-medium tracking-wide">
-                    * Radius jangkauan: 
-                    @forelse(Auth::user()->all_locations as $loc)
-                        {{ $loc->name }} ({{ $loc->radius }}m){{ !$loop->last ? ',' : '' }}
-                    @empty
-                        Tidak ada lokasi ditugaskan
-                    @endforelse
-                </p>
+                    <p class="text-[9px] text-slate-400 dark:text-slate-600 text-center font-medium tracking-wide">
+                        * Radius jangkauan:
+                        @forelse(Auth::user()->all_locations as $loc)
+                            {{ $loc->name }} ({{ $loc->radius }}m){{ !$loop->last ? ',' : '' }}
+                        @empty
+                            Tidak ada lokasi ditugaskan
+                        @endforelse
+                    </p>
                 @else
-                <p class="text-[9px] text-slate-400 dark:text-slate-600 text-center font-medium tracking-wide">* Radius jangkauan maksimal {{ $settings['office_radius'] ?? 50 }}m.</p>
+                    <p class="text-[9px] text-slate-400 dark:text-slate-600 text-center font-medium tracking-wide">* Radius
+                        jangkauan maksimal {{ $settings['office_radius'] ?? 50 }}m.</p>
                 @endif
             </div>
 
             <!-- Right: Stats + History -->
             <div class="space-y-6">
                 <!-- Stats Grid -->
-                <div class="bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden group">
-                    <h3 class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] mb-6 text-center">Ringkasan Bulan Ini</h3>
-                    
+                <div
+                    class="bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden group">
+                    <h3
+                        class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] mb-6 text-center">
+                        Ringkasan Bulan Ini</h3>
+
                     <div class="grid grid-cols-2 gap-4">
                         <!-- Hadir (Blue) -->
-                        <div class="bg-blue-50/40 dark:bg-blue-950/20 border border-blue-100/60 dark:border-blue-900/30 rounded-2xl p-4 flex flex-col items-center justify-center transition-all hover:scale-[1.02] shadow-sm">
-                            <p class="text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider mb-1.5">Hadir</p>
+                        <div
+                            class="bg-blue-50/40 dark:bg-blue-950/20 border border-blue-100/60 dark:border-blue-900/30 rounded-2xl p-4 flex flex-col items-center justify-center transition-all hover:scale-[1.02] shadow-sm">
+                            <p
+                                class="text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider mb-1.5">
+                                Hadir</p>
                             <p class="text-2xl font-bold text-blue-600 dark:text-blue-300 leading-none">
                                 {{ Auth::user()->attendances()->whereMonth('date', now()->month)->whereYear('date', now()->year)->where('status', 'Hadir')->count() }}
                             </p>
                         </div>
-                        
+
                         <!-- Izin (Purple) -->
-                        <div class="bg-purple-50/40 dark:bg-purple-950/20 border border-purple-100/60 dark:border-purple-900/30 rounded-2xl p-4 flex flex-col items-center justify-center transition-all hover:scale-[1.02] shadow-sm">
-                            <p class="text-[10px] font-bold text-purple-500 dark:text-purple-400 uppercase tracking-wider mb-1.5">Izin</p>
+                        <div
+                            class="bg-purple-50/40 dark:bg-purple-950/20 border border-purple-100/60 dark:border-purple-900/30 rounded-2xl p-4 flex flex-col items-center justify-center transition-all hover:scale-[1.02] shadow-sm">
+                            <p
+                                class="text-[10px] font-bold text-purple-500 dark:text-purple-400 uppercase tracking-wider mb-1.5">
+                                Izin</p>
                             <p class="text-2xl font-bold text-purple-600 dark:text-purple-300 leading-none">
                                 {{ Auth::user()->leaveRequests()->where('status', 'approved')->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count() }}
                             </p>
                         </div>
-                        
+
                         <!-- Early (Yellow/Amber) -->
-                        <div class="bg-amber-50/40 dark:bg-amber-950/20 border border-amber-100/60 dark:border-amber-900/30 rounded-2xl p-4 flex flex-col items-center justify-center transition-all hover:scale-[1.02] shadow-sm">
-                            <p class="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider mb-1.5">Pulang Cepat</p>
+                        <div
+                            class="bg-amber-50/40 dark:bg-amber-950/20 border border-amber-100/60 dark:border-amber-900/30 rounded-2xl p-4 flex flex-col items-center justify-center transition-all hover:scale-[1.02] shadow-sm">
+                            <p
+                                class="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider mb-1.5">
+                                Pulang Cepat</p>
                             <p class="text-2xl font-bold text-amber-600 dark:text-amber-300 leading-none">
                                 {{ Auth::user()->attendances()->whereMonth('date', now()->month)->whereYear('date', now()->year)->where('is_pulang_cepat', true)->count() }}
                             </p>
                         </div>
-                        
+
                         <!-- Late (Red) -->
-                        <div class="bg-rose-50/40 dark:bg-rose-950/20 border border-rose-100/60 dark:border-rose-900/30 rounded-2xl p-4 flex flex-col items-center justify-center transition-all hover:scale-[1.02] shadow-sm">
-                            <p class="text-[10px] font-bold text-rose-500 dark:text-rose-400 uppercase tracking-wider mb-1.5">Terlambat</p>
+                        <div
+                            class="bg-rose-50/40 dark:bg-rose-950/20 border border-rose-100/60 dark:border-rose-900/30 rounded-2xl p-4 flex flex-col items-center justify-center transition-all hover:scale-[1.02] shadow-sm">
+                            <p
+                                class="text-[10px] font-bold text-rose-500 dark:text-rose-400 uppercase tracking-wider mb-1.5">
+                                Terlambat</p>
                             <p class="text-2xl font-bold text-rose-600 dark:text-rose-300 leading-none">
                                 {{ Auth::user()->attendances()->whereMonth('date', now()->month)->whereYear('date', now()->year)->where('status', 'Terlambat')->count() }}
                             </p>
@@ -202,11 +251,15 @@
                 </div>
 
                 <!-- Recent Activity -->
-                <div class="bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 rounded-2xl overflow-hidden shadow-sm">
-                    <div class="px-5 py-4 border-b border-slate-200/50 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30">
-                        <h2 class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Log Riwayat Terbaru</h2>
+                <div
+                    class="bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 rounded-2xl overflow-hidden shadow-sm">
+                    <div
+                        class="px-5 py-4 border-b border-slate-200/50 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30">
+                        <h2 class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Log
+                            Riwayat Terbaru</h2>
                         <a href="{{ route(Auth::user()->role->slug . '.attendance.index') }}"
-                            class="text-[9px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest hover:text-blue-600 dark:hover:text-blue-300 transition-colors">Semua Riwayat &rarr;</a>
+                            class="text-[9px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest hover:text-blue-600 dark:hover:text-blue-300 transition-colors">Semua
+                            Riwayat &rarr;</a>
                     </div>
                     <div class="overflow-hidden">
                         <table class="w-full text-left">
@@ -215,7 +268,8 @@
                                     <tr class="hover:bg-slate-50/40 dark:hover:bg-slate-900/20 transition-colors">
                                         <td class="px-5 py-4 whitespace-nowrap">
                                             <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-xs">
+                                                <div
+                                                    class="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-xs">
                                                     📅
                                                 </div>
                                                 <div>
@@ -230,17 +284,19 @@
                                             </div>
                                         </td>
                                         <td class="px-5 py-4 whitespace-nowrap text-right">
-                                            <span class="px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border
-                                                @if($attendance->status == 'Hadir') bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border-emerald-100 dark:border-emerald-900/20
-                                                @elseif($attendance->status == 'Terlambat') bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-450 border-rose-100 dark:border-rose-900/20
-                                                @else bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-450 border-blue-100 dark:border-blue-900/20 @endif">
+                                            <span
+                                                class="px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border
+                                                                        @if($attendance->status == 'Hadir') bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-450 border-emerald-100 dark:border-emerald-900/20
+                                                                        @elseif($attendance->status == 'Terlambat') bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-450 border-rose-100 dark:border-rose-900/20
+                                                                        @else bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-450 border-blue-100 dark:border-blue-900/20 @endif">
                                                 {{ $attendance->status }}
                                             </span>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="2" class="px-6 py-8 text-center text-slate-400 dark:text-slate-650 text-xs font-medium italic">
+                                        <td colspan="2"
+                                            class="px-6 py-8 text-center text-slate-400 dark:text-slate-650 text-xs font-medium italic">
                                             Belum ada aktivitas baru
                                         </td>
                                     </tr>
@@ -256,11 +312,14 @@
                         class="group bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-4 px-6 flex items-center justify-between shadow-md shadow-blue-500/10 active:scale-95 transition-all cursor-pointer">
                         <div class="flex flex-col text-left">
                             <span class="text-xs font-bold uppercase tracking-wider">Pengajuan Cepat</span>
-                            <span class="text-[9px] text-blue-200 font-medium tracking-wider mt-0.5">Izin & Lupa Absen</span>
+                            <span class="text-[9px] text-blue-200 font-medium tracking-wider mt-0.5">Izin & Lupa
+                                Absen</span>
                         </div>
-                        <div class="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-12 border border-white/5">
+                        <div
+                            class="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-12 border border-white/5">
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4">
+                                </path>
                             </svg>
                         </div>
                     </button>
@@ -268,12 +327,19 @@
                     <a href="{{ route(Auth::user()->role->slug . '.leave-requests.index') }}"
                         class="group bg-white dark:bg-dark-card border border-slate-200/60 dark:border-slate-800 rounded-2xl py-4 px-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-900/60 shadow-sm active:scale-95 transition-all">
                         <div class="flex flex-col text-left">
-                            <span class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Riwayat Pengajuan</span>
-                            <span class="text-[9px] text-slate-450 dark:text-slate-500 font-medium tracking-wider mt-0.5">Log Pengajuan Izin</span>
+                            <span
+                                class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Riwayat
+                                Pengajuan</span>
+                            <span
+                                class="text-[9px] text-slate-450 dark:text-slate-500 font-medium tracking-wider mt-0.5">Log
+                                Pengajuan Izin</span>
                         </div>
-                        <div class="w-8 h-8 bg-slate-100 dark:bg-slate-900 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 transition-transform group-hover:rotate-12 border border-slate-250/20 dark:border-slate-850">
+                        <div
+                            class="w-8 h-8 bg-slate-100 dark:bg-slate-900 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 transition-transform group-hover:rotate-12 border border-slate-250/20 dark:border-slate-850">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                </path>
                             </svg>
                         </div>
                     </a>
@@ -283,31 +349,41 @@
         </div>
 
         <!-- Redesigned Mini Modal -->
-        <div x-show="showLeaveModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0" style="display: none;">
-            <div x-show="showLeaveModal" x-transition.opacity class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" @click="showLeaveModal = false"></div>
+        <div x-show="showLeaveModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0"
+            style="display: none;">
+            <div x-show="showLeaveModal" x-transition.opacity class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+                @click="showLeaveModal = false"></div>
 
             <div x-show="showLeaveModal" x-transition:enter="transition ease-out duration-250"
                 x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                 class="bg-white dark:bg-dark-card rounded-2xl shadow-xl relative z-10 w-full max-w-md overflow-hidden border border-slate-200/60 dark:border-slate-800/80 max-h-[90vh] flex flex-col">
 
-                <div class="px-6 py-4.5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/20">
+                <div
+                    class="px-6 py-4.5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/20">
                     <div>
-                        <h3 class="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-wider">Form Pengajuan Cepat</h3>
+                        <h3 class="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-wider">Form Pengajuan
+                            Cepat</h3>
                     </div>
-                    <button @click="showLeaveModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-white bg-slate-100 dark:bg-slate-900 p-1.5 rounded-lg transition-colors cursor-pointer">
+                    <button @click="showLeaveModal = false"
+                        class="text-slate-400 hover:text-slate-600 dark:hover:text-white bg-slate-100 dark:bg-slate-900 p-1.5 rounded-lg transition-colors cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
 
-                <form action="{{ route(Auth::user()->role->slug . '.leave-requests.store') }}" method="POST" class="p-6 overflow-y-auto space-y-4">
+                <form action="{{ route(Auth::user()->role->slug . '.leave-requests.store') }}" method="POST"
+                    class="p-6 overflow-y-auto space-y-4">
                     @csrf
                     <div class="space-y-4">
                         <div class="space-y-2">
-                            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest">Pilih Jenis Izin</label>
+                            <label
+                                class="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest">Pilih
+                                Jenis Izin</label>
                             <div class="grid grid-cols-2 gap-2">
-                                <template x-for="item in ['Sakit', 'Izin Tidak Masuk', 'Izin Masuk Siang', 'Libur', 'Lupa Absen']">
+                                <template
+                                    x-for="item in ['Sakit', 'Izin Tidak Masuk', 'Izin Masuk Siang', 'Libur', 'Lupa Absen']">
                                     <button type="button" @click="selectedLeaveType = item"
                                         :class="selectedLeaveType === item ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-250/20 dark:border-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800'"
                                         class="p-2.5 rounded-xl border text-[10px] font-bold uppercase transition-all tracking-wider text-center cursor-pointer">
@@ -319,28 +395,45 @@
                         </div>
 
                         <template x-if="selectedLeaveType === 'Lupa Absen'">
-                            <div class="space-y-3 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/50 dark:border-slate-850">
-                                <label class="block font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider">Jenis Lupa Absen</label>
-                                <input type="hidden" name="sub_type" x-model="subType" :required="selectedLeaveType === 'Lupa Absen'">
+                            <div
+                                class="space-y-3 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/50 dark:border-slate-850">
+                                <label
+                                    class="block font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider">Jenis
+                                    Lupa Absen</label>
+                                <input type="hidden" name="sub_type" x-model="subType"
+                                    :required="selectedLeaveType === 'Lupa Absen'">
                                 <div class="grid grid-cols-2 gap-2">
-                                    <button type="button" @click="subType = 'Absen Masuk'" :class="subType === 'Absen Masuk' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 border border-slate-200 dark:border-slate-700'" class="p-2.5 rounded-xl text-[10px] font-bold cursor-pointer">Masuk</button>
-                                    <button type="button" @click="subType = 'Absen Pulang'" :class="subType === 'Absen Pulang' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 border border-slate-200 dark:border-slate-700'" class="p-2.5 rounded-xl text-[10px] font-bold cursor-pointer">Pulang</button>
+                                    <button type="button" @click="subType = 'Absen Masuk'"
+                                        :class="subType === 'Absen Masuk' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 border border-slate-200 dark:border-slate-700'"
+                                        class="p-2.5 rounded-xl text-[10px] font-bold cursor-pointer">Masuk</button>
+                                    <button type="button" @click="subType = 'Absen Pulang'"
+                                        :class="subType === 'Absen Pulang' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 border border-slate-200 dark:border-slate-700'"
+                                        class="p-2.5 rounded-xl text-[10px] font-bold cursor-pointer">Pulang</button>
                                 </div>
                                 <div class="space-y-1 mt-2.5" x-show="subType">
-                                    <label class="block font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider">Jam Kejadian</label>
-                                    <input type="time" name="time_start" :required="selectedLeaveType === 'Lupa Absen'" class="focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500">
+                                    <label
+                                        class="block font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider">Jam
+                                        Kejadian</label>
+                                    <input type="time" name="time_start" :required="selectedLeaveType === 'Lupa Absen'"
+                                        class="focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500">
                                 </div>
                             </div>
                         </template>
 
                         <template x-if="selectedLeaveType === 'Izin Masuk Siang'">
-                            <div class="grid grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/50 dark:border-slate-850">
+                            <div
+                                class="grid grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/50 dark:border-slate-850">
                                 <div class="space-y-1">
-                                    <label class="block font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider">Mulai Jam</label>
-                                    <input type="time" name="time_start" :required="selectedLeaveType === 'Izin Masuk Siang'">
+                                    <label
+                                        class="block font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider">Mulai
+                                        Jam</label>
+                                    <input type="time" name="time_start"
+                                        :required="selectedLeaveType === 'Izin Masuk Siang'">
                                 </div>
                                 <div class="space-y-1">
-                                    <label class="block font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider">Sampai Jam</label>
+                                    <label
+                                        class="block font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider">Sampai
+                                        Jam</label>
                                     <input type="time" name="time_end" :required="selectedLeaveType === 'Izin Masuk Siang'">
                                 </div>
                             </div>
@@ -348,23 +441,31 @@
 
                         <div class="grid grid-cols-2 gap-3">
                             <div class="space-y-1.5">
-                                <label class="block font-bold text-slate-400 dark:text-slate-550 text-[9px] uppercase tracking-wider">Tanggal Mulai</label>
+                                <label
+                                    class="block font-bold text-slate-400 dark:text-slate-550 text-[9px] uppercase tracking-wider">Tanggal
+                                    Mulai</label>
                                 <input type="date" name="start_date" required>
                             </div>
                             <div class="space-y-1.5">
-                                <label class="block font-bold text-slate-400 dark:text-slate-550 text-[9px] uppercase tracking-wider">Tanggal Selesai</label>
+                                <label
+                                    class="block font-bold text-slate-400 dark:text-slate-550 text-[9px] uppercase tracking-wider">Tanggal
+                                    Selesai</label>
                                 <input type="date" name="end_date" required>
                             </div>
                         </div>
 
                         <div class="space-y-1.5">
-                            <label class="block font-bold text-slate-400 dark:text-slate-550 text-[9px] uppercase tracking-wider">Alasan Pengajuan</label>
-                            <textarea name="reason" rows="2.5" required placeholder="Tuliskan keterangan/alasan lengkap..." class="rounded-xl"></textarea>
+                            <label
+                                class="block font-bold text-slate-400 dark:text-slate-550 text-[9px] uppercase tracking-wider">Alasan
+                                Pengajuan</label>
+                            <textarea name="reason" rows="2.5" required placeholder="Tuliskan keterangan/alasan lengkap..."
+                                class="rounded-xl"></textarea>
                         </div>
                     </div>
 
                     <div class="pt-2">
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-md shadow-blue-500/10 transition-all active:scale-95 text-xs uppercase tracking-widest cursor-pointer">
+                        <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-md shadow-blue-500/10 transition-all active:scale-95 text-xs uppercase tracking-widest cursor-pointer">
                             Kirim Pengajuan
                         </button>
                     </div>
@@ -387,7 +488,7 @@
                 subType: '',
                 @php
                     $todayAttendance = Auth::user()->attendances()->whereDate('date', \Carbon\Carbon::today())->first();
-                    
+
                     $userDivision = Auth::user()->division ? strtolower(trim(Auth::user()->division->name)) : '';
                     if (str_contains($userDivision, 'live streaming')) {
                         if ((!$todayAttendance || !$todayAttendance->check_in) && \Carbon\Carbon::now()->format('H:i') <= '08:30') {
@@ -409,19 +510,19 @@
                         ->latest()
                         ->first();
                 @endphp
-                hasCheckedIn: {{ $todayAttendance ? 'true' : 'false' }},
+                            hasCheckedIn: {{ $todayAttendance ? 'true' : 'false' }},
                 hasCheckedOut: {{ ($todayAttendance && $todayAttendance->check_out) ? 'true' : 'false' }},
                 checkInTime: '{{ $todayAttendance ? $todayAttendance->check_in : '' }}',
                 requiredHours: {{ Auth::user()->role->slug === 'karyawan_ramayana' ? 7 : 8 }},
                 locations: [
                     @if(Auth::user()->role->slug == 'karyawan_ramayana')
                         @foreach(Auth::user()->all_locations as $loc)
-                        {
+                                                {
                             name: {!! json_encode($loc->name) !!},
                             lat: {{ $loc->latitude }},
                             long: {{ $loc->longitude }},
                             radius: {{ $loc->radius }}
-                        },
+                                                },
                         @endforeach
                     @else
                         {
@@ -429,9 +530,9 @@
                             lat: {{ $settings['office_latitude'] ?? -7.232539 }},
                             long: {{ $settings['office_longitude'] ?? 112.776228 }},
                             radius: {{ $settings['office_radius'] ?? 50 }}
-                        }
+                                                }
                     @endif
-                ],
+                            ],
                 userLat: null,
                 userLong: null,
                 gpsAlertShown: false,
@@ -447,7 +548,7 @@
 
                 startTimer() {
                     if (!this.checkInTime || this.hasCheckedOut) return;
-                    
+
                     const [h, m, s] = this.checkInTime.split(':');
                     const checkInDate = new Date();
                     checkInDate.setHours(h, m, s || 0, 0);
@@ -495,14 +596,14 @@
                         },
                         (err) => {
                             console.error("GPS error:", err);
-                            
+
                             let title = '';
                             let text = '';
-                            
+
                             if (err.code === 1) { // PERMISSION_DENIED
                                 this.locationStatus = 'IZIN LOKASI DITOLAK';
                                 title = 'Izin Lokasi Diblokir 🔒';
-                                text = 'Browser (Google Chrome / Safari) Anda belum diizinkan untuk mengakses lokasi. Silakan cek menu "Kelola Aplikasi" di HP Anda atau klik ikon gembok di sebelah alamat web untuk memberikan izin lokasi.';
+                                text = 'Harap Aktifkan Lokasi anda di atas bar HP anda, kalau memang belum bisa silahkan Buka Pengaturan HP -> Aplikasi -> Kelola Aplikasi -> Cari Chrome -> Izin Aplikasi -> Aktifkan izin Lokasi.';
                             } else if (err.code === 3) { // TIMEOUT
                                 this.locationStatus = 'TIMEOUT PENCARIAN LOKASI';
                                 title = 'Pencarian Lokasi Timeout ⏳';
@@ -529,7 +630,7 @@
                                 });
                             }
                         },
-                        { 
+                        {
                             enableHighAccuracy: true,
                             timeout: 10000, // Timeout 10 detik agar tidak menggantung selamanya
                             maximumAge: 5000 // Mengizinkan cache lokasi jika baru berumur maksimal 5 detik
@@ -547,7 +648,7 @@
 
                     const R = 6371e3;
                     const p1 = this.userLat * Math.PI / 180;
-                    
+
                     let minDistance = null;
                     let isWithinAny = false;
                     let nearestRadius = 0;
