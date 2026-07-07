@@ -496,18 +496,21 @@
                         (err) => {
                             console.error("GPS error:", err);
                             
-                            let title = 'Deteksi Lokasi Gagal 📍';
-                            let text = 'Pastikan GPS Anda aktif dan berikan izin lokasi untuk website ini.';
+                            let title = '';
+                            let text = '';
                             
                             if (err.code === 1) { // PERMISSION_DENIED
                                 this.locationStatus = 'IZIN LOKASI DITOLAK';
-                                text = 'Izin lokasi diblokir oleh browser. Harap aktifkan izin lokasi di Pengaturan Browser (Google Chrome / Safari) Anda.';
+                                title = 'Izin Lokasi Diblokir 🔒';
+                                text = 'Browser (Google Chrome / Safari) Anda belum diizinkan untuk mengakses lokasi. Silakan cek menu "Kelola Aplikasi" di HP Anda atau klik ikon gembok di sebelah alamat web untuk memberikan izin lokasi.';
                             } else if (err.code === 3) { // TIMEOUT
                                 this.locationStatus = 'TIMEOUT PENCARIAN LOKASI';
-                                text = 'Waktu pencarian lokasi habis (Timeout). Pastikan koneksi internet stabil, hidupkan kembali GPS Anda, dan pindah ke area terbuka (tidak terhalang gedung tebal).';
-                            } else {
+                                title = 'Pencarian Lokasi Timeout ⏳';
+                                text = 'Waktu pencarian lokasi habis. Pastikan koneksi internet stabil dan silakan berpindah ke tempat terbuka (tidak terhalang gedung tebal) agar sinyal GPS satelit bisa mendeteksi posisi Anda.';
+                            } else { // POSITION_UNAVAILABLE or other errors
                                 this.locationStatus = 'GPS MATI / TIDAK AKTIF';
-                                text = 'Gagal mendeteksi lokasi. Pastikan GPS/Location Service di HP Anda aktif.';
+                                title = 'Aktifkan GPS / Lokasi Di HP Anda 📍';
+                                text = 'Layanan lokasi (GPS) pada HP Anda tidak aktif atau tidak dapat dideteksi. Harap aktifkan GPS (Layanan Lokasi) di menu bar atas HP Anda.';
                             }
 
                             if (!this.gpsAlertShown) {
