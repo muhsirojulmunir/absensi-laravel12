@@ -444,13 +444,13 @@
                                 <label
                                     class="block font-bold text-slate-400 dark:text-slate-550 text-[9px] uppercase tracking-wider">Tanggal
                                     Mulai</label>
-                                <input type="date" name="start_date" required>
+                                <input type="date" name="start_date" required :min="minStartDate" :max="maxStartDate" x-model="startDate">
                             </div>
                             <div class="space-y-1.5">
                                 <label
                                     class="block font-bold text-slate-400 dark:text-slate-550 text-[9px] uppercase tracking-wider">Tanggal
                                     Selesai</label>
-                                <input type="date" name="end_date" required>
+                                <input type="date" name="end_date" required :min="minEndDate">
                             </div>
                         </div>
 
@@ -486,6 +486,13 @@
                 showLeaveModal: false,
                 selectedLeaveType: '',
                 subType: '',
+                today: '{{ date('Y-m-d') }}',
+                startOfMonth: '{{ date('Y-m-01') }}',
+                isStaffKantor: {{ Auth::user()->role->slug === 'karyawan' ? 'true' : 'false' }},
+                startDate: '',
+                get minStartDate() { return this.selectedLeaveType === 'Lupa Absen' ? this.startOfMonth : (this.isStaffKantor ? this.startOfMonth : this.today); },
+                get maxStartDate() { return this.selectedLeaveType === 'Lupa Absen' ? this.today : ''; },
+                get minEndDate() { return this.startDate ? this.startDate : (this.isStaffKantor ? this.startOfMonth : this.today); },
                 @php
                     $todayAttendance = Auth::user()->attendances()->whereDate('date', \Carbon\Carbon::today())->first();
 

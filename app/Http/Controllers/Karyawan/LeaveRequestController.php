@@ -50,6 +50,18 @@ class LeaveRequestController extends Controller
         $isLupaAbsen = $request->type === 'Lupa Absen';
         $isAbsenDiluar = $request->type === 'Absen Diluar';
 
+        $isStaffKantor = Auth::user()->role->slug === 'karyawan';
+        $startDateRule = 'required|date';
+        if ($isLupaAbsen) {
+            $startDateRule .= '|after_or_equal:' . now()->startOfMonth()->toDateString() . '|before_or_equal:today';
+        } else {
+            if ($isStaffKantor) {
+                $startDateRule .= '|after_or_equal:' . now()->startOfMonth()->toDateString();
+            } else {
+                $startDateRule .= '|after_or_equal:today';
+            }
+        }
+
         $request->validate([
             'type' => 'required|in:Sakit,Izin Tidak Masuk,Izin Masuk Siang,Libur,Lupa Absen,Absen Diluar',
             'sub_type' => [
@@ -66,12 +78,7 @@ class LeaveRequestController extends Controller
                     }
                 }
             ],
-            // Lupa Absen: boleh tanggal lampau dalam bulan ini.
-            // Absen Diluar: hari ini ke depan.
-            // Lainnya: hari ini ke depan.
-            'start_date' => $isLupaAbsen
-                ? 'required|date|after_or_equal:' . now()->startOfMonth()->toDateString() . '|before_or_equal:today'
-                : 'required|date|after_or_equal:today',
+            'start_date' => $startDateRule,
             'end_date' => 'required|date|after_or_equal:start_date',
             'time_start' => 'nullable|required_if:type,Izin Masuk Siang|required_if:type,Lupa Absen|required_if:type,Absen Diluar',
             'time_end' => 'nullable|required_if:type,Izin Masuk Siang',

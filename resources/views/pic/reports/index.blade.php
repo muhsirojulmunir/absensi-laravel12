@@ -30,9 +30,26 @@
                     <select name="employee_id" id="employee_id"
                             class="w-full rounded-xl border border-blue-200 dark:border-slate-700 bg-blue-50/50 dark:bg-slate-800 text-sm text-blue-900 dark:text-white px-4 py-2.5 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all">
                         <option value="">-- Semua Karyawan --</option>
-                        @foreach($employees as $emp)
-                            <option value="{{ $emp->id }}" {{ $employeeId == $emp->id ? 'selected' : '' }}>{{ $emp->name }}</option>
-                        @endforeach
+                        @php
+                            $staffEmployees = $employees->filter(fn($e) => $e->role->slug === 'karyawan');
+                            $ramayanaEmployees = $employees->filter(fn($e) => $e->role->slug === 'karyawan_ramayana');
+                        @endphp
+                        @if($staffEmployees->count() > 0 && $ramayanaEmployees->count() > 0)
+                            <optgroup label="💼 Staff Kantor">
+                                @foreach($staffEmployees as $emp)
+                                    <option value="{{ $emp->id }}" {{ $employeeId == $emp->id ? 'selected' : '' }}>{{ $emp->name }}</option>
+                                @endforeach
+                            </optgroup>
+                            <optgroup label="🛍️ Karyawan Ramayana">
+                                @foreach($ramayanaEmployees as $emp)
+                                    <option value="{{ $emp->id }}" {{ $employeeId == $emp->id ? 'selected' : '' }}>{{ $emp->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @else
+                            @foreach($employees as $emp)
+                                <option value="{{ $emp->id }}" {{ $employeeId == $emp->id ? 'selected' : '' }}>{{ $emp->name }}</option>
+                            @endforeach
+                        @endif
                     </select>
                 </div>
 
@@ -321,24 +338,70 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-blue-100/50 dark:divide-slate-800/50">
-                        @foreach($allReports as $row)
-                            <tr class="hover:bg-blue-50/40 dark:hover:bg-slate-800/30 transition-colors">
-                                <td class="px-5 py-3">
-                                    <p class="font-semibold text-blue-900 dark:text-white">{{ $row['employee']->name }}</p>
-                                </td>
-                                <td class="px-5 py-3 text-emerald-600 dark:text-emerald-400 font-bold">{{ $row['summary']['total_present'] }}</td>
-                                <td class="px-5 py-3 text-amber-600 dark:text-amber-400 font-bold">{{ $row['summary']['total_late'] }}</td>
-                                <td class="px-5 py-3 text-blue-600 dark:text-blue-400 font-bold">{{ $row['summary']['total_leave'] }}</td>
-                                <td class="px-5 py-3 text-rose-600 dark:text-rose-400 font-bold">{{ $row['summary']['total_sick'] }}</td>
-                                <td class="px-5 py-3 text-slate-700 dark:text-slate-300 font-bold">{{ $row['summary']['total_attendance_records'] }}</td>
-                                <td class="px-5 py-3">
-                                    <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}"
-                                       class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all">
-                                        <span class="text-[10px] font-black uppercase tracking-widest">Detail</span>
-                                    </a>
+                        @php
+                            $staffReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan');
+                            $ramayanaReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan_ramayana');
+                        @endphp
+
+                        @if($staffReports->count() > 0)
+                            <tr class="bg-blue-150/30 dark:bg-slate-800/40 font-bold">
+                                <td colspan="7" class="px-5 py-2.5 text-xs text-blue-800 dark:text-blue-300 uppercase tracking-widest">
+                                    💼 Staff Kantor
                                 </td>
                             </tr>
-                        @endforeach
+                            @foreach($staffReports as $row)
+                                <tr class="hover:bg-blue-50/40 dark:hover:bg-slate-800/30 transition-colors">
+                                    <td class="px-5 py-3 pl-8">
+                                        <p class="font-semibold text-blue-900 dark:text-white">{{ $row['employee']->name }}</p>
+                                    </td>
+                                    <td class="px-5 py-3 text-emerald-600 dark:text-emerald-400 font-bold">{{ $row['summary']['total_present'] }}</td>
+                                    <td class="px-5 py-3 text-amber-600 dark:text-amber-400 font-bold">{{ $row['summary']['total_late'] }}</td>
+                                    <td class="px-5 py-3 text-blue-600 dark:text-blue-400 font-bold">{{ $row['summary']['total_leave'] }}</td>
+                                    <td class="px-5 py-3 text-rose-600 dark:text-rose-400 font-bold">{{ $row['summary']['total_sick'] }}</td>
+                                    <td class="px-5 py-3 text-slate-700 dark:text-slate-300 font-bold">{{ $row['summary']['total_attendance_records'] }}</td>
+                                    <td class="px-5 py-3">
+                                        <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}"
+                                           class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all">
+                                            <span class="text-[10px] font-black uppercase tracking-widest">Detail</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        @endif
+
+                        @if($ramayanaReports->count() > 0)
+                            <tr class="bg-fuchsia-100/20 dark:bg-fuchsia-950/10 font-bold">
+                                <td colspan="7" class="px-5 py-2.5 text-xs text-fuchsia-800 dark:text-fuchsia-300 uppercase tracking-widest border-t border-blue-100/50 dark:border-slate-800/50">
+                                    🛍️ Karyawan Ramayana
+                                </td>
+                            </tr>
+                            @foreach($ramayanaReports as $row)
+                                <tr class="hover:bg-blue-50/40 dark:hover:bg-slate-800/30 transition-colors">
+                                    <td class="px-5 py-3 pl-8">
+                                        <p class="font-semibold text-blue-900 dark:text-white">{{ $row['employee']->name }}</p>
+                                    </td>
+                                    <td class="px-5 py-3 text-emerald-600 dark:text-emerald-400 font-bold">{{ $row['summary']['total_present'] }}</td>
+                                    <td class="px-5 py-3 text-amber-600 dark:text-amber-400 font-bold">{{ $row['summary']['total_late'] }}</td>
+                                    <td class="px-5 py-3 text-blue-600 dark:text-blue-400 font-bold">{{ $row['summary']['total_leave'] }}</td>
+                                    <td class="px-5 py-3 text-rose-600 dark:text-rose-400 font-bold">{{ $row['summary']['total_sick'] }}</td>
+                                    <td class="px-5 py-3 text-slate-700 dark:text-slate-300 font-bold">{{ $row['summary']['total_attendance_records'] }}</td>
+                                    <td class="px-5 py-3">
+                                        <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}"
+                                           class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all">
+                                            <span class="text-[10px] font-black uppercase tracking-widest">Detail</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        @endif
+
+                        @if($staffReports->isEmpty() && $ramayanaReports->isEmpty())
+                            <tr>
+                                <td colspan="7" class="px-5 py-8 text-center text-slate-400 dark:text-slate-500 italic">
+                                    Tidak ada data karyawan ditemukan.
+                                </td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>

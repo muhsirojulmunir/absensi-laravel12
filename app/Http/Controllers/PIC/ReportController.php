@@ -17,12 +17,23 @@ class ReportController extends Controller
      */
     public function index(Request $request)
     {
-        $targetRole = Auth::user()->role->slug === 'pic_ramayana' ? 'karyawan_ramayana' : 'karyawan';
+        $targetRoles = ['karyawan'];
+        if (Auth::user()->role->slug === 'pic_ramayana') {
+            $targetRoles = ['karyawan_ramayana'];
+        } elseif (Auth::user()->role->slug === 'super-admin' || strtolower(Auth::user()->username) === 'superadmin1') {
+            $targetRoles = ['karyawan', 'karyawan_ramayana'];
+        }
 
-        // Get list of employees (users with target role)
-        $employees = User::whereHas('role', function ($q) use ($targetRole) {
-            $q->where('slug', $targetRole);
-        })->where('is_active', true)->orderBy('name')->get();
+        // Get list of employees (users with target roles)
+        $employees = User::whereHas('role', function ($q) use ($targetRoles) {
+            $q->whereIn('slug', $targetRoles);
+        })->where('is_active', true)
+        ->with('role')
+        ->get()
+        ->sortBy(function($user) {
+            $roleOrder = $user->role->slug === 'karyawan' ? 1 : 2;
+            return $roleOrder . '_' . strtolower($user->name);
+        });
 
         // Determine selected employee and month (default current month)
         $employeeId = $request->query('employee_id');

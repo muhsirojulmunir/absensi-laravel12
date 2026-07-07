@@ -8,8 +8,11 @@
         subType: '{{ old('sub_type') }}',
         today: '{{ date('Y-m-d') }}',
         startOfMonth: '{{ date('Y-m-01') }}',
-        get minStartDate() { return this.selectedType === 'Lupa Absen' ? this.startOfMonth : this.today; },
-        get maxStartDate() { return this.selectedType === 'Lupa Absen' ? this.today : ''; }
+        isStaffKantor: {{ Auth::user()->role->slug === 'karyawan' ? 'true' : 'false' }},
+        startDate: '{{ old('start_date') }}',
+        get minStartDate() { return this.selectedType === 'Lupa Absen' ? this.startOfMonth : (this.isStaffKantor ? this.startOfMonth : this.today); },
+        get maxStartDate() { return this.selectedType === 'Lupa Absen' ? this.today : ''; },
+        get minEndDate() { return this.startDate ? this.startDate : (this.isStaffKantor ? this.startOfMonth : this.today); }
     }">
         <!-- Header: Bold & Minimalist -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 group">
@@ -253,6 +256,7 @@
                                         <input type="date" name="start_date" required
                                             :min="minStartDate"
                                             :max="maxStartDate"
+                                            x-model="startDate"
                                             value="{{ old('start_date') }}"
                                             class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-50 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-full text-blue-900 dark:text-blue-100 px-4 py-3 text-xs font-bold transition-all shadow-sm">
                                     </div>
@@ -261,7 +265,7 @@
                                             class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">Sampai</label>
                                         <input type="date" name="end_date"
                                             :required="selectedType !== 'Lupa Absen' && selectedType !== 'Absen Diluar'"
-                                            :min="today"
+                                            :min="minEndDate"
                                             value="{{ old('end_date') }}"
                                             class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-50 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-full text-blue-900 dark:text-blue-100 px-4 py-3 text-xs font-bold transition-all shadow-sm">
                                     </div>
