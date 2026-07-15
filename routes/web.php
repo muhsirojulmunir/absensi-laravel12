@@ -149,12 +149,24 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/attendance/payment-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'paymentHistory'])->name('attendance.payment-history');
         Route::post('/attendance/payment-history/{payment}/update', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'updatePaymentHistory'])->name('attendance.payment-history.update');
         Route::post('/attendance/payment-history/{payment}/delete', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'deletePaymentHistory'])->name('attendance.payment-history.delete');
+        Route::get('/scanner', [App\Http\Controllers\HRD\ScannerController::class, 'index'])->name('scanner.index');
     });
 
     Route::prefix('karyawan')->name('karyawan.')->group(function () {
         Route::get('/dashboard', function () {
             $settings = \App\Models\Setting::all()->pluck('value', 'key');
-            return view('karyawan.dashboard', compact('settings'));
+            $top3Sales = \App\Models\SalesInput::query()
+                ->where('type', 'sale')
+                ->whereYear('date', now()->year)
+                ->whereMonth('date', now()->month)
+                ->whereHas('user', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', 'karyawan_ramayana')))
+                ->selectRaw('user_id, SUM(qty) as total_qty')
+                ->groupBy('user_id')
+                ->orderByDesc('total_qty')
+                ->with('user.location')
+                ->limit(3)
+                ->get();
+            return view('karyawan.dashboard', compact('settings', 'top3Sales'));
         })->name('dashboard');
 
         // Leave Requests
@@ -173,7 +185,18 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('karyawan-ramayana')->name('karyawan_ramayana.')->group(function () {
         Route::get('/dashboard', function () {
             $settings = \App\Models\Setting::all()->pluck('value', 'key');
-            return view('karyawan.dashboard', compact('settings'));
+            $top3Sales = \App\Models\SalesInput::query()
+                ->where('type', 'sale')
+                ->whereYear('date', now()->year)
+                ->whereMonth('date', now()->month)
+                ->whereHas('user', fn($q) => $q->whereHas('role', fn($r) => $r->where('slug', 'karyawan_ramayana')))
+                ->selectRaw('user_id, SUM(qty) as total_qty')
+                ->groupBy('user_id')
+                ->orderByDesc('total_qty')
+                ->with('user.location')
+                ->limit(3)
+                ->get();
+            return view('karyawan.dashboard', compact('settings', 'top3Sales'));
         })->name('dashboard');
 
         // Leave Requests

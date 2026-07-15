@@ -2,35 +2,88 @@
 @section('title', 'Dashboard Karyawan')
 @section('content')
     <div x-data="attendanceHandler()" class="max-w-5xl mx-auto space-y-6 animate-fade-in">
-        <!-- Welcome Section -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 py-2">
-            <div class="space-y-1.5 group">
-                <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-                    Halo, <span class="text-blue-600 dark:text-blue-400">{{ explode(' ', Auth::user()->name)[0] }}</span>
-                </h1>
-                <p class="text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide leading-tight">Siap untuk
-                    memberikan dampak positif hari ini? ✨</p>
+        <!-- Top 3 Penjualan Ramayana Bulan Ini -->
+        @php
+            $rankMeta = [
+                1 => ['color' => '#E87A10', 'bg' => 'rgba(232,122,16,0.10)'],
+                2 => ['color' => '#6B7FA3', 'bg' => 'rgba(107,127,163,0.10)'],
+                3 => ['color' => '#A0724A', 'bg' => 'rgba(160,114,74,0.10)'],
+            ];
+        @endphp
+        <div class="bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+            {{-- Header --}}
+            <div style="display:flex; align-items:center; justify-content:space-between; padding: 10px 14px 8px 14px; border-bottom: 1px solid rgba(148,163,184,0.15);">
+                <div style="display:flex; align-items:center; gap:7px;">
+                    <span style="font-size:14px; line-height:1;">🏆</span>
+                    <div>
+                        <div style="font-size:10px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; line-height:1;" class="text-slate-800 dark:text-slate-100">
+                            3 Penjualan Terbaik Bulan Ini
+                        </div>
+                        <div style="font-size:9px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; margin-top:2px; line-height:1;" class="text-slate-400 dark:text-slate-500">
+                            Berdasarkan Qty &middot; {{ \Carbon\Carbon::now()->translatedFormat('F Y') }}
+                        </div>
+                    </div>
+                </div>
+                <span style="font-size:14px; opacity:0.8;" class="text-orange-400 dark:text-orange-300">📈</span>
             </div>
 
-            <!-- Date Info: Premium Badge -->
-            <div
-                class="inline-flex items-center space-x-3.5 bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 px-5 py-3 rounded-2xl shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
-                <div class="bg-blue-50 dark:bg-blue-950/40 p-2 rounded-xl text-blue-600 dark:text-blue-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                        </path>
-                    </svg>
+            {{-- 3 Persons Row --}}
+            @if(isset($top3Sales) && $top3Sales->count() > 0)
+                <div style="display:flex; align-items:center; padding: 10px 8px;">
+                    @foreach($top3Sales as $i => $sale)
+                        @php
+                            $rank     = $i + 1;
+                            $user     = $sale->user;
+                            $name     = $user ? explode(' ', $user->name)[0] : 'N/A';
+                            $initials = $user ? strtoupper(substr($user->name, 0, 1)) : '?';
+                            $meta     = $rankMeta[$rank] ?? ['color' => '#94a3b8', 'bg' => 'rgba(148,163,184,0.1)'];
+                        @endphp
+
+                        {{-- Divider between cards --}}
+                        @if($i > 0)
+                            <div style="width:1px; align-self:stretch; background:rgba(148,163,184,0.15); margin:0 4px; flex-shrink:0;"></div>
+                        @endif
+
+                        {{-- Person card --}}
+                        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; padding:6px 4px; border-radius:12px; background:{{ $meta['bg'] }};">
+                            {{-- Avatar + rank badge --}}
+                            <div style="position:relative; display:inline-flex;">
+                                <div style="padding:2px; border-radius:50%; background:{{ $meta['color'] }}; flex-shrink:0;">
+                                    @if($user && $user->avatar)
+                                        <img src="{{ asset('storage/' . $user->avatar) }}"
+                                             alt="{{ $user->name }}"
+                                             style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid white; display:block;">
+                                    @else
+                                        <div style="width:38px; height:38px; border-radius:50%; background:{{ $meta['color'] }}; color:#fff; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; border:2px solid white;">
+                                            {{ $initials }}
+                                        </div>
+                                    @endif
+                                </div>
+                                {{-- Rank number badge --}}
+                                <span style="position:absolute; bottom:-3px; right:-3px; width:16px; height:16px; border-radius:50%; background:{{ $meta['color'] }}; color:#fff; font-size:9px; font-weight:900; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:0 1px 4px rgba(0,0,0,0.25);">
+                                    {{ $rank }}
+                                </span>
+                            </div>
+
+                            {{-- Name --}}
+                            <span style="font-size:11px; font-weight:700; text-align:center; max-width:72px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;" class="text-slate-800 dark:text-slate-100" title="{{ $user?->name ?? 'N/A' }}">
+                                {{ $name }}
+                            </span>
+
+                            {{-- Nama Lokasi / Counter --}}
+                            <span style="font-size:7px; font-weight:700; color:{{ $meta['color'] }}; line-height:1; letter-spacing:0.02em; text-align:center; white-space:nowrap; display:block;"
+                                  title="{{ $user?->location?->name ?? 'Lokasi tidak diset' }}">
+                                {{ $user?->location?->name ?? '-' }}
+                            </span>
+                        </div>
+                    @endforeach
                 </div>
-                <div>
-                    <p
-                        class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">
-                        Hari Ini</p>
-                    <p class="text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight">
-                        {{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}
-                    </p>
+            @else
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px; padding:16px 14px;">
+                    <span style="font-size:22px;">🏆</span>
+                    <p class="text-xs text-slate-400 dark:text-slate-500" style="font-weight:500;">Belum ada data penjualan bulan ini.</p>
                 </div>
-            </div>
+            @endif
         </div>
 
         @php
