@@ -323,7 +323,7 @@ function switchTab(name) {
 
 // ── SPG Detail Modal ──────────────────────────────────────────────────────────
 // Store ranking data passed from server for modal use (client-side only)
-const _spgRankingData = {!! json_encode($spgRanking->map(function($r) {
+window._spgRankingData = {!! json_encode($spgRanking->map(function($r) {
     return [
         'user_id'       => $r['user']->id,
         'name'          => $r['user']->name,
@@ -352,7 +352,7 @@ function openSpgDetailModal(spgId, spgName) {
     document.getElementById('spg-modal-subtitle').textContent = 'Detail transaksi pada periode yang dipilih';
 
     // Find data
-    const spg = _spgRankingData.find(s => s.user_id == spgId);
+    const spg = window._spgRankingData.find(s => s.user_id == spgId);
 
     if (!spg) {
         document.getElementById('spg-modal-tbody').innerHTML = '<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400 text-sm">Data tidak ditemukan.</td></tr>';
@@ -510,6 +510,10 @@ function salesReport() {
                 this.totalQty        = data.totalQty;
                 this.transactionCount= data.transactionCount;
                 this.hasSpgSummary   = data.hasSpgSummary;
+
+                if (data.spgRankingData) {
+                    window._spgRankingData = data.spgRankingData;
+                }
 
                 if (this.userId) {
                     switchTab('detail');

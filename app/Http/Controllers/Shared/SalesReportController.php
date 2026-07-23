@@ -94,6 +94,26 @@ class SalesReportController extends Controller
             $htmlSpgSummaryTableFoot = view('reports.partials.sales_spg_summary_foot', compact('sales', 'totalQty', 'totalNominal', 'userId'))->render();
             $htmlRankingBody = view('reports.partials.sales_ranking_body', compact('spgRanking', 'maxNominal', 'userId'))->render();
 
+            $rankingData = $spgRanking->map(function ($r) {
+                return [
+                    'user_id'       => $r['user']->id,
+                    'name'          => $r['user']->name,
+                    'location'      => $r['user']->location?->name ?? '-',
+                    'total_qty'     => $r['total_qty'],
+                    'total_nominal' => $r['total_nominal'],
+                    'total_trx'     => $r['total_trx'],
+                    'transactions'  => $r['transactions']->map(function ($t) {
+                        return [
+                            'date'    => $t->date,
+                            'sku'     => $t->sku,
+                            'size'    => $t->size,
+                            'qty'     => $t->qty,
+                            'nominal' => $t->nominal,
+                        ];
+                    })->values()->all(),
+                ];
+            })->values()->all();
+
             return response()->json([
                 'totalQty'               => number_format($totalQty, 0, ',', '.'),
                 'totalNominal'           => 'Rp ' . number_format($totalNominal, 0, ',', '.'),
@@ -104,6 +124,7 @@ class SalesReportController extends Controller
                 'htmlSpgSummaryTableFoot'=> $htmlSpgSummaryTableFoot,
                 'htmlRankingBody'        => $htmlRankingBody,
                 'hasSpgSummary'          => ($sales->count() > 0 && !$userId),
+                'spgRankingData'         => $rankingData,
             ]);
         }
 
