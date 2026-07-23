@@ -323,21 +323,25 @@ function switchTab(name) {
 
 // ── SPG Detail Modal ──────────────────────────────────────────────────────────
 // Store ranking data passed from server for modal use (client-side only)
-const _spgRankingData = @json($spgRanking->map(fn($r) => [
-    'user_id'       => $r['user']->id,
-    'name'          => $r['user']->name,
-    'location'      => $r['user']->location?->name ?? '-',
-    'total_qty'     => $r['total_qty'],
-    'total_nominal' => $r['total_nominal'],
-    'total_trx'     => $r['total_trx'],
-    'transactions'  => $r['transactions']->map(fn($t) => [
-        'date'    => $t->date,
-        'sku'     => $t->sku,
-        'size'    => $t->size,
-        'qty'     => $t->qty,
-        'nominal' => $t->nominal,
-    ])->values(),
-])->values());
+const _spgRankingData = {!! json_encode($spgRanking->map(function($r) {
+    return [
+        'user_id'       => $r['user']->id,
+        'name'          => $r['user']->name,
+        'location'      => $r['user']->location?->name ?? '-',
+        'total_qty'     => $r['total_qty'],
+        'total_nominal' => $r['total_nominal'],
+        'total_trx'     => $r['total_trx'],
+        'transactions'  => $r['transactions']->map(function($t) {
+            return [
+                'date'    => $t->date,
+                'sku'     => $t->sku,
+                'size'    => $t->size,
+                'qty'     => $t->qty,
+                'nominal' => $t->nominal,
+            ];
+        })->values()->all(),
+    ];
+})->values()->all()) !!};
 
 function openSpgDetailModal(spgId, spgName) {
     const modal  = document.getElementById('spg-detail-modal');
