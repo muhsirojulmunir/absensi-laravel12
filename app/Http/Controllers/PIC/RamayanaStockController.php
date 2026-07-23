@@ -10,6 +10,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
+use App\Models\IncomingStock;
+
 // Load SimpleXLSX directly (bundled, not from vendor/composer)
 require_once app_path('Libraries/Shuchkin/SimpleXLSX.php');
 use Shuchkin\SimpleXLSX;
@@ -186,5 +188,180 @@ class RamayanaStockController extends Controller
         ));
     }
 
+    public function downloadTemplate()
+    {
+        $headers = [
+            'Content-type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="Template_Import_Stok.csv"',
+        ];
 
+        $callback = function() {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Kode Barang', 'Nama Barang', 'Total Quantity', 'Keterangan']);
+            fputcsv($file, ['01230631', 'SDL AJS 2430-1 30-35 A4ZY (2) 31', '1.00 PSG ( )', '']);
+            fputcsv($file, ['01158400', 'JAM TANGAN', '45.00 LSN ( 45.00 BJ )', '']);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv',
+            'import_location_id' => 'required|exists:locations,id'
+        ]);
+
+        $debugLog = [];
+        $debugLog[] = "=== IMPORT START (PIC): " . now()->toDateTimeString() . " ===";
+        $debugLog[] = "Location ID: " . $request->import_location_id;
+
+        if ($xlsx = SimpleXLSX::parse($request->file('file')->path())) {
+            $rows = $xlsx->rows();
+            if (empty($rows)) {
+                return redirect()->back()->with('error', 'File Excel sama sekali kosong atau gagal terbaca.');
+            }
+
+            $userId = User::where('location_id', $request->import_location_id)
+                ->whereHas('role', function($q) {
+                    $q->where('slug', 'karyawan_ramayana');
+                })->value('id');
+
+            if (!$userId) {
+                return redirect()->back()->with('error', 'Lokasi ini belum memiliki akun Karyawan Ramayana.');
+            }
+
+            $colKode = null;
+            $colNama = null;
+            $colWarna = null;
+            $colSize = null;
+            $colQty  = null;
+            $headerRowIndex = null;
+
+            foreach ($rows as $ri => $row) {
+                foreach ($row as $ci => $cell) {
+                    $val = strtolower(trim((string)$cell));
+                    if (strpos($val, 'kode') !== false) {
+                        $colKode = $ci;
+                        $headerRowIndex = $ri;
+                    }
+                    if (strpos($val, 'nama') !== false) $colNama = $ci;
+                    if (strpos($val, 'warna') !== false) $colWarna = $ci;
+                    if (strpos($val, 'size') !== false || strpos($val, 'ukuran') !== false) $colSize = $ci;
+                    if (strpos($val, 'qty') !== false || strpos($val, 'quantity') !== false) $colQty = $ci;
+                }
+                if ($colKode !== null && $colQty !== null) break;
+            }
+
+            if ($colKode === null) $colKode = 2;
+            if ($colNama === null) $colNama = 5;
+            if ($colQty === null)  $colQty  = 7;
+            if ($headerRowIndex === null) $headerRowIndex = 0;
+
+            $successCount = 0;
+            $insertData = [];
+            $now = now();
+
+            $importMode = $request->input('import_mode', 'add'); // 'add' or 'replace'
+
+            if ($importMode === 'replace') {
+                SalesInput::where('user_id', $userId)
+                    ->whereIn('type', ['stock_in', 'incoming'])
+                    ->delete();
+
+                IncomingStock::where('user_id', $userId)->delete();
+
+                $existingSales = SalesInput::select('kode_barang', DB::raw("SUM(qty) as total_out"))
+                    ->where('user_id', $userId)
+                    ->where('type', 'sale')
+                    ->whereNotNull('kode_barang')
+                    ->where('kode_barang', '!=', '')
+                    ->groupBy('kode_barang')
+                    ->get()
+                    ->keyBy('kode_barang');
+            } else {
+                $existingSales = collect();
+            }
+
+            for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
+                $row = $rows[$i];
+
+                $kodeBarang = isset($row[$colKode]) ? trim((string)$row[$colKode]) : '';
+                $namaBarang = isset($row[$colNama]) ? trim((string)$row[$colNama]) : '';
+                $qtyRaw     = isset($row[$colQty])  ? trim((string)$row[$colQty])  : '';
+                $warnaExcel = ($colWarna !== null && isset($row[$colWarna])) ? trim((string)$row[$colWarna]) : '';
+                $sizeExcel  = ($colSize !== null && isset($row[$colSize])) ? trim((string)$row[$colSize]) : '';
+
+                if (empty($kodeBarang) || empty($namaBarang)) continue;
+                if (!preg_match('/^\d+$/', $kodeBarang)) continue;
+                if (stripos($namaBarang, 'ACCOS') !== false) continue;
+
+                $qty = 0;
+                if (preg_match('/(-?\d+(\.\d+)?)/', $qtyRaw, $matches)) {
+                    $qty = (int)round((float)$matches[1]);
+                }
+                
+                $satuan = 'PSG';
+                if (preg_match('/[a-zA-Z]+/', $qtyRaw, $unitMatches)) {
+                    $satuan = strtoupper($unitMatches[0]);
+                }
+
+                $size = '';
+                $sku = $namaBarang;
+                
+                if (!empty($sizeExcel)) {
+                    $size = $sizeExcel;
+                } else {
+                    if (preg_match('/\s(\d{2,3})$/', $namaBarang, $matches)) {
+                        $size = $matches[1];
+                        $sku = trim(substr($namaBarang, 0, -strlen($matches[0])));
+                    }
+                }
+
+                $warna = $warnaExcel;
+
+                if ($importMode === 'replace') {
+                    $totalOut = isset($existingSales[$kodeBarang]) ? $existingSales[$kodeBarang]->total_out : 0;
+                    $finalQty = $qty + $totalOut;
+                    $insertType = 'stock_in';
+                } else {
+                    $finalQty = $qty;
+                    $insertType = 'incoming';
+                }
+
+                $insertData[] = [
+                    'user_id'     => $userId,
+                    'type'        => $insertType,
+                    'date'        => $now->toDateString(),
+                    'sku'         => $sku,
+                    'kode_barang' => $kodeBarang,
+                    'size'        => $size,
+                    'warna'       => $warna,
+                    'satuan'      => $satuan,
+                    'nominal'     => null,
+                    'qty'         => $finalQty,
+                    'created_at'  => $now,
+                    'updated_at'  => $now,
+                ];
+
+                $successCount++;
+            }
+
+            $actualInserted = 0;
+            if (!empty($insertData)) {
+                $chunks = array_chunk($insertData, 500);
+                foreach ($chunks as $chunk) {
+                    SalesInput::insert($chunk);
+                    $actualInserted += count($chunk);
+                }
+            }
+
+            $modeText = ($importMode === 'replace') ? 'Ganti Total Stok' : 'Tambah Stok (Barang Datang)';
+            $message = "Berhasil ($modeText)! $successCount baris Excel dibaca, $actualInserted produk stok berhasil diproses.";
+            return redirect()->route('pic_ramayana.ramayana-stocks.index')->with('success', $message);
+        } else {
+            return redirect()->back()->with('error', 'Gagal membaca file Excel. ' . SimpleXLSX::parseError());
+        }
+    }
 }

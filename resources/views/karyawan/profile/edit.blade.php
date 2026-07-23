@@ -70,14 +70,21 @@
             </div>
         </div>
 
+        @php
+            $currentRoute = request()->route() ? request()->route()->getName() : '';
+            $updateRoute = $currentRoute ? str_replace('.edit', '.update', $currentRoute) : 'karyawan.profile.update';
+            $destroyAvatarRoute = $currentRoute ? str_replace('.edit', '.destroy-avatar', $currentRoute) : 'karyawan.profile.destroy-avatar';
+        @endphp
+
         <!-- Main Form -->
         <div class="lg:col-span-2">
-            <form action="{{ route('karyawan.profile.update') }}" method="POST" enctype="multipart/form-data" id="profile-form" class="bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] group/form">
+            <form action="{{ route($updateRoute) }}" method="POST" enctype="multipart/form-data" id="profile-form" class="bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] group/form">
                 @csrf
                 @method('PUT')
                 
                 <!-- Hidden input for cropped image -->
                 <input type="hidden" name="avatar_cropped" id="avatar_cropped">
+                <input type="hidden" name="delete_avatar" id="delete_avatar" value="0">
 
                 <div class="p-8 space-y-10">
                     <!-- Photo Upload -->
@@ -96,16 +103,26 @@
                                     @endif
                                 </div>
                                 <label for="avatar-input" class="absolute inset-0 bg-blue-600/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-all rounded-2xl">
-                                    <span class="text-[10px] font-bold text-white uppercase tracking-widest">Ganti Foto</span>
+                                    <span class="text-[10px] font-bold text-white uppercase tracking-widest">{{ $user->avatar ? 'Ganti Foto' : 'Unggah Foto' }}</span>
                                 </label>
                                 <input type="file" id="avatar-input" name="avatar" class="hidden" accept="image/*">
                             </div>
                             <div class="flex-1 space-y-4 pt-4">
                                 <p class="text-[11px] text-blue-500 dark:text-blue-400 font-medium leading-relaxed max-w-sm">
-                                    Gunakan pas foto formal (Rasio 3x4). Anda dapat mengatur zoom dan me-crop posisi gambar secara persisi setelah memilih file Anda.
+                                    Gunakan pas foto formal (Rasio 3x4). Anda dapat mengganti, me-crop, atau menghapus foto profil Anda kapan saja.
                                 </p>
-                                <div class="flex space-x-2">
-                                    <button type="button" onclick="document.getElementById('avatar-input').click()" class="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-5 py-2.5 rounded-xl border border-blue-100 dark:border-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all shadow-sm">Pilih File Foto</button>
+                                <div class="flex items-center gap-3 flex-wrap">
+                                    <button type="button" onclick="document.getElementById('avatar-input').click()" class="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-5 py-2.5 rounded-xl border border-blue-100 dark:border-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all shadow-sm flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                        <span>{{ $user->avatar ? 'Ganti Foto' : 'Pilih File Foto' }}</span>
+                                    </button>
+
+                                    @if($user->avatar)
+                                        <button type="button" onclick="if(confirm('Apakah Anda yakin ingin menghapus foto profil ini?')) { document.getElementById('delete-avatar-form').submit(); }" class="text-[10px] font-bold uppercase tracking-widest text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-4 py-2.5 rounded-xl border border-red-100 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-900/50 transition-all shadow-sm flex items-center gap-1.5">
+                                            <svg class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            <span>Hapus Foto</span>
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -213,6 +230,12 @@
                     </button>
                 </div>
             </form>
+            @if($user->avatar)
+            <form id="delete-avatar-form" action="{{ route($destroyAvatarRoute) }}" method="POST" class="hidden">
+                @csrf
+                @method('DELETE')
+            </form>
+            @endif
         </div>
     </div>
 </div>

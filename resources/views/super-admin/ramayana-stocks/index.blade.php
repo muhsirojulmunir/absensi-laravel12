@@ -40,7 +40,25 @@
                                             @endforeach
                                         </select>
 
-                                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">2. Upload File Excel (.xlsx)</label>
+                                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">2. Mode Import / Jenis Transaksi</label>
+                                        <div class="space-y-2 mb-4">
+                                            <label class="flex items-start p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500 transition-colors">
+                                                <input type="radio" name="import_mode" value="add" checked class="mt-1 text-emerald-600 focus:ring-emerald-500">
+                                                <div class="ml-3">
+                                                    <span class="block text-sm font-bold text-slate-900 dark:text-white">➕ Tambah Stok (Barang Datang)</span>
+                                                    <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Menambahkan kuantitas barang dari Excel ke stok yang sudah ada. Barang belum ada akan otomatis dibuat.</span>
+                                                </div>
+                                            </label>
+                                            <label class="flex items-start p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-red-500 transition-colors">
+                                                <input type="radio" name="import_mode" value="replace" class="mt-1 text-red-600 focus:ring-red-500">
+                                                <div class="ml-3">
+                                                    <span class="block text-sm font-bold text-slate-900 dark:text-white">🔄 Ganti / Timpa Total Stok</span>
+                                                    <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Menghapus stok lama di toko ini dan menggantikannya secara menyeluruh dengan data Excel baru.</span>
+                                                </div>
+                                            </label>
+                                        </div>
+
+                                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">3. Upload File Excel (.xlsx)</label>
                                         <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">Upload langsung file export dari aplikasi internal (JAYA MANDIRI). Pastikan sudah di-Save As ke format <strong>.xlsx</strong>.</p>
                                         <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                             <input type="file" name="file" id="file" accept=".xlsx, .xls, .csv" required class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 cursor-pointer">

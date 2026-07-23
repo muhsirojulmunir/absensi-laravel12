@@ -288,25 +288,33 @@ class RamayanaStockController extends Controller
             $insertData = [];
             $now = now();
 
-            // Hapus SEMUA stock_in DAN incoming lama milik user ini (clean slate per import)
-            SalesInput::where('user_id', $userId)
-                ->whereIn('type', ['stock_in', 'incoming'])
-                ->delete();
-            $debugLog[] = "Deleted all old stock_in and incoming for user $userId";
+            $importMode = $request->input('import_mode', 'add'); // 'add' or 'replace'
+            $debugLog[] = "Import Mode: " . $importMode;
 
-            // Hapus juga riwayat barang masuk (incoming_stocks + items cascade)
-            IncomingStock::where('user_id', $userId)->delete();
-            $debugLog[] = "Deleted all incoming_stocks history for user $userId";
+            if ($importMode === 'replace') {
+                // Hapus SEMUA stock_in DAN incoming lama milik user ini (clean slate per import)
+                SalesInput::where('user_id', $userId)
+                    ->whereIn('type', ['stock_in', 'incoming'])
+                    ->delete();
+                $debugLog[] = "Deleted all old stock_in and incoming for user $userId (Replace Mode)";
 
-            // Ambil total penjualan yang sudah ada untuk kompensasi
-            $existingSales = SalesInput::select('kode_barang', DB::raw("SUM(qty) as total_out"))
-                ->where('user_id', $userId)
-                ->where('type', 'sale')
-                ->whereNotNull('kode_barang')
-                ->where('kode_barang', '!=', '')
-                ->groupBy('kode_barang')
-                ->get()
-                ->keyBy('kode_barang');
+                // Hapus juga riwayat barang masuk (incoming_stocks + items cascade)
+                IncomingStock::where('user_id', $userId)->delete();
+                $debugLog[] = "Deleted all incoming_stocks history for user $userId (Replace Mode)";
+
+                // Ambil total penjualan yang sudah ada untuk kompensasi
+                $existingSales = SalesInput::select('kode_barang', DB::raw("SUM(qty) as total_out"))
+                    ->where('user_id', $userId)
+                    ->where('type', 'sale')
+                    ->whereNotNull('kode_barang')
+                    ->where('kode_barang', '!=', '')
+                    ->groupBy('kode_barang')
+                    ->get()
+                    ->keyBy('kode_barang');
+            } else {
+                $debugLog[] = "Preserving existing stocks for user $userId (Add/Tambah Mode)";
+                $existingSales = collect();
+            }
 
             // Mulai baca data dari baris setelah header
             for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
@@ -349,13 +357,18 @@ class RamayanaStockController extends Controller
 
                 $warna = $warnaExcel;
 
-                // Kompensasi: stock_in = stok_excel + total_sudah_terjual
-                $totalOut = isset($existingSales[$kodeBarang]) ? $existingSales[$kodeBarang]->total_out : 0;
-                $requiredStockIn = $qty + $totalOut;
+                if ($importMode === 'replace') {
+                    $totalOut = isset($existingSales[$kodeBarang]) ? $existingSales[$kodeBarang]->total_out : 0;
+                    $finalQty = $qty + $totalOut;
+                    $insertType = 'stock_in';
+                } else {
+                    $finalQty = $qty;
+                    $insertType = 'incoming';
+                }
 
                 $insertData[] = [
                     'user_id'     => $userId,
-                    'type'        => 'stock_in',
+                    'type'        => $insertType,
                     'date'        => $now->toDateString(),
                     'sku'         => $sku,
                     'kode_barang' => $kodeBarang,
@@ -363,7 +376,7 @@ class RamayanaStockController extends Controller
                     'warna'       => $warna,
                     'satuan'      => $satuan,
                     'nominal'     => null,
-                    'qty'         => $requiredStockIn,
+                    'qty'         => $finalQty,
                     'created_at'  => $now,
                     'updated_at'  => $now,
                 ];
@@ -372,7 +385,7 @@ class RamayanaStockController extends Controller
 
                 // Log beberapa data awal
                 if ($successCount <= 5) {
-                    $debugLog[] = "Data[$i]: kode=$kodeBarang | nama=$namaBarang | sku=$sku | size=$size | qty=$qty | stockIn=$requiredStockIn";
+                    $debugLog[] = "Data[$i]: kode=$kodeBarang | nama=$namaBarang | sku=$sku | size=$size | qty=$qty | finalQty=$finalQty | mode=$importMode";
                 }
             }
 
@@ -395,7 +408,8 @@ class RamayanaStockController extends Controller
             // Simpan debug log ke file
             file_put_contents(storage_path('logs/import_debug.log'), implode("\n", $debugLog) . "\n\n", FILE_APPEND);
 
-            $message = "Berhasil! $successCount baris Excel dibaca, $actualInserted produk stok berhasil dimasukkan ke database.";
+            $modeText = ($importMode === 'replace') ? 'Ganti Total Stok' : 'Tambah Stok (Barang Datang)';
+            $message = "Berhasil ($modeText)! $successCount baris Excel dibaca, $actualInserted produk stok berhasil diproses.";
             return redirect()->route('super-admin.ramayana-stocks.index')->with('success', $message);
         } else {
             return redirect()->back()->with('error', 'Gagal membaca file Excel. ' . SimpleXLSX::parseError());

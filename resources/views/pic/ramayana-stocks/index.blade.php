@@ -2,10 +2,82 @@
 @section('title', 'Manajemen Stok Ramayana')
 @section('content')
 <div class="space-y-6">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" x-data="{ showImportModal: false }">
         <div>
             <h2 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Manajemen Stok Ramayana</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Pantau dan Kelola Stok Real-time Counter</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button @click="showImportModal = true" class="inline-flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transform hover:-translate-y-0.5">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Import Excel
+            </button>
+        </div>
+
+        <!-- Import Modal -->
+        <div x-show="showImportModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-cloak>
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="showImportModal" x-transition.opacity class="fixed inset-0 bg-slate-900/75 transition-opacity" aria-hidden="true" @click="showImportModal = false"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div x-show="showImportModal" x-transition.scale.origin.bottom class="relative z-10 inline-block align-bottom bg-white dark:bg-slate-900 rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full border border-slate-200 dark:border-slate-800">
+                    <form action="{{ route('pic_ramayana.ramayana-stocks.import') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="bg-white dark:bg-slate-900 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                            <div class="sm:flex sm:items-start">
+                                <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 sm:mx-0 sm:h-10 sm:w-10">
+                                    <svg class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                    </svg>
+                                </div>
+                                <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                    <h3 class="text-lg leading-6 font-bold text-slate-900 dark:text-white" id="modal-title">Import Data Stok Internal</h3>
+                                    <div class="mt-2 text-left">
+                                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">1. Pilih Counter Tujuan</label>
+                                        <select name="import_location_id" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 p-3 transition-colors font-medium mb-4">
+                                            <option value="">-- Pilih Counter Ramayana --</option>
+                                            @foreach($locations as $loc)
+                                                <option value="{{ $loc->id }}">{{ $loc->name }}</option>
+                                            @endforeach
+                                        </select>
+
+                                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">2. Mode Import / Jenis Transaksi</label>
+                                        <div class="space-y-2 mb-4">
+                                            <label class="flex items-start p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500 transition-colors">
+                                                <input type="radio" name="import_mode" value="add" checked class="mt-1 text-emerald-600 focus:ring-emerald-500">
+                                                <div class="ml-3">
+                                                    <span class="block text-sm font-bold text-slate-900 dark:text-white">➕ Tambah Stok (Barang Datang)</span>
+                                                    <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Menambahkan kuantitas barang dari Excel ke stok yang sudah ada. Barang belum ada akan otomatis dibuat.</span>
+                                                </div>
+                                            </label>
+                                            <label class="flex items-start p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-red-500 transition-colors">
+                                                <input type="radio" name="import_mode" value="replace" class="mt-1 text-red-600 focus:ring-red-500">
+                                                <div class="ml-3">
+                                                    <span class="block text-sm font-bold text-slate-900 dark:text-white">🔄 Ganti / Timpa Total Stok</span>
+                                                    <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Menghapus stok lama di toko ini dan menggantikannya secara menyeluruh dengan data Excel baru.</span>
+                                                </div>
+                                            </label>
+                                        </div>
+
+                                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">3. Upload File Excel (.xlsx)</label>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">Upload langsung file export dari aplikasi internal (JAYA MANDIRI). Pastikan sudah di-Save As ke format <strong>.xlsx</strong>.</p>
+                                        <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                            <input type="file" name="file" id="file" accept=".xlsx, .xls, .csv" required class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 cursor-pointer">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-800/50 px-4 py-4 sm:px-6 sm:flex sm:flex-row-reverse border-t border-slate-200 dark:border-slate-800">
+                            <button type="submit" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2.5 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+                                Upload & Import
+                            </button>
+                            <button type="button" @click="showImportModal = false" class="mt-3 w-full inline-flex justify-center rounded-xl border border-slate-300 dark:border-slate-700 shadow-sm px-4 py-2.5 bg-white dark:bg-slate-900 text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+                                Batal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 

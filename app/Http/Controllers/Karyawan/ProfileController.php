@@ -61,7 +61,12 @@ class ProfileController extends Controller
             'birth_date' => $request->birth_date,
         ];
 
-        if ($request->filled('avatar_cropped')) {
+        if ($request->filled('delete_avatar') && $request->delete_avatar == '1') {
+            if ($user->avatar && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->avatar)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+            }
+            $data['avatar'] = null;
+        } elseif ($request->filled('avatar_cropped')) {
             // Delete old avatar if exists
             if ($user->avatar && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->avatar)) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
@@ -105,6 +110,23 @@ class ProfileController extends Controller
 
         $user->update($data);
 
-        return redirect()->route('karyawan.profile.edit')->with('success', 'Profil berhasil diperbarui.');
+        return redirect()->back()->with('success', 'Profil berhasil diperbarui.');
+    }
+
+    public function destroyAvatar(Request $request)
+    {
+        $user = Auth::user();
+        
+        if ($user->avatar && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->avatar)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+        }
+
+        $user->update(['avatar' => null]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Foto profil berhasil dihapus.']);
+        }
+
+        return redirect()->back()->with('success', 'Foto profil berhasil dihapus.');
     }
 }

@@ -97,6 +97,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/ramayana-stocks/{user}/incoming/history', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'incomingHistory'])->name('ramayana-stocks.incoming.history');
         Route::get('/ramayana-stocks/{user}/incoming/{incomingStock}', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'incomingDetail'])->name('ramayana-stocks.incoming.show');
         Route::delete('/ramayana-stocks/{user}/incoming/{incomingStock}', [App\Http\Controllers\SuperAdmin\RamayanaStockController::class, 'destroyIncoming'])->name('ramayana-stocks.incoming.destroy');
+        // Profile / Data Diri
+        Route::get('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile/avatar', [App\Http\Controllers\Karyawan\ProfileController::class, 'destroyAvatar'])->name('profile.destroy-avatar');
     });
 
     Route::prefix('pic')->name('pic.')->group(function () {
@@ -112,6 +116,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/employees', [App\Http\Controllers\PIC\EmployeeController::class, 'index'])->name('employees.index');
         Route::get('/employees/{user}', [App\Http\Controllers\PIC\EmployeeController::class, 'show'])->name('employees.show');
         Route::get('/reports', [App\Http\Controllers\PIC\ReportController::class, 'index'])->name('reports.index');
+
+        // Profile / Data Diri
+        Route::get('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile/avatar', [App\Http\Controllers\Karyawan\ProfileController::class, 'destroyAvatar'])->name('profile.destroy-avatar');
     });
 
     Route::prefix('pic-ramayana')->name('pic_ramayana.')->group(function () {
@@ -130,11 +139,18 @@ Route::middleware(['auth'])->group(function () {
         
         // Ramayana Stocks
         Route::get('/ramayana-stocks', [App\Http\Controllers\PIC\RamayanaStockController::class, 'index'])->name('ramayana-stocks.index');
+        Route::get('/ramayana-stocks/download-template', [App\Http\Controllers\PIC\RamayanaStockController::class, 'downloadTemplate'])->name('ramayana-stocks.download-template');
         Route::get('/ramayana-stocks/{id}', [App\Http\Controllers\PIC\RamayanaStockController::class, 'show'])->name('ramayana-stocks.show');
+        Route::post('/ramayana-stocks/import', [App\Http\Controllers\PIC\RamayanaStockController::class, 'import'])->name('ramayana-stocks.import');
 
         // Sales Reports
         Route::get('/top-products', [App\Http\Controllers\Shared\TopProductController::class, 'index'])->name('top-products.index');
         Route::get('/sales-reports', [App\Http\Controllers\Shared\SalesReportController::class, 'index'])->name('sales-reports.index');
+
+        // Profile / Data Diri
+        Route::get('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile/avatar', [App\Http\Controllers\Karyawan\ProfileController::class, 'destroyAvatar'])->name('profile.destroy-avatar');
     });
 
     Route::prefix('hrd')->name('hrd.')->group(function () {
@@ -150,6 +166,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/attendance/payment-history/{payment}/update', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'updatePaymentHistory'])->name('attendance.payment-history.update');
         Route::post('/attendance/payment-history/{payment}/delete', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'deletePaymentHistory'])->name('attendance.payment-history.delete');
         Route::get('/scanner', [App\Http\Controllers\HRD\ScannerController::class, 'index'])->name('scanner.index');
+
+        // Profile / Data Diri
+        Route::get('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile/avatar', [App\Http\Controllers\Karyawan\ProfileController::class, 'destroyAvatar'])->name('profile.destroy-avatar');
     });
 
     Route::prefix('karyawan')->name('karyawan.')->group(function () {
@@ -180,6 +201,7 @@ Route::middleware(['auth'])->group(function () {
         // Profile / Data Diri
         Route::get('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile/avatar', [App\Http\Controllers\Karyawan\ProfileController::class, 'destroyAvatar'])->name('profile.destroy-avatar');
     });
 
     Route::prefix('karyawan-ramayana')->name('karyawan_ramayana.')->group(function () {
@@ -210,6 +232,7 @@ Route::middleware(['auth'])->group(function () {
         // Profile / Data Diri
         Route::get('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile/avatar', [App\Http\Controllers\Karyawan\ProfileController::class, 'destroyAvatar'])->name('profile.destroy-avatar');
 
         // Sales & Stock Input
         Route::resource('sales', App\Http\Controllers\KaryawanRamayana\SalesController::class);
