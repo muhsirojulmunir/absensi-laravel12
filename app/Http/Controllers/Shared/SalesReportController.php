@@ -8,6 +8,7 @@ use App\Models\SalesInput;
 use App\Models\Location;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class SalesReportController extends Controller
 {
@@ -15,25 +16,20 @@ class SalesReportController extends Controller
     {
         $user = Auth::user();
 
-        // Check permission if needed, but routes are protected by role middleware
-
-        $period = $request->query('period', 'today'); // today, week, month, custom
+        $period     = $request->query('period', 'today');
         $locationId = $request->query('location_id');
-        $userId = $request->query('user_id');
-        $month = $request->query('month', date('Y-m')); // Define month always for the view
+        $userId     = $request->query('user_id');
+        $month      = $request->query('month', date('Y-m'));
 
+        // ── Base Sales Query ───────────────────────────────────────────────
         $query = SalesInput::with(['user.location'])
             ->where('type', 'sale')
             ->whereHas('user', function ($q) {
-                // only users who are karyawan_ramayana
-                $q->whereHas('role', function ($r) {
-                    $r->where('slug', 'karyawan_ramayana');
-                });
+                $q->whereHas('role', fn($r) => $r->where('slug', 'karyawan_ramayana'));
             });
 
         // Date Filtering
-        $startDate = $request->query('start_date');
-        $endDate = $request->query('end_date');
+        [$startDate, $endDate] = $this->resolveDateRange($request, $period, $month);
 
         if ($startDate && $endDate) {
             $query->whereBetween('date', [$startDate, $endDate]);
@@ -41,59 +37,104 @@ class SalesReportController extends Controller
             $query->whereDate('date', '>=', $startDate);
         } elseif ($endDate) {
             $query->whereDate('date', '<=', $endDate);
-        } elseif ($period === 'today') {
-            $query->whereDate('date', \Carbon\Carbon::today());
-        } elseif ($period === 'week') {
-            $query->whereBetween('date', [\Carbon\Carbon::now()->startOfWeek(), \Carbon\Carbon::now()->endOfWeek()]);
-        } elseif ($period === 'month') {
-            $query->whereYear('date', substr($month, 0, 4))
-                  ->whereMonth('date', substr($month, 5, 2));
         }
 
         if ($locationId) {
-            $query->whereHas('user', function ($q) use ($locationId) {
-                $q->where('location_id', $locationId);
-            });
+            $query->whereHas('user', fn($q) => $q->where('location_id', $locationId));
         }
 
         if ($userId) {
             $query->where('user_id', $userId);
         }
 
-        $sales = $query->orderBy('date', 'desc')->get();
-
-        $totalQty = $sales->sum('qty');
+        $sales        = $query->orderBy('date', 'desc')->get();
+        $totalQty     = $sales->sum('qty');
         $totalNominal = $sales->sum('nominal');
 
-        // Get filter options
-        $locations = Location::all();
-        
-        $users = User::whereHas('role', function ($q) {
-            $q->where('slug', 'karyawan_ramayana');
-        })->get();
+        // ── SPG Ranking ────────────────────────────────────────────────────
+        // Ambil semua SPG karyawan_ramayana
+        $spgQuery = User::with('location')
+            ->whereHas('role', fn($q) => $q->where('slug', 'karyawan_ramayana'));
 
-        $routeName = $user->role->slug === 'super-admin' 
-            ? 'super-admin.sales-reports.index' 
+        if ($locationId) {
+            $spgQuery->where('location_id', $locationId);
+        }
+
+        $allSpg = $spgQuery->get();
+
+        // Buat summary dari sales yang sudah difilter (groupBy user_id)
+        $salesGrouped = $sales->groupBy('user_id');
+
+        $spgRanking = $allSpg->map(function ($spg) use ($salesGrouped) {
+            $items = $salesGrouped->get($spg->id, collect());
+            return [
+                'user'          => $spg,
+                'total_qty'     => $items->sum('qty'),
+                'total_nominal' => $items->sum('nominal'),
+                'total_trx'     => $items->count(),
+                'transactions'  => $items->sortByDesc('date')->values(),
+            ];
+        })->sortByDesc('total_nominal')->values();
+
+        $maxNominal = $spgRanking->max('total_nominal') ?: 1;
+
+        // ── Filter Options ─────────────────────────────────────────────────
+        $locations = Location::all();
+        $users     = User::whereHas('role', fn($q) => $q->where('slug', 'karyawan_ramayana'))->get();
+
+        $routeName = $user->role->slug === 'super-admin'
+            ? 'super-admin.sales-reports.index'
             : 'pic_ramayana.sales-reports.index';
 
+        // ── AJAX Response ──────────────────────────────────────────────────
         if ($request->ajax()) {
             $htmlTableBody = view('reports.partials.sales_table_body', compact('sales'))->render();
             $htmlTableFoot = view('reports.partials.sales_table_foot', compact('sales', 'totalQty', 'totalNominal'))->render();
             $htmlSpgSummaryTableBody = view('reports.partials.sales_spg_summary_body', compact('sales', 'userId'))->render();
             $htmlSpgSummaryTableFoot = view('reports.partials.sales_spg_summary_foot', compact('sales', 'totalQty', 'totalNominal', 'userId'))->render();
+            $htmlRankingBody = view('reports.partials.sales_ranking_body', compact('spgRanking', 'maxNominal', 'userId'))->render();
 
             return response()->json([
-                'totalQty' => number_format($totalQty, 0, ',', '.'),
-                'totalNominal' => 'Rp ' . number_format($totalNominal, 0, ',', '.'),
-                'transactionCount' => number_format($sales->count(), 0, ',', '.'),
-                'htmlTableBody' => $htmlTableBody,
-                'htmlTableFoot' => $htmlTableFoot,
-                'htmlSpgSummaryTableBody' => $htmlSpgSummaryTableBody,
-                'htmlSpgSummaryTableFoot' => $htmlSpgSummaryTableFoot,
-                'hasSpgSummary' => ($sales->count() > 0 && !$userId) ? true : false,
+                'totalQty'               => number_format($totalQty, 0, ',', '.'),
+                'totalNominal'           => 'Rp ' . number_format($totalNominal, 0, ',', '.'),
+                'transactionCount'       => number_format($sales->count(), 0, ',', '.'),
+                'htmlTableBody'          => $htmlTableBody,
+                'htmlTableFoot'          => $htmlTableFoot,
+                'htmlSpgSummaryTableBody'=> $htmlSpgSummaryTableBody,
+                'htmlSpgSummaryTableFoot'=> $htmlSpgSummaryTableFoot,
+                'htmlRankingBody'        => $htmlRankingBody,
+                'hasSpgSummary'          => ($sales->count() > 0 && !$userId),
             ]);
         }
 
-        return view('reports.sales', compact('sales', 'totalQty', 'totalNominal', 'month', 'locationId', 'userId', 'locations', 'users', 'routeName'));
+        return view('reports.sales', compact(
+            'sales', 'totalQty', 'totalNominal',
+            'month', 'locationId', 'userId',
+            'locations', 'users', 'routeName',
+            'spgRanking', 'maxNominal'
+        ));
+    }
+
+    /**
+     * Resolve date range dari request berdasarkan period.
+     */
+    private function resolveDateRange(Request $request, string $period, string $month): array
+    {
+        $startDate = $request->query('start_date');
+        $endDate   = $request->query('end_date');
+
+        if ($startDate || $endDate) {
+            return [$startDate, $endDate];
+        }
+
+        return match ($period) {
+            'today'  => [Carbon::today()->toDateString(), Carbon::today()->toDateString()],
+            'week'   => [Carbon::now()->startOfWeek()->toDateString(), Carbon::now()->endOfWeek()->toDateString()],
+            'month'  => [
+                Carbon::createFromFormat('Y-m', $month)->startOfMonth()->toDateString(),
+                Carbon::createFromFormat('Y-m', $month)->endOfMonth()->toDateString(),
+            ],
+            default  => [null, null],
+        };
     }
 }
