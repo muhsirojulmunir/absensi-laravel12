@@ -80,19 +80,11 @@
         @endif
     </td>
 
-    {{-- Nominal + Progress Bar --}}
-    <td class="px-4 py-3.5 min-w-[180px]">
-        <div class="space-y-1.5">
-            <span class="font-black text-sm {{ $hasTrx ? 'text-blue-900 dark:text-blue-100' : 'text-slate-400 dark:text-slate-500' }}">
-                {{ $hasTrx ? 'Rp ' . number_format($item['total_nominal'], 0, ',', '.') : '—' }}
-            </span>
-            <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                <div class="h-full rounded-full {{ $hasTrx ? $color['bar'] : 'bg-slate-200 dark:bg-slate-600' }} transition-all duration-700 ease-out"
-                     style="width: {{ $pct }}%">
-                </div>
-            </div>
-            <span class="text-[9px] font-bold text-slate-400">{{ $pct }}% dari tertinggi</span>
-        </div>
+    {{-- Nominal --}}
+    <td class="px-4 py-3.5">
+        <span class="font-black text-sm {{ $hasTrx ? 'text-blue-900 dark:text-blue-100' : 'text-slate-400 dark:text-slate-500' }}">
+            {{ $hasTrx ? 'Rp ' . number_format($item['total_nominal'], 0, ',', '.') : '—' }}
+        </span>
     </td>
 
     {{-- Aksi --}}

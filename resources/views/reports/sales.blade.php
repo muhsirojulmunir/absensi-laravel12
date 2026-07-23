@@ -147,18 +147,18 @@
                     <span x-text="transactionCount">{{ $sales->count() }}</span> data
                 </span>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+            <div class="overflow-x-auto max-h-[600px] overflow-y-auto relative">
+                <table class="w-full text-sm border-collapse">
                     <thead>
                         <tr class="bg-slate-50/80 dark:bg-slate-800/60 border-b border-blue-100 dark:border-slate-700">
-                            <th class="text-left px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">No</th>
-                            <th class="text-left px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Tanggal</th>
-                            <th class="text-left px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Nama SPG</th>
-                            <th class="text-left px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Counter</th>
-                            <th class="text-left px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Produk / SKU</th>
-                            <th class="text-left px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Size</th>
-                            <th class="text-right px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Qty (Psg)</th>
-                            <th class="text-right px-6 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Nominal (Rp)</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-6 py-3.5 text-left text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">No</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-6 py-3.5 text-left text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Tanggal</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-6 py-3.5 text-left text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Nama SPG</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-6 py-3.5 text-left text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Counter</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-6 py-3.5 text-left text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Produk / SKU</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-6 py-3.5 text-left text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Size</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-6 py-3.5 text-right text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Qty (Psg)</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-6 py-3.5 text-right text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Nominal (Rp)</th>
                         </tr>
                     </thead>
                     <tbody id="salesTableBody" class="divide-y divide-blue-50 dark:divide-slate-800">
@@ -182,16 +182,16 @@
                     {{ count($spgRanking) }} SPG terdaftar
                 </span>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+            <div class="overflow-x-auto max-h-[600px] overflow-y-auto relative">
+                <table class="w-full text-sm border-collapse">
                     <thead>
                         <tr class="bg-slate-50/80 dark:bg-slate-800/60 border-b border-blue-100 dark:border-slate-700">
-                            <th class="text-center px-4 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider w-16">Rank</th>
-                            <th class="text-left px-4 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Nama SPG</th>
-                            <th class="text-center px-4 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Transaksi</th>
-                            <th class="text-center px-4 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Total Qty</th>
-                            <th class="text-left px-4 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider min-w-[200px]">Total Nominal</th>
-                            <th class="text-center px-4 py-3.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Aksi</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-4 py-3.5 text-center text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 w-16 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Rank</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-4 py-3.5 text-left text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Nama SPG</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-4 py-3.5 text-center text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Transaksi</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-4 py-3.5 text-center text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Total Qty</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-4 py-3.5 text-left text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Total Nominal</th>
+                            <th class="sticky top-0 bg-slate-50 dark:bg-slate-800 px-4 py-3.5 text-center text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider z-10 shadow-[inset_0_-1px_0_rgba(219,234,254,1)] dark:shadow-[inset_0_-1px_0_rgba(51,65,85,1)]">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="rankingTableBody" class="divide-y divide-blue-50 dark:divide-slate-800">
