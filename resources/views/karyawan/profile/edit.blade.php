@@ -72,8 +72,21 @@
 
         @php
             $currentRoute = request()->route() ? request()->route()->getName() : '';
-            $updateRoute = $currentRoute ? str_replace('.edit', '.update', $currentRoute) : 'karyawan.profile.update';
-            $destroyAvatarRoute = $currentRoute ? str_replace('.edit', '.destroy-avatar', $currentRoute) : 'karyawan.profile.destroy-avatar';
+            // Resolve update route with safe fallback
+            $updateRoute = 'karyawan.profile.update';
+            $destroyAvatarRoute = 'karyawan.profile.destroy-avatar';
+            if ($currentRoute) {
+                $candidateUpdate = str_replace('.edit', '.update', $currentRoute);
+                $candidateDestroy = str_replace('.edit', '.destroy-avatar', $currentRoute);
+                try {
+                    route($candidateUpdate);
+                    $updateRoute = $candidateUpdate;
+                } catch (\Exception $e) {}
+                try {
+                    route($candidateDestroy);
+                    $destroyAvatarRoute = $candidateDestroy;
+                } catch (\Exception $e) {}
+            }
         @endphp
 
         <!-- Main Form -->
@@ -230,12 +243,11 @@
                     </button>
                 </div>
             </form>
-            @if($user->avatar)
+            {{-- Form hapus avatar selalu ada di DOM agar JS bisa .submit() kapan saja --}}
             <form id="delete-avatar-form" action="{{ route($destroyAvatarRoute) }}" method="POST" class="hidden">
                 @csrf
                 @method('DELETE')
             </form>
-            @endif
         </div>
     </div>
 </div>
