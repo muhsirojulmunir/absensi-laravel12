@@ -26,11 +26,39 @@ class RamayanaStockController extends Controller
         })->with('location');
         
         if (!empty($search)) {
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                  ->orWhereHas('location', function($ql) use ($search) {
-                      $ql->where('name', 'like', "%$search%");
-                  });
+            $matchingLocationIds = Location::query()
+                ->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                    
+                    $cleanSearch = preg_replace('/[^a-zA-Z0-9]/', '', $search);
+                    if (strlen($cleanSearch) >= 2 && strlen($cleanSearch) <= 4 && ctype_alpha($cleanSearch)) {
+                        $pattern = implode('% ', str_split(strtoupper($cleanSearch))) . '%';
+                        $pattern2 = '%' . implode('%', str_split(strtoupper($cleanSearch))) . '%';
+                        $q->orWhere('name', 'like', $pattern)
+                          ->orWhere('name', 'like', $pattern2);
+                    }
+                    
+                    $words = array_filter(explode(' ', $search));
+                    if (count($words) > 1) {
+                        $q->orWhere(function($subQ) use ($words) {
+                            foreach ($words as $w) {
+                                $subQ->where('name', 'like', "%{$w}%");
+                            }
+                        });
+                    }
+                })
+                ->pluck('id')
+                ->toArray();
+
+            $query->where(function($q) use ($search, $matchingLocationIds) {
+                $q->where('name', 'like', "%$search%");
+                if (!empty($matchingLocationIds)) {
+                    $q->orWhereIn('location_id', $matchingLocationIds);
+                    foreach ($matchingLocationIds as $locId) {
+                        $q->orWhere('additional_location_ids', 'like', "%\"{$locId}\"%")
+                          ->orWhere('additional_location_ids', 'like', "%{$locId}%");
+                    }
+                }
             });
         }
         
@@ -71,6 +99,11 @@ class RamayanaStockController extends Controller
                 $totalOverallStock += $counterTotalStock;
             }
         }
+
+        // Urutkan total stock yang terbesar ada di paling atas
+        usort($counterStats, function ($a, $b) {
+            return $b['total_stock'] <=> $a['total_stock'];
+        });
 
         $locations = Location::all();
 

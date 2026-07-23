@@ -1,7 +1,7 @@
 @extends('layouts.master')
 @section('title', 'Manajemen Lokasi Counter')
 @section('content')
-<div class="space-y-6" x-data="{ search: '{{ $query }}' }">
+<div class="space-y-6">
     <!-- Header Section -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -38,13 +38,14 @@
     <div class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
         <!-- Search bar -->
         <div class="p-4 border-b border-slate-100 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-950/20">
-            <form action="{{ route('super-admin.locations.index') }}" method="GET" class="relative">
+            <form id="searchForm" action="{{ route('super-admin.locations.index') }}" method="GET" class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                     <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.637 10.637z"></path>
                     </svg>
                 </div>
-                <input type="text" name="q" x-model="search" placeholder="Cari nama lokasi counter atau koordinat..."
+                <input type="text" name="q" value="{{ $query }}" placeholder="Cari nama lokasi counter atau koordinat..."
+                       id="locationSearch"
                        class="block w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white placeholder-slate-450 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-inner">
             </form>
         </div>
@@ -63,8 +64,7 @@
                 </thead>
                 <tbody id="tableBody" class="divide-y divide-slate-100 dark:divide-slate-850 text-sm">
                     @forelse($locations as $loc)
-                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-colors" 
-                        x-show="search === '' || '{{ strtolower(addslashes($loc->name ?? '') . ' ' . ($loc->latitude ?? '') . ' ' . ($loc->longitude ?? '')) }}'.includes(search.toLowerCase())">
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-colors">
                         <td class="px-6 py-4">
                             <div class="font-bold text-slate-900 dark:text-white">{{ $loc->name }}</div>
                             @if($loc->google_maps_url)

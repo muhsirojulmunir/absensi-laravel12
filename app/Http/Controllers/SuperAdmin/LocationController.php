@@ -10,18 +10,37 @@ class LocationController extends Controller
 {
     public function index(Request $request)
     {
-        $query = $request->get('q', '');
+        $query = $request->get('q', $request->get('search', ''));
         $perPage = 10;
 
         $locations = Location::query();
 
         if (!empty($query)) {
-            $locations->where('name', 'like', '%' . $query . '%')
-                      ->orWhere('latitude', 'like', '%' . $query . '%')
-                      ->orWhere('longitude', 'like', '%' . $query . '%');
+            $locations->where(function($q) use ($query) {
+                $q->where('name', 'like', '%' . $query . '%')
+                  ->orWhere('latitude', 'like', '%' . $query . '%')
+                  ->orWhere('longitude', 'like', '%' . $query . '%');
+
+                $cleanQuery = preg_replace('/[^a-zA-Z0-9]/', '', $query);
+                if (strlen($cleanQuery) >= 2 && strlen($cleanQuery) <= 4 && ctype_alpha($cleanQuery)) {
+                    $pattern = implode('% ', str_split(strtoupper($cleanQuery))) . '%';
+                    $pattern2 = '%' . implode('%', str_split(strtoupper($cleanQuery))) . '%';
+                    $q->orWhere('name', 'like', $pattern)
+                      ->orWhere('name', 'like', $pattern2);
+                }
+
+                $words = array_filter(explode(' ', $query));
+                if (count($words) > 1) {
+                    $q->orWhere(function($subQ) use ($words) {
+                        foreach ($words as $w) {
+                            $subQ->where('name', 'like', "%{$w}%");
+                        }
+                    });
+                }
+            });
         }
 
-        $locations = $locations->latest()->paginate($perPage);
+        $locations = $locations->latest()->paginate($perPage)->withQueryString();
 
         if ($request->wantsJson()) {
             return response()->json([
