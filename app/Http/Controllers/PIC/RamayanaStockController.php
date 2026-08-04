@@ -9,12 +9,9 @@ use App\Models\Location;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-
+use App\Models\Setting;
 use App\Models\IncomingStock;
-
-// Load SimpleXLSX directly (bundled, not from vendor/composer)
-require_once app_path('Libraries/Shuchkin/SimpleXLSX.php');
-use Shuchkin\SimpleXLSX;
+use App\Services\ExcelImportReader;
 
 class RamayanaStockController extends Controller
 {
@@ -68,24 +65,34 @@ class RamayanaStockController extends Controller
         $counterStats = [];
         $totalOverallStock = 0;
         $seenLocations = []; // Hindari double-counting jika 1 toko punya beberapa karyawan
-        
-        foreach ($users as $user) {
-            $userIds = $user->location_id 
-                ? User::where('location_id', $user->location_id)->pluck('id')->toArray() 
-                : [$user->id];
 
-            $rawStocks = SalesInput::select('sku',
-                DB::raw("SUM(CASE WHEN type IN ('stock_in','incoming') THEN qty ELSE -qty END) as current_stock")
+        // Hitung total stok & total SKU langsung di database (server-side aggregation),
+        // dikelompokkan per lokasi (atau per user jika user tidak punya lokasi).
+        // Ini menghindari menarik puluhan ribu baris ke PHP yang sangat lambat di koneksi DB remote.
+        $inner = DB::table('sales_inputs as si')
+            ->join('users as u', 'u.id', '=', 'si.user_id')
+            ->select(
+                DB::raw('COALESCE(u.location_id, u.id) as loc_key'),
+                'si.sku', 'si.satuan',
+                DB::raw("SUM(CASE WHEN si.type IN ('stock_in','incoming') THEN si.qty ELSE -si.qty END) as stock")
             )
-            ->whereIn('user_id', $userIds)
-            ->where('date', '<=', $filterDate)
-            ->groupBy('sku')
-            ->get();
-            
-            // Hanya jumlah stok yang positif (tersedia)
-            $counterTotalStock = $rawStocks->where('current_stock', '>', 0)->sum('current_stock');
-            $counterTotalSku = $rawStocks->where('current_stock', '>', 0)->count();
-            
+            ->where('si.date', '<=', $filterDate)
+            ->groupBy('loc_key', 'si.sku', 'si.satuan');
+
+        $aggByLocKey = DB::query()->fromSub($inner, 't')
+            ->select('loc_key', DB::raw('SUM(stock) as total_stock'), DB::raw('COUNT(*) as total_sku'))
+            ->where('stock', '>', 0)
+            ->groupBy('loc_key')
+            ->get()
+            ->keyBy('loc_key');
+
+        foreach ($users as $user) {
+            $locKey = $user->location_id ?: $user->id;
+            $agg = $aggByLocKey->get($locKey);
+
+            $counterTotalStock = $agg->total_stock ?? 0;
+            $counterTotalSku = $agg->total_sku ?? 0;
+
             $counterStats[] = [
                 'user_id' => $user->id,
                 'spg_name' => $user->name,
@@ -93,7 +100,7 @@ class RamayanaStockController extends Controller
                 'total_stock' => $counterTotalStock,
                 'total_sku' => $counterTotalSku
             ];
-            
+
             // Hanya tambahkan ke total keseluruhan sekali per lokasi/toko
             $locationKey = $user->location_id ? 'loc_' . $user->location_id : 'user_' . $user->id;
             if (!isset($seenLocations[$locationKey])) {
@@ -109,7 +116,18 @@ class RamayanaStockController extends Controller
 
         $locations = Location::all();
 
-        return view('pic.ramayana-stocks.index', compact('counterStats', 'search', 'totalOverallStock', 'locations', 'filterDate'));
+        // Ambil timestamp import terakhir untuk setiap lokasi
+        $importTimestamps = Setting::where('key', 'like', 'stock_last_import_%')
+            ->get()
+            ->mapWithKeys(function ($s) {
+                $locId = str_replace('stock_last_import_', '', $s->key);
+                return [$locId => $s->value];
+            })
+            ->toArray();
+
+        return view('pic.ramayana-stocks.index', compact(
+            'counterStats', 'search', 'totalOverallStock', 'locations', 'filterDate', 'importTimestamps'
+        ));
     }
 
     public function show($id, Request $request)
@@ -209,16 +227,30 @@ class RamayanaStockController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv',
+            'file' => 'required|file',
             'import_location_id' => 'required|exists:locations,id'
         ]);
+
+        $allowedExtensions = ['xlsx', 'xls', 'ods', 'csv'];
+        $ext = strtolower($request->file('file')->getClientOriginalExtension());
+        if ($ext === 'xlsb') {
+            return redirect()->back()->with('error', 'File berformat Excel Binary Workbook (.xlsb) belum didukung. Silakan buka file tersebut di Excel, lalu "Save As" → pilih "Excel Workbook (*.xlsx)", kemudian upload ulang file .xlsx tersebut.');
+        }
+        if (!in_array($ext, $allowedExtensions)) {
+            return redirect()->back()->with('error', 'Format file tidak didukung. Gunakan file Excel (xlsx, xls, ods) atau CSV.');
+        }
 
         $debugLog = [];
         $debugLog[] = "=== IMPORT START (PIC): " . now()->toDateTimeString() . " ===";
         $debugLog[] = "Location ID: " . $request->import_location_id;
 
-        if ($xlsx = SimpleXLSX::parse($request->file('file')->path())) {
-            $rows = $xlsx->rows();
+        try {
+            $rows = ExcelImportReader::readRows($request->file('file')->path());
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Gagal membaca file Excel. ' . $e->getMessage());
+        }
+
+        if (true) {
             if (empty($rows)) {
                 return redirect()->back()->with('error', 'File Excel sama sekali kosong atau gagal terbaca.');
             }
@@ -272,14 +304,10 @@ class RamayanaStockController extends Controller
 
                 IncomingStock::where('user_id', $userId)->delete();
 
-                $existingSales = SalesInput::select('kode_barang', DB::raw("SUM(qty) as total_out"))
-                    ->where('user_id', $userId)
+                // Hapus juga data penjualan lama — angka Excel = stok fisik saat ini
+                SalesInput::where('user_id', $userId)
                     ->where('type', 'sale')
-                    ->whereNotNull('kode_barang')
-                    ->where('kode_barang', '!=', '')
-                    ->groupBy('kode_barang')
-                    ->get()
-                    ->keyBy('kode_barang');
+                    ->delete();
             } else {
                 $existingSales = collect();
             }
@@ -322,8 +350,8 @@ class RamayanaStockController extends Controller
                 $warna = $warnaExcel;
 
                 if ($importMode === 'replace') {
-                    $totalOut = isset($existingSales[$kodeBarang]) ? $existingSales[$kodeBarang]->total_out : 0;
-                    $finalQty = $qty + $totalOut;
+                    // Simpan langsung dari Excel — angka Excel = stok fisik saat ini
+                    $finalQty = $qty;
                     $insertType = 'stock_in';
                 } else {
                     $finalQty = $qty;
@@ -357,11 +385,16 @@ class RamayanaStockController extends Controller
                 }
             }
 
+            // Simpan timestamp import terakhir untuk lokasi ini
+            $locationId = $request->import_location_id;
+            Setting::updateOrCreate(
+                ['key' => "stock_last_import_{$locationId}"],
+                ['value' => now()->toDateTimeString()]
+            );
+
             $modeText = ($importMode === 'replace') ? 'Ganti Total Stok' : 'Tambah Stok (Barang Datang)';
             $message = "Berhasil ($modeText)! $successCount baris Excel dibaca, $actualInserted produk stok berhasil diproses.";
             return redirect()->route('pic_ramayana.ramayana-stocks.index')->with('success', $message);
-        } else {
-            return redirect()->back()->with('error', 'Gagal membaca file Excel. ' . SimpleXLSX::parseError());
         }
     }
 }

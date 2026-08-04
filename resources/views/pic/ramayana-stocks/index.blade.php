@@ -61,7 +61,7 @@
                                         <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">3. Upload File Excel (.xlsx)</label>
                                         <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">Upload langsung file export dari aplikasi internal (JAYA MANDIRI). Pastikan sudah di-Save As ke format <strong>.xlsx</strong>.</p>
                                         <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                            <input type="file" name="file" id="file" accept=".xlsx, .xls, .csv" required class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 cursor-pointer">
+                                            <input type="file" name="file" id="file" accept=".xlsx, .xls, .ods, .csv" required class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 cursor-pointer">
                                         </div>
                                     </div>
                                 </div>
@@ -160,12 +160,21 @@
                         <th class="p-4">Counter</th>
                         <th class="p-4 text-center">Jumlah SKU</th>
                         <th class="p-4 text-center">Total Stok</th>
+                        <th class="p-4 text-center">Terakhir Import Excel</th>
                         <th class="p-4 text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
                     @php $no = 1; @endphp
                     @forelse($counterStats as $counter)
+                    @php
+                        $counterUser = \App\Models\User::find($counter['user_id']);
+                        $counterLocId = $counterUser ? ($counterUser->location_id ?: $counterUser->id) : null;
+                        $lastImportRaw = $counterLocId ? ($importTimestamps[$counterLocId] ?? null) : null;
+                        $lastImportStr = $lastImportRaw
+                            ? \Carbon\Carbon::parse($lastImportRaw)->translatedFormat('d M Y, H:i')
+                            : null;
+                    @endphp
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" 
                         x-show="search === '' || '{{ strtolower($counter['spg_name'] . ' ' . $counter['location']) }}'.includes(search.toLowerCase())">
                         <td class="p-4 text-sm font-medium text-slate-400 text-center">{{ $no++ }}</td>
@@ -184,12 +193,23 @@
                         </td>
                         <td class="p-4 text-center">
                             <span class="inline-flex items-center justify-center min-w-[64px] px-3 py-1.5 rounded-lg text-sm font-black
-                                @if($counter['total_stock'] < 0) bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
-                                @elseif($counter['total_stock'] == 0) bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400
+                                @if($counter['total_stock'] == 0) bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400
                                 @else bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400
                                 @endif">
-                                {{ $counter['total_stock'] }} ITEMS
+                                {{ abs($counter['total_stock']) }} ITEMS
                             </span>
+                        </td>
+                        <td class="p-4 text-center">
+                            @if($lastImportStr)
+                                <div class="flex flex-col items-center gap-0.5">
+                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                        {{ $lastImportStr }}
+                                    </span>
+                                </div>
+                            @else
+                                <span class="text-xs text-slate-400 dark:text-slate-500 italic">Belum pernah import</span>
+                            @endif
                         </td>
                         <td class="p-4 text-center">
                             <a href="{{ route('pic_ramayana.ramayana-stocks.show', $counter['user_id']) }}?date={{ $filterDate }}" class="inline-flex items-center justify-center px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-800/50 rounded-xl text-xs font-bold transition-colors">
@@ -200,7 +220,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="p-12 text-center">
+                        <td colspan="7" class="p-12 text-center">
                             <div class="flex flex-col items-center">
                                 <svg class="w-16 h-16 text-slate-300 dark:text-slate-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                                 <p class="text-slate-500 dark:text-slate-400 font-medium">Belum ada Karyawan Ramayana.</p>
