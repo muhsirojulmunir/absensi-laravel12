@@ -2,7 +2,28 @@
 @section('title', 'Manajemen Stok Ramayana')
 @section('content')
 <div class="space-y-6">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" x-data="{ showImportModal: false }">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" x-data="{
+            showImportModal: false,
+            locations: {{ Illuminate\Support\Js::from($locations->map(fn($l) => ['id' => $l->id, 'name' => $l->name])->values()) }},
+            locQuery: '',
+            locOpen: false,
+            locSelectedId: '',
+            get filteredLocations() {
+                if (this.locQuery.trim() === '') return this.locations;
+                const q = this.locQuery.toLowerCase();
+                return this.locations.filter(l => l.name.toLowerCase().includes(q));
+            },
+            selectLocation(loc) {
+                this.locSelectedId = loc.id;
+                this.locQuery = loc.name;
+                this.locOpen = false;
+            },
+            resetLocation() {
+                this.locQuery = '';
+                this.locSelectedId = '';
+                this.locOpen = false;
+            }
+        }">
         <div>
             <h2 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Manajemen Stok Ramayana</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Pantau dan Kelola Stok Real-time Counter</p>
@@ -19,10 +40,10 @@
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                 <div x-show="showImportModal" x-transition.opacity class="fixed inset-0 bg-slate-900/75 transition-opacity" aria-hidden="true" @click="showImportModal = false"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                <div x-show="showImportModal" x-transition.scale.origin.bottom class="relative z-10 inline-block align-bottom bg-white dark:bg-slate-900 rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full border border-slate-200 dark:border-slate-800">
+                <div x-show="showImportModal" x-transition.scale.origin.bottom class="relative z-10 inline-block align-bottom bg-white dark:bg-slate-900 rounded-3xl text-left shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full border border-slate-200 dark:border-slate-800">
                     <form action="{{ route('pic_ramayana.ramayana-stocks.import') }}" method="POST" enctype="multipart/form-data">
                         @csrf
-                        <div class="bg-white dark:bg-slate-900 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="bg-white dark:bg-slate-900 rounded-t-3xl px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                             <div class="sm:flex sm:items-start">
                                 <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 sm:mx-0 sm:h-10 sm:w-10">
                                     <svg class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -33,12 +54,38 @@
                                     <h3 class="text-lg leading-6 font-bold text-slate-900 dark:text-white" id="modal-title">Import Data Stok Internal</h3>
                                     <div class="mt-2 text-left">
                                         <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">1. Pilih Counter Tujuan</label>
-                                        <select name="import_location_id" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 p-3 transition-colors font-medium mb-4">
-                                            <option value="">-- Pilih Counter Ramayana --</option>
-                                            @foreach($locations as $loc)
-                                                <option value="{{ $loc->id }}">{{ $loc->name }}</option>
-                                            @endforeach
-                                        </select>
+                                        <div class="relative mb-4" @click.outside="locOpen = false">
+                                            <div class="relative">
+                                                <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                                <input
+                                                    type="text"
+                                                    x-model="locQuery"
+                                                    @focus="locOpen = true; $el.select()"
+                                                    @input="locOpen = true; locSelectedId = ''"
+                                                    @keydown.escape="locOpen = false"
+                                                    @keydown.enter.prevent="if (filteredLocations.length) selectLocation(filteredLocations[0])"
+                                                    placeholder="Cari nama / kode counter…"
+                                                    autocomplete="off"
+                                                    class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 pl-10 pr-9 py-3 transition-colors font-medium placeholder:font-normal placeholder:text-slate-400"
+                                                >
+                                                <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 cursor-pointer" :class="{ 'rotate-180': locOpen }" @click="locOpen = !locOpen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            </div>
+                                            <input type="hidden" name="import_location_id" :value="locSelectedId">
+
+                                            <div x-show="locOpen" x-transition.opacity.duration.150ms
+                                                 class="absolute left-0 top-full mt-2 z-30 w-full max-h-44 overflow-y-auto overscroll-contain bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl divide-y divide-slate-100 dark:divide-slate-700/60 py-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+                                                <template x-for="loc in filteredLocations" :key="loc.id">
+                                                    <button type="button"
+                                                        @click="selectLocation(loc)"
+                                                        class="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
+                                                        :class="{ 'bg-emerald-50 dark:bg-emerald-900/40 font-semibold text-emerald-700 dark:text-emerald-300': loc.id === locSelectedId }"
+                                                        x-text="loc.name">
+                                                    </button>
+                                                </template>
+                                                <div x-show="filteredLocations.length === 0" class="px-4 py-3 text-sm text-slate-400 italic">Counter tidak ditemukan.</div>
+                                            </div>
+                                        </div>
+                                        <p x-show="!locSelectedId" class="-mt-3 mb-4 text-xs text-amber-600 dark:text-amber-400">Silakan pilih counter dari daftar sebelum upload.</p>
 
                                         <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">2. Mode Import / Jenis Transaksi</label>
                                         <div class="space-y-2 mb-4">
@@ -67,11 +114,11 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-slate-50 dark:bg-slate-800/50 px-4 py-4 sm:px-6 sm:flex sm:flex-row-reverse border-t border-slate-200 dark:border-slate-800">
-                            <button type="submit" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2.5 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+                        <div class="bg-slate-50 dark:bg-slate-800/50 rounded-b-3xl px-4 py-4 sm:px-6 sm:flex sm:flex-row-reverse border-t border-slate-200 dark:border-slate-800">
+                            <button type="submit" :disabled="!locSelectedId" :class="locSelectedId ? 'bg-green-600 hover:bg-green-700 cursor-pointer' : 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed'" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2.5 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
                                 Upload & Import
                             </button>
-                            <button type="button" @click="showImportModal = false" class="mt-3 w-full inline-flex justify-center rounded-xl border border-slate-300 dark:border-slate-700 shadow-sm px-4 py-2.5 bg-white dark:bg-slate-900 text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+                            <button type="button" @click="showImportModal = false; resetLocation()" class="mt-3 w-full inline-flex justify-center rounded-xl border border-slate-300 dark:border-slate-700 shadow-sm px-4 py-2.5 bg-white dark:bg-slate-900 text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
                                 Batal
                             </button>
                         </div>
