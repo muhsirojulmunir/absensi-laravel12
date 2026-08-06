@@ -405,35 +405,79 @@ class AttendanceMonitoringController extends Controller
         $sheet       = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Absensi');
 
-        // Header Columns
+        // ── Baris 1: Judul panduan
+        $sheet->mergeCells('A1:F1');
+        $sheet->setCellValue('A1', '📋 TEMPLATE IMPORT ABSENSI MASSAL — Hanya isi kolom yang tersedia. Kolom Status boleh dikosongkan (otomatis = Hadir).');
+        $sheet->getStyle('A1')->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '92400E']],
+            'fill'      => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT, 'wrapText' => true],
+        ]);
+        $sheet->getRowDimension(1)->setRowHeight(28);
+
+        // ── Baris 2: Header Kolom
         $headers = [
-            'Nama Karyawan',
-            'Tanggal (YYYY-MM-DD)',
-            'Jam Masuk (HH:MM)',
-            'Jam Pulang (HH:MM)',
-            'Status (Hadir/Terlambat/Izin/Sakit)',
-            'Catatan',
+            'A2' => 'Nama Karyawan',
+            'B2' => 'Tanggal',
+            'C2' => 'Jam Masuk',
+            'D2' => 'Jam Pulang',
+            'E2' => 'Status',
+            'F2' => 'Catatan',
         ];
-        $sheet->fromArray([$headers], null, 'A1');
-
-        // Style Header Row
-        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:F1')->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setRGB('4F46E5'); // Indigo color
-        $sheet->getStyle('A1:F1')->getFont()->getColor()->setRGB('FFFFFF');
-
-        // Sample Rows
-        $sampleData = [
-            ['Budi Santoso', date('Y-m-d'), '08:00', '17:00', 'Hadir', 'Absen Import Massal'],
-            ['Siti Aminah', date('Y-m-d'), '08:30', '17:00', 'Hadir', 'Absen Import Massal'],
-        ];
-        $sheet->fromArray($sampleData, null, 'A2');
-
-        // Auto-fit Column Widths
-        foreach (range('A', 'F') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
+        foreach ($headers as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
         }
+        $sheet->getStyle('A2:F2')->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+            'borders'   => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => '3730A3']]],
+        ]);
+
+        // ── Baris 3: Panduan format kolom (warna abu)
+        $guides = [
+            'A3' => 'Nama lengkap sesuai sistem',
+            'B3' => 'Format: YYYY-MM-DD  (contoh: ' . date('Y-m-d') . ')',
+            'C3' => 'Format: HH:MM  (contoh: 08:00)',
+            'D3' => 'Format: HH:MM  (contoh: 17:00)',
+            'E3' => 'Hadir / Terlambat / Izin / Sakit  (boleh kosong)',
+            'F3' => 'Keterangan tambahan  (boleh kosong)',
+        ];
+        foreach ($guides as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
+        $sheet->getStyle('A3:F3')->applyFromArray([
+            'font'      => ['italic' => true, 'size' => 9, 'color' => ['rgb' => '6B7280']],
+            'fill'      => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT],
+        ]);
+
+        // ── Baris 4–6: Contoh data
+        $today      = date('Y-m-d');
+        $sampleData = [
+            4 => ['Budi Santoso',  $today, '08:00', '17:00', 'Hadir',  'Import massal'],
+            5 => ['Siti Aminah',   $today, '08:30', '17:00', '',       ''],
+            6 => ['Ahmad Fauzi',   $today, '10:15', '17:00', '',       ''],
+        ];
+        foreach ($sampleData as $rowNum => $rowData) {
+            $sheet->fromArray($rowData, null, 'A' . $rowNum);
+            // Gaya baris data
+            $fillColor = ($rowNum % 2 === 0) ? 'F8FAFC' : 'FFFFFF';
+            $sheet->getStyle('A' . $rowNum . ':F' . $rowNum)->applyFromArray([
+                'fill'    => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => $fillColor]],
+                'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'E2E8F0']]],
+                'font'    => ['size' => 10],
+            ]);
+        }
+
+        // ── Lebar kolom yang optimal
+        $columnWidths = ['A' => 28, 'B' => 20, 'C' => 16, 'D' => 16, 'E' => 30, 'F' => 30];
+        foreach ($columnWidths as $col => $width) {
+            $sheet->getColumnDimension($col)->setWidth($width);
+        }
+
+        // ── Freeze pane agar header tetap terlihat saat scroll
+        $sheet->freezePane('A4');
 
         $fileName = 'template_import_absen_' . date('Ymd') . '.' . ($format === 'csv' ? 'csv' : 'xlsx');
 
@@ -584,14 +628,16 @@ class AttendanceMonitoringController extends Controller
                 }
             }
 
-            // Status
+            // Status — Jika kolom Status kosong, otomatis = 'Hadir'
             $statusRaw     = isset($row[$colStatus]) ? trim((string) $row[$colStatus]) : '';
             $validStatuses = ['Hadir', 'Terlambat', 'Izin', 'Sakit'];
-            $status        = 'Hadir';
-            foreach ($validStatuses as $vs) {
-                if (strcasecmp($statusRaw, $vs) === 0) {
-                    $status = $vs;
-                    break;
+            $status        = 'Hadir'; // Default: Hadir jika kosong
+            if (!empty($statusRaw)) {
+                foreach ($validStatuses as $vs) {
+                    if (strcasecmp($statusRaw, $vs) === 0) {
+                        $status = $vs;
+                        break;
+                    }
                 }
             }
 
