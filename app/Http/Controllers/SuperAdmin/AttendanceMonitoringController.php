@@ -393,4 +393,232 @@ class AttendanceMonitoringController extends Controller
             ->route('super-admin.attendance.deleted-backups')
             ->with('success', 'Absensi berhasil dipulihkan dari cadangan.');
     }
+
+    /**
+     * Download template Excel/CSV import absensi massal
+     */
+    public function downloadTemplate()
+    {
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="template_import_absen.csv"',
+        ];
+
+        return response()->streamDownload(function () {
+            $file = fopen('php://output', 'w');
+            fputs($file, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel compatibility
+            fputcsv($file, ['Nama Karyawan', 'Tanggal (YYYY-MM-DD)', 'Jam Masuk (HH:MM)', 'Jam Pulang (HH:MM)', 'Status (Hadir/Terlambat/Izin/Sakit)', 'Catatan']);
+            fputcsv($file, ['Contoh Nama Karyawan', date('Y-m-d'), '08:00', '17:00', 'Hadir', 'Absen Import Massal']);
+            fclose($file);
+        }, 'template_import_absen.csv', $headers);
+    }
+
+    /**
+     * Import data absensi massal dari Excel / CSV
+     */
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
+        ]);
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        try {
+            $rows = \App\Services\ExcelImportReader::readRows($path);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal membaca file Excel/CSV: ' . $e->getMessage());
+        }
+
+        if (empty($rows) || count($rows) < 2) {
+            return back()->with('error', 'File Excel/CSV kosong atau tidak memiliki data.');
+        }
+
+        // Deteksi kolom dari baris header
+        $headerRowIndex = null;
+        $colNama        = null;
+        $colTanggal     = null;
+        $colCheckIn     = null;
+        $colCheckOut    = null;
+        $colStatus      = null;
+        $colCatatan     = null;
+
+        foreach ($rows as $index => $row) {
+            $rowStr = implode(' ', array_map('strtolower', array_map('strval', $row)));
+            if (str_contains($rowStr, 'nama') || str_contains($rowStr, 'karyawan') || str_contains($rowStr, 'tanggal') || str_contains($rowStr, 'masuk')) {
+                $headerRowIndex = $index;
+                foreach ($row as $colIdx => $val) {
+                    $v = strtolower(trim((string) $val));
+                    if (str_contains($v, 'nama') || str_contains($v, 'karyawan')) $colNama = $colIdx;
+                    elseif (str_contains($v, 'tanggal') || str_contains($v, 'date')) $colTanggal = $colIdx;
+                    elseif (str_contains($v, 'masuk') || str_contains($v, 'check_in') || str_contains($v, 'check in')) $colCheckIn = $colIdx;
+                    elseif (str_contains($v, 'pulang') || str_contains($v, 'check_out') || str_contains($v, 'check out')) $colCheckOut = $colIdx;
+                    elseif (str_contains($v, 'status')) $colStatus = $colIdx;
+                    elseif (str_contains($v, 'catatan') || str_contains($v, 'note')) $colCatatan = $colIdx;
+                }
+                break;
+            }
+        }
+
+        if ($headerRowIndex === null) $headerRowIndex = 0;
+        if ($colNama === null) $colNama = 0;
+        if ($colTanggal === null) $colTanggal = 1;
+        if ($colCheckIn === null) $colCheckIn = 2;
+        if ($colCheckOut === null) $colCheckOut = 3;
+        if ($colStatus === null) $colStatus = 4;
+        if ($colCatatan === null) $colCatatan = 5;
+
+        // Ambil seluruh karyawan aktif untuk pencocokan nama/username/email
+        $users   = User::all();
+        $userMap = [];
+        foreach ($users as $u) {
+            $userMap[strtolower(trim((string) $u->name))] = $u;
+            if (!empty($u->username)) {
+                $userMap[strtolower(trim((string) $u->username))] = $u;
+            }
+            if (!empty($u->email)) {
+                $userMap[strtolower(trim((string) $u->email))] = $u;
+            }
+        }
+
+        $importedCount  = 0;
+        $skippedCount   = 0;
+        $skippedDetails = [];
+
+        for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
+            $row = $rows[$i];
+
+            $namaRaw = isset($row[$colNama]) ? trim((string) $row[$colNama]) : '';
+            if (empty($namaRaw)) continue;
+
+            $namaKey = strtolower($namaRaw);
+
+            // LOGIKA UTAMA: Jika nama karyawan TIDAK ADA di sistem -> LEWATI (SKIP)
+            if (!isset($userMap[$namaKey])) {
+                $skippedCount++;
+                if (count($skippedDetails) < 5) {
+                    $skippedDetails[] = "Baris " . ($i + 1) . " ('$namaRaw')";
+                }
+                continue;
+            }
+
+            $employee = $userMap[$namaKey];
+
+            // Parsing Tanggal
+            $tanggalRaw = isset($row[$colTanggal]) ? trim((string) $row[$colTanggal]) : '';
+            $targetDate = null;
+            if (!empty($tanggalRaw)) {
+                try {
+                    if (is_numeric($tanggalRaw)) {
+                        $targetDate = Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($tanggalRaw))->toDateString();
+                    } else {
+                        $targetDate = Carbon::parse($tanggalRaw)->toDateString();
+                    }
+                } catch (\Throwable $e) {
+                    $targetDate = now()->toDateString();
+                }
+            } else {
+                $targetDate = now()->toDateString();
+            }
+
+            // Parsing Jam Masuk
+            $checkInRaw       = isset($row[$colCheckIn]) ? trim((string) $row[$colCheckIn]) : '';
+            $checkInFormatted = null;
+            if (!empty($checkInRaw)) {
+                if (is_numeric($checkInRaw)) {
+                    $checkInFormatted = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($checkInRaw)->format('H:i:00');
+                } else {
+                    $checkInFormatted = date('H:i:00', strtotime($checkInRaw));
+                }
+            }
+
+            // Parsing Jam Pulang
+            $checkOutRaw       = isset($row[$colCheckOut]) ? trim((string) $row[$colCheckOut]) : '';
+            $checkOutFormatted = null;
+            if (!empty($checkOutRaw)) {
+                if (is_numeric($checkOutRaw)) {
+                    $checkOutFormatted = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($checkOutRaw)->format('H:i:00');
+                } else {
+                    $checkOutFormatted = date('H:i:00', strtotime($checkOutRaw));
+                }
+            }
+
+            // Status
+            $statusRaw     = isset($row[$colStatus]) ? trim((string) $row[$colStatus]) : '';
+            $validStatuses = ['Hadir', 'Terlambat', 'Izin', 'Sakit'];
+            $status        = 'Hadir';
+            foreach ($validStatuses as $vs) {
+                if (strcasecmp($statusRaw, $vs) === 0) {
+                    $status = $vs;
+                    break;
+                }
+            }
+
+            // Catatan
+            $noteRaw = isset($row[$colCatatan]) && !empty(trim((string) $row[$colCatatan])) 
+                ? trim((string) $row[$colCatatan]) 
+                : 'Import Massal Absensi';
+
+            // Hitung Keterlambatan
+            $latenessMinutes = 0;
+            if ($checkInFormatted && !in_array($status, ['Izin', 'Sakit'])) {
+                $userDivision     = $employee->division ? strtolower(trim((string) $employee->division->name)) : '';
+                $isLiveStreaming  = str_contains($userDivision, 'live streaming');
+                $isSalesMarketing = str_contains($userDivision, 'sales marketing');
+
+                if (!$isLiveStreaming && !$isSalesMarketing) {
+                    $checkInTime   = Carbon::parse($targetDate . ' ' . $checkInFormatted);
+                    $lateThreshold = Carbon::parse($targetDate . ' 10:00:00');
+                    if ($checkInTime->greaterThanOrEqualTo($lateThreshold)) {
+                        $latenessMinutes = (int) $lateThreshold->diffInMinutes($checkInTime);
+                        $status          = 'Terlambat';
+                    }
+                }
+            }
+
+            // Hitung Is Pulang Cepat
+            $isPulangCepat = false;
+            if ($checkOutFormatted && $checkInFormatted) {
+                $userDivision  = $employee->division ? strtolower(trim((string) $employee->division->name)) : '';
+                $checkInTime   = Carbon::parse($targetDate . ' ' . $checkInFormatted);
+                $checkOutTime  = Carbon::parse($targetDate . ' ' . $checkOutFormatted);
+                $minutesWorked = (int) $checkInTime->diffInMinutes($checkOutTime);
+
+                if ($employee->role->slug === 'karyawan_ramayana') {
+                    $isPulangCepat = $minutesWorked < (7 * 60);
+                } elseif (str_contains($userDivision, 'gudang')) {
+                    $isPulangCepat = $checkOutFormatted < '18:00:00';
+                } else {
+                    $isPulangCepat = $minutesWorked < (8 * 60);
+                }
+            }
+
+            Attendance::updateOrCreate(
+                [
+                    'user_id' => $employee->id,
+                    'date'    => $targetDate,
+                ],
+                [
+                    'check_in'         => $checkInFormatted,
+                    'check_out'        => $checkOutFormatted,
+                    'status'           => $status,
+                    'lateness_minutes' => $latenessMinutes,
+                    'is_pulang_cepat'  => $isPulangCepat,
+                    'note'             => $noteRaw,
+                    'lat'              => 0,
+                    'long'             => 0,
+                ]
+            );
+
+            $importedCount++;
+        }
+
+        $msg = "✅ Berhasil meng-import {$importedCount} data absensi.";
+        if ($skippedCount > 0) {
+            $msg .= " ({$skippedCount} baris dilewati karena karyawan tidak terdaftar di sistem: " . implode(', ', $skippedDetails) . ")";
+        }
+
+        return back()->with('success', $msg);
+    }
 };

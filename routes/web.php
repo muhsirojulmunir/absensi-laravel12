@@ -75,6 +75,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('attendance.destroy');
         Route::post('/attendance/manual-checkin', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'manualCheckin'])->name('attendance.manual-checkin');
         Route::post('/attendance/manual-checkout', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'manualCheckout'])->name('attendance.manual-checkout');
+        Route::get('/attendance/import-template', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'downloadTemplate'])->name('attendance.import-template');
+        Route::post('/attendance/import', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'import'])->name('attendance.import');
         Route::get('/attendance/payment-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'paymentHistory'])->name('attendance.payment-history');
 
         // Leave Approvals untuk Super Admin (Bisa hapus dll)
