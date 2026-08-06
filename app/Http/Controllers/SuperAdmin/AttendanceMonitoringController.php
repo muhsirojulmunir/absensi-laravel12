@@ -621,4 +621,4 @@ class AttendanceMonitoringController extends Controller
 
         return back()->with('success', $msg);
     }
-};
+}
