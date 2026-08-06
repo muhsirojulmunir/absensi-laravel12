@@ -304,10 +304,22 @@ class RamayanaStockController extends Controller
 
                 IncomingStock::where('user_id', $userId)->delete();
 
-                // Hapus juga data penjualan lama — angka Excel = stok fisik saat ini
-                SalesInput::where('user_id', $userId)
+                // PENTING: Data penjualan (sale) TIDAK dihapus — itu data krusial!
+                // Kompensasi per kode_barang + size agar net stock = angka Excel.
+                $existingSales = SalesInput::select(
+                        'kode_barang',
+                        'size',
+                        DB::raw('SUM(qty) as total_out')
+                    )
+                    ->where('user_id', $userId)
                     ->where('type', 'sale')
-                    ->delete();
+                    ->whereNotNull('kode_barang')
+                    ->where('kode_barang', '!=', '')
+                    ->groupBy('kode_barang', 'size')
+                    ->get()
+                    ->keyBy(function ($row) {
+                        return $row->kode_barang . '|' . ($row->size ?? '');
+                    });
             } else {
                 $existingSales = collect();
             }
@@ -350,8 +362,10 @@ class RamayanaStockController extends Controller
                 $warna = $warnaExcel;
 
                 if ($importMode === 'replace') {
-                    // Simpan langsung dari Excel — angka Excel = stok fisik saat ini
-                    $finalQty = $qty;
+                    // Kompensasi per kode_barang + size agar net stock = angka Excel
+                    $saleKey = $kodeBarang . '|' . $size;
+                    $totalOut = isset($existingSales[$saleKey]) ? (int)$existingSales[$saleKey]->total_out : 0;
+                    $finalQty = $qty + $totalOut;
                     $insertType = 'stock_in';
                 } else {
                     $finalQty = $qty;

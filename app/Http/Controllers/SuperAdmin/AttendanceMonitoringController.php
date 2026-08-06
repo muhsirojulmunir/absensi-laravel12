@@ -198,15 +198,18 @@ class AttendanceMonitoringController extends Controller
         $userDivision   = $employee->division ? strtolower(trim((string) $employee->division->name)) : '';
         $isLiveStreaming = str_contains($userDivision, 'live streaming');
 
-        if (!$isLiveStreaming) {
-            $expectedCheckIn = Carbon::parse($targetDate . ' ' . ($settings['check_in_time'] ?? '08:00') . ':00');
-            $graceMinutes    = (int) ($settings['late_tolerance_minutes'] ?? 15);
+        $isSalesMarketing = str_contains($userDivision, 'sales marketing');
 
-            if ($checkInTime->greaterThan($expectedCheckIn->copy()->addMinutes($graceMinutes))) {
-                $latenessMinutes = (int) $expectedCheckIn->diffInMinutes($checkInTime);
+        if (!$isLiveStreaming && !$isSalesMarketing) {
+            // Staff kantor dan divisi lain: terlambat jika check-in jam 10.00 ke atas
+            $lateThreshold = Carbon::parse($targetDate . ' 10:00:00');
+
+            if ($checkInTime->greaterThanOrEqualTo($lateThreshold)) {
+                $latenessMinutes = (int) $lateThreshold->diffInMinutes($checkInTime);
                 $status          = 'Terlambat';
             }
         }
+        // Sales Marketing & Live Streaming: tidak ada terlambat (status tetap dari input form)
 
         if ($existing instanceof Attendance) {
             $existing->update([

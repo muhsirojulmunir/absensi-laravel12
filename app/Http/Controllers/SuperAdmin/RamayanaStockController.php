@@ -335,15 +335,27 @@ class RamayanaStockController extends Controller
                 IncomingStock::where('user_id', $userId)->delete();
                 $debugLog[] = "Deleted all incoming_stocks history for user $userId (Replace Mode)";
 
-                // Hapus juga semua data penjualan (sale) lama karena angka Excel
-                // sudah merupakan stok fisik saat ini (net setelah penjualan).
-                // Menyimpan sales lama akan membuat net stock jadi negatif/salah.
-                SalesInput::where('user_id', $userId)
+                // PENTING: Data penjualan (sale) TIDAK dihapus — itu data krusial!
+                // Kita kompensasi per kode_barang + size agar net stock = angka Excel.
+                // Rumus: finalQty = ExcelQty + totalTerjual → net = finalQty - totalTerjual = ExcelQty ✓
+                $existingSales = SalesInput::select(
+                        'kode_barang',
+                        'size',
+                        DB::raw('SUM(qty) as total_out')
+                    )
+                    ->where('user_id', $userId)
                     ->where('type', 'sale')
-                    ->delete();
-                $debugLog[] = "Deleted all sales for user $userId (Replace Mode — Excel qty is current physical stock)";
+                    ->whereNotNull('kode_barang')
+                    ->where('kode_barang', '!=', '')
+                    ->groupBy('kode_barang', 'size')
+                    ->get()
+                    ->keyBy(function ($row) {
+                        return $row->kode_barang . '|' . ($row->size ?? '');
+                    });
+                $debugLog[] = "Loaded existing sales grouped by kode+size: " . $existingSales->count() . " entries";
             } else {
                 $debugLog[] = "Preserving existing stocks for user $userId (Add/Tambah Mode)";
+                $existingSales = collect();
             }
 
             // Mulai baca data dari baris setelah header
@@ -388,9 +400,14 @@ class RamayanaStockController extends Controller
                 $warna = $warnaExcel;
 
                 if ($importMode === 'replace') {
-                    // Simpan langsung dari Excel — angka Excel = stok fisik saat ini
-                    $finalQty = $qty;
+                    // Kompensasi per kode_barang + size agar net stock = angka Excel
+                    $saleKey = $kodeBarang . '|' . $size;
+                    $totalOut = isset($existingSales[$saleKey]) ? (int)$existingSales[$saleKey]->total_out : 0;
+                    $finalQty = $qty + $totalOut;
                     $insertType = 'stock_in';
+                    if ($successCount <= 5) {
+                        $debugLog[] = "REPLACE row: kode=$kodeBarang size=$size excelQty=$qty sales=$totalOut finalQty=$finalQty";
+                    }
                 } else {
                     $finalQty = $qty;
                     $insertType = 'incoming';

@@ -215,8 +215,10 @@ class StockController extends Controller
             : [$user->id];
         $sku = ucwords(strtolower(trim($request->query('sku'))));
 
+        // PENTING: Hanya hapus stock_in dan incoming — data penjualan (sale) TIDAK BOLEH dihapus!
         SalesInput::whereIn('user_id', $userIds)
             ->where('sku', $sku)
+            ->whereIn('type', ['stock_in', 'incoming'])
             ->delete();
 
         return redirect()->route('karyawan_ramayana.stocks.index')->with('success', "Semua stok untuk $sku berhasil dihapus.");
