@@ -126,15 +126,15 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center space-x-3.5">
                                     <div class="w-9 h-9 bg-slate-100 dark:bg-slate-900 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold border border-slate-200/40 dark:border-slate-800 text-xs overflow-hidden shadow-inner">
-                                        @if($attendance->user->avatar)
+                                        @if($attendance->user?->avatar)
                                             <img src="{{ asset('storage/' . $attendance->user->avatar) }}" class="w-full h-full object-cover" alt="">
                                         @else
-                                            {{ substr($attendance->user->name, 0, 1) }}
+                                            {{ substr($attendance->user?->name ?? 'K', 0, 1) }}
                                         @endif
                                     </div>
                                     <div>
-                                        <div class="text-xs font-bold text-slate-800 dark:text-white">{{ $attendance->user->name }}</div>
-                                        <div class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">{{ $attendance->user->division->name ?? 'Tanpa Divisi' }}</div>
+                                        <div class="text-xs font-bold text-slate-800 dark:text-white">{{ $attendance->user?->name ?? 'User Tidak Ditemukan' }}</div>
+                                        <div class="text-[9px] text-slate-400 dark:text-slate-550 font-bold uppercase tracking-wider">{{ $attendance->user?->division?->name ?? 'Tanpa Divisi' }}</div>
                                     </div>
                                 </div>
                             </td>
@@ -164,7 +164,7 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center">
                                 <button type="button"
-                                    @click="openDelete('{{ route('super-admin.attendance.destroy', $attendance) }}?date={{ $date }}', @js($attendance->user->name), @js(\Carbon\Carbon::parse($attendance->date)->translatedFormat('d M Y')))"
+                                    @click="openDelete('{{ route('super-admin.attendance.destroy', $attendance) }}?date={{ $date }}', @js($attendance->user?->name ?? 'Karyawan'), @js(\Carbon\Carbon::parse($attendance->date)->translatedFormat('d M Y')))"
                                     class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
                                     title="Hapus absensi">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -389,9 +389,14 @@
                         <li><strong class="text-indigo-950 dark:text-indigo-100">Karyawan yang tidak terdaftar</strong> di sistem akan <strong>otomatis dilewati (skipped)</strong>.</li>
                         <li>Format kolom: <code>Nama Karyawan</code>, <code>Tanggal</code>, <code>Jam Masuk</code>, <code>Jam Pulang</code>, <code>Status</code>, <code>Catatan</code>.</li>
                     </ul>
-                    <div class="pt-1">
-                        <a href="{{ route('super-admin.attendance.import-template') }}" 
-                           class="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+                    <div class="pt-1.5 flex flex-wrap gap-2">
+                        <a href="{{ route('super-admin.attendance.import-template', ['format' => 'xlsx']) }}" 
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all shadow-sm">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span>Download Template Excel (.xlsx)</span>
+                        </a>
+                        <a href="{{ route('super-admin.attendance.import-template', ['format' => 'csv']) }}" 
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition-all shadow-sm">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                             <span>Download Template CSV</span>
                         </a>

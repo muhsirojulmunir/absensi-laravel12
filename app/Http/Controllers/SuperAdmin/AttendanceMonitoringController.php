@@ -115,7 +115,7 @@ class AttendanceMonitoringController extends Controller
 
         $date = $request->get('date', Carbon::today()->toDateString());
 
-        $attendances = Attendance::with(['user.division'])
+        $attendances = Attendance::has('user')->with(['user.division'])
             ->whereDate('date', $date)
             ->latest()
             ->get();
@@ -397,20 +397,60 @@ class AttendanceMonitoringController extends Controller
     /**
      * Download template Excel/CSV import absensi massal
      */
-    public function downloadTemplate()
+    public function downloadTemplate(Request $request)
     {
-        $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="template_import_absen.csv"',
-        ];
+        $format = strtolower($request->query('format', 'xlsx'));
 
-        return response()->streamDownload(function () {
-            $file = fopen('php://output', 'w');
-            fputs($file, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel compatibility
-            fputcsv($file, ['Nama Karyawan', 'Tanggal (YYYY-MM-DD)', 'Jam Masuk (HH:MM)', 'Jam Pulang (HH:MM)', 'Status (Hadir/Terlambat/Izin/Sakit)', 'Catatan']);
-            fputcsv($file, ['Contoh Nama Karyawan', date('Y-m-d'), '08:00', '17:00', 'Hadir', 'Absen Import Massal']);
-            fclose($file);
-        }, 'template_import_absen.csv', $headers);
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet       = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Absensi');
+
+        // Header Columns
+        $headers = [
+            'Nama Karyawan',
+            'Tanggal (YYYY-MM-DD)',
+            'Jam Masuk (HH:MM)',
+            'Jam Pulang (HH:MM)',
+            'Status (Hadir/Terlambat/Izin/Sakit)',
+            'Catatan',
+        ];
+        $sheet->fromArray([$headers], null, 'A1');
+
+        // Style Header Row
+        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:F1')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('4F46E5'); // Indigo color
+        $sheet->getStyle('A1:F1')->getFont()->getColor()->setRGB('FFFFFF');
+
+        // Sample Rows
+        $sampleData = [
+            ['Budi Santoso', date('Y-m-d'), '08:00', '17:00', 'Hadir', 'Absen Import Massal'],
+            ['Siti Aminah', date('Y-m-d'), '08:30', '17:00', 'Hadir', 'Absen Import Massal'],
+        ];
+        $sheet->fromArray($sampleData, null, 'A2');
+
+        // Auto-fit Column Widths
+        foreach (range('A', 'F') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = 'template_import_absen_' . date('Ymd') . '.' . ($format === 'csv' ? 'csv' : 'xlsx');
+
+        if ($format === 'csv') {
+            $writer   = new \PhpOffice\PhpSpreadsheet\Writer\Csv($spreadsheet);
+            $writer->setUseBOM(true);
+            $response = response()->streamDownload(function () use ($writer) {
+                $writer->save('php://output');
+            }, $fileName, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        } else {
+            $writer   = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $response = response()->streamDownload(function () use ($writer) {
+                $writer->save('php://output');
+            }, $fileName, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+        }
+
+        return $response;
     }
 
     /**
