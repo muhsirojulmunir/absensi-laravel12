@@ -33,7 +33,22 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         [x-cloak] { display: none !important; }
+
+        /* Transisi halus antar halaman (native browser cross-fade, tanpa JS/SPA) */
+        @view-transition {
+            navigation: auto;
+        }
     </style>
+    <script>
+        // Kalau halaman ini ditampilkan dari bfcache (mis. user menekan tombol
+        // "kembali" di browser), muat ulang supaya CSRF token & data (status absensi,
+        // dsb) selalu segar — mencegah error "Page Expired" saat submit form lama.
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+    </script>
 </head>
 <body class="bg-[#f8fafc] dark:bg-[#0c101a] text-slate-800 dark:text-slate-200 flex min-h-screen transition-colors duration-300">
 

@@ -16,5 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Kalau sesi/CSRF token sudah kedaluwarsa (mis. karena user menekan tombol
+        // "kembali" di browser ke halaman lama), jangan tampilkan halaman error
+        // "419 Page Expired" — cukup arahkan balik dengan pesan yang jelas.
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            return redirect()
+                ->back()
+                ->withInput($request->except(['_token', 'password', 'password_confirmation']))
+                ->with('error', 'Sesi Anda sudah kedaluwarsa. Silakan coba lagi.');
+        });
     })->create();

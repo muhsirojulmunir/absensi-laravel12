@@ -29,7 +29,7 @@
 
             {{-- 3 Persons Row --}}
             @if(isset($top3Sales) && $top3Sales->count() > 0)
-                <div style="display:flex; align-items:center; padding: 10px 8px;">
+                <div style="display:flex; align-items:center; padding: 10px 8px; width:100%;">
                     @foreach($top3Sales as $i => $sale)
                         @php
                             $rank     = $i + 1;
@@ -45,9 +45,9 @@
                         @endif
 
                         {{-- Person card --}}
-                        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; padding:6px 4px; border-radius:12px; background:{{ $meta['bg'] }};">
+                        <div style="flex:1 1 0%; min-width:0; display:flex; flex-direction:column; align-items:center; gap:5px; padding:6px 4px; border-radius:12px; background:{{ $meta['bg'] }};">
                             {{-- Avatar + rank badge --}}
-                            <div style="position:relative; display:inline-flex;">
+                            <div style="position:relative; display:inline-flex; flex-shrink:0;">
                                 <div style="padding:2px; border-radius:50%; background:{{ $meta['color'] }}; flex-shrink:0;">
                                     @if($user && $user->avatar)
                                         <img src="{{ asset('storage/' . $user->avatar) }}"
@@ -66,12 +66,12 @@
                             </div>
 
                             {{-- Name --}}
-                            <span style="font-size:11px; font-weight:700; text-align:center; max-width:72px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;" class="text-slate-800 dark:text-slate-100" title="{{ $user?->name ?? 'N/A' }}">
+                            <span style="font-size:11px; font-weight:700; text-align:center; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;" class="text-slate-800 dark:text-slate-100" title="{{ $user?->name ?? 'N/A' }}">
                                 {{ $name }}
                             </span>
 
                             {{-- Nama Lokasi / Counter --}}
-                            <span style="font-size:7px; font-weight:700; color:{{ $meta['color'] }}; line-height:1; letter-spacing:0.02em; text-align:center; white-space:nowrap; display:block;"
+                            <span style="font-size:7px; font-weight:700; color:{{ $meta['color'] }}; line-height:1; letter-spacing:0.02em; text-align:center; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;"
                                   title="{{ $user?->location?->name ?? 'Lokasi tidak diset' }}">
                                 {{ $user?->location?->name ?? '-' }}
                             </span>
