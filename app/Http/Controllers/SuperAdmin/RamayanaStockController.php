@@ -246,7 +246,8 @@ class RamayanaStockController extends Controller
         $debugLog[] = "Location ID: " . $request->import_location_id;
 
         try {
-            $rows = ExcelImportReader::readRows($request->file('file')->path());
+            $ext  = strtolower($request->file('file')->getClientOriginalExtension());
+            $rows = ExcelImportReader::readRows($request->file('file')->path(), $ext);
         } catch (\Throwable $e) {
             return redirect()->back()->with('error', 'Gagal membaca file Excel. ' . $e->getMessage());
         }
