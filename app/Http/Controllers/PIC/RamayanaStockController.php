@@ -263,7 +263,6 @@ class RamayanaStockController extends Controller
             if (!$userId) {
                 return redirect()->back()->with('error', 'Lokasi ini belum memiliki akun Karyawan Ramayana.');
             }
-
             $colKode = null;
             $colNama = null;
             $colWarna = null;
@@ -271,27 +270,45 @@ class RamayanaStockController extends Controller
             $colQty  = null;
             $headerRowIndex = null;
 
+            // Keyword yang dikenali dari export Ramayana POS / template internal
+            $kodeKeywords  = ['kode', 'artikel', 'barcode', 'article', 'product code', 'item code'];
+            $namaKeywords  = ['nama', 'deskripsi', 'description', 'produk', 'barang', 'item', 'keterangan barang'];
+            $qtyKeywords   = ['qty', 'quantity', 'jumlah', 'stok', 'stock', 'total qty', 'total quantity', 'saldo'];
+            $sizeKeywords  = ['size', 'ukuran', 'no.', 'nomor'];
+            $warnaKeywords = ['warna', 'color', 'colour'];
+
             foreach ($rows as $ri => $row) {
                 foreach ($row as $ci => $cell) {
                     $val = strtolower(trim((string)$cell));
-                    if (strpos($val, 'kode') !== false) {
-                        $colKode = $ci;
-                        $headerRowIndex = $ri;
+                    if ($val === '') continue;
+
+                    foreach ($kodeKeywords as $kw) {
+                        if (strpos($val, $kw) !== false) { $colKode = $ci; $headerRowIndex = $ri; break; }
                     }
-                    if (strpos($val, 'nama') !== false) $colNama = $ci;
-                    if (strpos($val, 'warna') !== false) $colWarna = $ci;
-                    if (strpos($val, 'size') !== false || strpos($val, 'ukuran') !== false) $colSize = $ci;
-                    if (strpos($val, 'qty') !== false || strpos($val, 'quantity') !== false) $colQty = $ci;
+                    foreach ($namaKeywords as $kw) {
+                        if (strpos($val, $kw) !== false) { $colNama = $ci; break; }
+                    }
+                    foreach ($qtyKeywords as $kw) {
+                        if (strpos($val, $kw) !== false) { $colQty = $ci; break; }
+                    }
+                    foreach ($sizeKeywords as $kw) {
+                        if (strpos($val, $kw) !== false) { $colSize = $ci; break; }
+                    }
+                    foreach ($warnaKeywords as $kw) {
+                        if (strpos($val, $kw) !== false) { $colWarna = $ci; break; }
+                    }
                 }
                 if ($colKode !== null && $colQty !== null) break;
             }
 
-            if ($colKode === null) $colKode = 2;
-            if ($colNama === null) $colNama = 5;
-            if ($colQty === null)  $colQty  = 7;
+            // Fallback jika header tidak ditemukan — pakai kolom 0 dan 1 sebagai default
+            if ($colKode === null) $colKode = 0;
+            if ($colNama === null) $colNama = 1;
+            if ($colQty === null)  $colQty  = 2;
             if ($headerRowIndex === null) $headerRowIndex = 0;
 
             $successCount = 0;
+            $skippedCount = 0;
             $insertData = [];
             $now = now();
 
@@ -329,22 +346,47 @@ class RamayanaStockController extends Controller
 
                 $kodeBarang = isset($row[$colKode]) ? trim((string)$row[$colKode]) : '';
                 $namaBarang = isset($row[$colNama]) ? trim((string)$row[$colNama]) : '';
-                $qtyRaw     = isset($row[$colQty])  ? trim((string)$row[$colQty])  : '';
+                $qtyCell    = $row[$colQty] ?? null;
+                $qtyRaw     = trim((string)$qtyCell);
                 $warnaExcel = ($colWarna !== null && isset($row[$colWarna])) ? trim((string)$row[$colWarna]) : '';
                 $sizeExcel  = ($colSize !== null && isset($row[$colSize])) ? trim((string)$row[$colSize]) : '';
 
-                if (empty($kodeBarang) || empty($namaBarang)) continue;
-                if (!preg_match('/^\d+$/', $kodeBarang)) continue;
-                if (stripos($namaBarang, 'ACCOS') !== false) continue;
+                // 1. Baris kosong
+                if ($kodeBarang === '' || $namaBarang === '') continue;
 
+                // 2. Baris footer / subtotal
+                $lowerNama = strtolower($namaBarang);
+                $lowerKode = strtolower($kodeBarang);
+                if (
+                    stripos($namaBarang, 'ACCOS') !== false ||
+                    in_array($lowerNama, ['total', 'grand total', 'subtotal', 'jumlah']) ||
+                    in_array($lowerKode, ['total', 'grand total', 'subtotal', 'jumlah'])
+                ) {
+                    $skippedCount++;
+                    continue;
+                }
+
+                // 3. Kode barang minimal 3 karakter (boleh alphanumeric)
+                $kodeClean = preg_replace('/[\s\-_\.]+/', '', $kodeBarang);
+                if (strlen($kodeClean) < 3) {
+                    $skippedCount++;
+                    continue;
+                }
+
+                // Ekstrak qty
                 $qty = 0;
-                if (preg_match('/(-?\d+(\.\d+)?)/', $qtyRaw, $matches)) {
+                if (is_numeric($qtyCell) && $qtyCell !== null && $qtyCell !== '') {
+                    $qty = (int)round((float)$qtyCell);
+                } elseif (preg_match('/(-?\d+(\.\d+)?)/', $qtyRaw, $matches)) {
                     $qty = (int)round((float)$matches[1]);
                 }
                 
                 $satuan = 'PSG';
-                if (preg_match('/[a-zA-Z]+/', $qtyRaw, $unitMatches)) {
-                    $satuan = strtoupper($unitMatches[0]);
+                if (preg_match('/\d+\.?\d*\s+([A-Za-z]+)/', $qtyRaw, $unitMatches)) {
+                    $unitUp = strtoupper($unitMatches[1]);
+                    if (in_array($unitUp, ['PSG', 'PCS', 'BJ', 'LSN', 'LUSIN', 'KODI', 'SET', 'BOX', 'DOS'])) {
+                        $satuan = $unitUp;
+                    }
                 }
 
                 $size = '';

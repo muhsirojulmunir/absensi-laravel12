@@ -285,39 +285,48 @@ class RamayanaStockController extends Controller
             $colQty  = null;
             $headerRowIndex = null;
 
+            // ── Deteksi baris header & kolom ──────────────────────────────────────────
+            // Keyword yang dikenali dari export Ramayana POS / template internal
+            $kodeKeywords  = ['kode', 'artikel', 'barcode', 'article', 'product code', 'item code'];
+            $namaKeywords  = ['nama', 'deskripsi', 'description', 'produk', 'barang', 'item', 'keterangan barang'];
+            $qtyKeywords   = ['qty', 'quantity', 'jumlah', 'stok', 'stock', 'total qty', 'total quantity', 'saldo'];
+            $sizeKeywords  = ['size', 'ukuran', 'no.', 'nomor'];
+            $warnaKeywords = ['warna', 'color', 'colour'];
+
             foreach ($rows as $ri => $row) {
                 foreach ($row as $ci => $cell) {
                     $val = strtolower(trim((string)$cell));
-                    if (strpos($val, 'kode') !== false) {
-                        $colKode = $ci;
-                        $headerRowIndex = $ri;
+                    if ($val === '') continue;
+
+                    foreach ($kodeKeywords as $kw) {
+                        if (strpos($val, $kw) !== false) { $colKode = $ci; $headerRowIndex = $ri; break; }
                     }
-                    if (strpos($val, 'nama') !== false) {
-                        $colNama = $ci;
+                    foreach ($namaKeywords as $kw) {
+                        if (strpos($val, $kw) !== false) { $colNama = $ci; break; }
                     }
-                    if (strpos($val, 'warna') !== false) {
-                        $colWarna = $ci;
+                    foreach ($qtyKeywords as $kw) {
+                        if (strpos($val, $kw) !== false) { $colQty = $ci; break; }
                     }
-                    if (strpos($val, 'size') !== false || strpos($val, 'ukuran') !== false) {
-                        $colSize = $ci;
+                    foreach ($sizeKeywords as $kw) {
+                        if (strpos($val, $kw) !== false) { $colSize = $ci; break; }
                     }
-                    if (strpos($val, 'qty') !== false || strpos($val, 'quantity') !== false) {
-                        $colQty = $ci;
+                    foreach ($warnaKeywords as $kw) {
+                        if (strpos($val, $kw) !== false) { $colWarna = $ci; break; }
                     }
                 }
-                // Jika sudah menemukan minimal Kode dan Qty, kita asumsikan baris header sudah ketemu
                 if ($colKode !== null && $colQty !== null) break;
             }
 
-            // Fallback jika header tidak ditemukan sama sekali
-            if ($colKode === null) $colKode = 2;
-            if ($colNama === null) $colNama = 5;
-            if ($colQty === null)  $colQty  = 7;
+            // Fallback jika header tidak ditemukan — pakai kolom 0 dan 1 sebagai default
+            if ($colKode === null) $colKode = 0;
+            if ($colNama === null) $colNama = 1;
+            if ($colQty === null)  $colQty  = 2;
             if ($headerRowIndex === null) $headerRowIndex = 0;
 
-            $debugLog[] = "Detected columns: Kode=$colKode, Nama=$colNama, Warna=$colWarna, Size=$colSize, Qty=$colQty, HeaderRow=$headerRowIndex";
+            $debugLog[] = "Detected columns: Kode=$colKode, Nama=$colNama, Warna=" . ($colWarna ?? 'null') . ", Size=" . ($colSize ?? 'null') . ", Qty=$colQty, HeaderRow=$headerRowIndex";
 
             $successCount = 0;
+            $skippedCount = 0;
             $insertData = [];
             $now = now();
 
@@ -336,8 +345,6 @@ class RamayanaStockController extends Controller
                 $debugLog[] = "Deleted all incoming_stocks history for user $userId (Replace Mode)";
 
                 // PENTING: Data penjualan (sale) TIDAK dihapus — itu data krusial!
-                // Kita kompensasi per kode_barang + size agar net stock = angka Excel.
-                // Rumus: finalQty = ExcelQty + totalTerjual → net = finalQty - totalTerjual = ExcelQty ✓
                 $existingSales = SalesInput::select(
                         'kode_barang',
                         'size',
@@ -358,58 +365,85 @@ class RamayanaStockController extends Controller
                 $existingSales = collect();
             }
 
-            // Mulai baca data dari baris setelah header
+            // ── Parsing baris data ──────────────────────────────────────────────────────
             for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
                 $row = $rows[$i];
 
                 $kodeBarang = isset($row[$colKode]) ? trim((string)$row[$colKode]) : '';
                 $namaBarang = isset($row[$colNama]) ? trim((string)$row[$colNama]) : '';
-                $qtyRaw     = isset($row[$colQty])  ? trim((string)$row[$colQty])  : '';
+                // Qty bisa berupa angka (int/float dari PhpSpreadsheet) atau string format Ramayana
+                $qtyCell    = $row[$colQty] ?? null;
+                $qtyRaw     = trim((string)$qtyCell);
                 $warnaExcel = ($colWarna !== null && isset($row[$colWarna])) ? trim((string)$row[$colWarna]) : '';
                 $sizeExcel  = ($colSize !== null && isset($row[$colSize])) ? trim((string)$row[$colSize]) : '';
 
-                // Skip baris kosong, header duplikat, footer ("ACCOS"), atau baris tanpa kode
-                if (empty($kodeBarang) || empty($namaBarang)) continue;
-                if (!preg_match('/^\d+$/', $kodeBarang)) continue; // Kode barang harus berupa angka murni
-                if (stripos($namaBarang, 'ACCOS') !== false) continue;
+                // ── Filter baris tidak valid ──────────────────────────────────────────
+                // 1. Baris kosong
+                if ($kodeBarang === '' || $namaBarang === '') {
+                    continue;
+                }
+                // 2. Baris footer / subtotal Excel Ramayana (mengandung kata kunci total/grand)
+                $lowerNama = strtolower($namaBarang);
+                $lowerKode = strtolower($kodeBarang);
+                if (
+                    stripos($namaBarang, 'ACCOS') !== false ||
+                    in_array($lowerNama, ['total', 'grand total', 'subtotal', 'jumlah']) ||
+                    in_array($lowerKode, ['total', 'grand total', 'subtotal', 'jumlah'])
+                ) {
+                    $skippedCount++;
+                    $debugLog[] = "SKIP[$i] footer/accos: kode=$kodeBarang nama=$namaBarang";
+                    continue;
+                }
+                // 3. Kode barang minimal 3 karakter (boleh alphanumeric, termasuk kode Ramayana asli)
+                $kodeClean = preg_replace('/[\s\-_\.]+/', '', $kodeBarang); // hapus spasi/strip/titik
+                if (strlen($kodeClean) < 3) {
+                    $skippedCount++;
+                    $debugLog[] = "SKIP[$i] kode terlalu pendek: '$kodeBarang'";
+                    continue;
+                }
 
-                // Ekstrak qty dan satuan
+                // ── Ekstrak qty ───────────────────────────────────────────────────────
                 $qty = 0;
-                if (preg_match('/(-?\d+(\.\d+)?)/', $qtyRaw, $matches)) {
+                if (is_numeric($qtyCell) && $qtyCell !== null && $qtyCell !== '') {
+                    // PhpSpreadsheet mengembalikan angka langsung
+                    $qty = (int)round((float)$qtyCell);
+                } elseif (preg_match('/(-?\d+(\.\d+)?)/', $qtyRaw, $matches)) {
                     $qty = (int)round((float)$matches[1]);
                 }
-                
-                $satuan = 'PSG'; // Default
-                if (preg_match('/[a-zA-Z]+/', $qtyRaw, $unitMatches)) {
-                    $satuan = strtoupper($unitMatches[0]);
+
+                $satuan = 'PSG';
+                if (preg_match('/\d+\.?\d*\s+([A-Za-z]+)/', $qtyRaw, $unitMatches)) {
+                    $unitUp = strtoupper($unitMatches[1]);
+                    // Hanya ambil unit yang masuk akal
+                    if (in_array($unitUp, ['PSG', 'PCS', 'BJ', 'LSN', 'LUSIN', 'KODI', 'SET', 'BOX', 'DOS'])) {
+                        $satuan = $unitUp;
+                    }
                 }
 
-                // Jika kolom size ada, gunakan kolom size, jika tidak ada fallback ke regex akhir nama
+                // ── Ekstrak size dari nama barang atau kolom size ─────────────────────
                 $size = '';
-                $sku = $namaBarang;
-                
+                $sku  = $namaBarang;
                 if (!empty($sizeExcel)) {
                     $size = $sizeExcel;
                 } else {
                     if (preg_match('/\s(\d{2,3})$/', $namaBarang, $matches)) {
                         $size = $matches[1];
-                        $sku = trim(substr($namaBarang, 0, -strlen($matches[0])));
+                        $sku  = trim(substr($namaBarang, 0, -strlen($matches[0])));
                     }
                 }
 
                 $warna = $warnaExcel;
 
                 if ($importMode === 'replace') {
-                    // Kompensasi per kode_barang + size agar net stock = angka Excel
-                    $saleKey = $kodeBarang . '|' . $size;
+                    $saleKey  = $kodeBarang . '|' . $size;
                     $totalOut = isset($existingSales[$saleKey]) ? (int)$existingSales[$saleKey]->total_out : 0;
                     $finalQty = $qty + $totalOut;
                     $insertType = 'stock_in';
                     if ($successCount <= 5) {
-                        $debugLog[] = "REPLACE row: kode=$kodeBarang size=$size excelQty=$qty sales=$totalOut finalQty=$finalQty";
+                        $debugLog[] = "REPLACE[$i]: kode=$kodeBarang size=$size excelQty=$qty sales=$totalOut finalQty=$finalQty";
                     }
                 } else {
-                    $finalQty = $qty;
+                    $finalQty   = $qty;
                     $insertType = 'incoming';
                 }
 
@@ -429,12 +463,11 @@ class RamayanaStockController extends Controller
                 ];
 
                 $successCount++;
-
-                // Log beberapa data awal
                 if ($successCount <= 5) {
-                    $debugLog[] = "Data[$i]: kode=$kodeBarang | nama=$namaBarang | sku=$sku | size=$size | qty=$qty | finalQty=$finalQty | mode=$importMode";
+                    $debugLog[] = "OK[$i]: kode=$kodeBarang | nama=$namaBarang | sku=$sku | size=$size | qty=$qty | finalQty=$finalQty";
                 }
             }
+            $debugLog[] = "Parsed OK: $successCount | Skipped: $skippedCount";
 
             $debugLog[] = "Total rows parsed: $successCount";
             $debugLog[] = "Total records to insert: " . count($insertData);
