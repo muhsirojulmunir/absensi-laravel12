@@ -351,38 +351,50 @@ class RamayanaStockController extends Controller
                 $warnaExcel = ($colWarna !== null && isset($row[$colWarna])) ? trim((string)$row[$colWarna]) : '';
                 $sizeExcel  = ($colSize !== null && isset($row[$colSize])) ? trim((string)$row[$colSize]) : '';
 
-                // 1. Baris kosong
-                if ($kodeBarang === '' || $namaBarang === '') continue;
+                // 1. Baris kosong — nama wajib ada (kode boleh '-')
+                if ($namaBarang === '') continue;
 
-                // 2. Baris footer / subtotal
+                // 2. Baris footer / subtotal / total
                 $lowerNama = strtolower($namaBarang);
                 $lowerKode = strtolower($kodeBarang);
                 if (
                     stripos($namaBarang, 'ACCOS') !== false ||
-                    in_array($lowerNama, ['total', 'grand total', 'subtotal', 'jumlah']) ||
-                    in_array($lowerKode, ['total', 'grand total', 'subtotal', 'jumlah'])
+                    in_array(trim($lowerNama), ['total', 'grand total', 'subtotal', 'jumlah', 'total :', 'total:']) ||
+                    in_array(trim($lowerKode), ['total', 'grand total', 'subtotal', 'jumlah'])
                 ) {
                     $skippedCount++;
                     continue;
                 }
 
-                // 3. Kode barang minimal 3 karakter (boleh alphanumeric)
-                $kodeClean = preg_replace('/[\s\-_\.]+/', '', $kodeBarang);
-                if (strlen($kodeClean) < 3) {
+                // 3. Nama barang terlalu pendek
+                if (mb_strlen($namaBarang) < 3) {
                     $skippedCount++;
                     continue;
                 }
 
-                // Ekstrak qty
+                // Normalisasi kode barang
+                // Format Ramayana POS: kode '-' = tidak ada kode, gunakan nama sebagai identifier
+                $isDashKode = ($kodeBarang === '-' || $kodeBarang === '' || $kodeBarang === '0');
+                if ($isDashKode) {
+                    $kodeBarang = '';
+                } else {
+                    $kodeClean = preg_replace('/[\s\-_\.]+/', '', $kodeBarang);
+                    if (strlen($kodeClean) < 3) {
+                        $skippedCount++;
+                        continue;
+                    }
+                }
+
+                // Ekstrak qty — Ramayana POS bisa negatif (deficit), ambil absolut
                 $qty = 0;
                 if (is_numeric($qtyCell) && $qtyCell !== null && $qtyCell !== '') {
-                    $qty = (int)round((float)$qtyCell);
+                    $qty = abs((int)round((float)$qtyCell));
                 } elseif (preg_match('/(-?\d+(\.\d+)?)/', $qtyRaw, $matches)) {
-                    $qty = (int)round((float)$matches[1]);
+                    $qty = abs((int)round((float)$matches[1]));
                 }
                 
                 $satuan = 'PSG';
-                if (preg_match('/\d+\.?\d*\s+([A-Za-z]+)/', $qtyRaw, $unitMatches)) {
+                if (preg_match('/[-\d]+\.?\d*\s+([A-Za-z]+)/', $qtyRaw, $unitMatches)) {
                     $unitUp = strtoupper($unitMatches[1]);
                     if (in_array($unitUp, ['PSG', 'PCS', 'BJ', 'LSN', 'LUSIN', 'KODI', 'SET', 'BOX', 'DOS'])) {
                         $satuan = $unitUp;
@@ -405,7 +417,8 @@ class RamayanaStockController extends Controller
 
                 if ($importMode === 'replace') {
                     // Kompensasi per kode_barang + size agar net stock = angka Excel
-                    $saleKey = $kodeBarang . '|' . $size;
+                    $lookupKey = ($kodeBarang !== '') ? $kodeBarang : $sku;
+                    $saleKey = $lookupKey . '|' . $size;
                     $totalOut = isset($existingSales[$saleKey]) ? (int)$existingSales[$saleKey]->total_out : 0;
                     $finalQty = $qty + $totalOut;
                     $insertType = 'stock_in';

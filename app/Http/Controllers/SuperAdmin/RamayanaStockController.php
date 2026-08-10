@@ -378,41 +378,56 @@ class RamayanaStockController extends Controller
                 $sizeExcel  = ($colSize !== null && isset($row[$colSize])) ? trim((string)$row[$colSize]) : '';
 
                 // ── Filter baris tidak valid ──────────────────────────────────────────
-                // 1. Baris kosong
-                if ($kodeBarang === '' || $namaBarang === '') {
+                // 1. Baris kosong — nama barang wajib ada (kode boleh '-' atau kosong)
+                if ($namaBarang === '') {
                     continue;
                 }
-                // 2. Baris footer / subtotal Excel Ramayana (mengandung kata kunci total/grand)
+                // 2. Baris footer / subtotal / total Excel Ramayana
                 $lowerNama = strtolower($namaBarang);
                 $lowerKode = strtolower($kodeBarang);
                 if (
                     stripos($namaBarang, 'ACCOS') !== false ||
-                    in_array($lowerNama, ['total', 'grand total', 'subtotal', 'jumlah']) ||
-                    in_array($lowerKode, ['total', 'grand total', 'subtotal', 'jumlah'])
+                    in_array(trim($lowerNama), ['total', 'grand total', 'subtotal', 'jumlah', 'total :', 'total:']) ||
+                    in_array(trim($lowerKode), ['total', 'grand total', 'subtotal', 'jumlah'])
                 ) {
                     $skippedCount++;
                     $debugLog[] = "SKIP[$i] footer/accos: kode=$kodeBarang nama=$namaBarang";
                     continue;
                 }
-                // 3. Kode barang minimal 3 karakter (boleh alphanumeric, termasuk kode Ramayana asli)
-                $kodeClean = preg_replace('/[\s\-_\.]+/', '', $kodeBarang); // hapus spasi/strip/titik
-                if (strlen($kodeClean) < 3) {
+                // 3. Nama barang terlalu pendek (< 3 karakter) = baris invalid
+                if (mb_strlen($namaBarang) < 3) {
                     $skippedCount++;
-                    $debugLog[] = "SKIP[$i] kode terlalu pendek: '$kodeBarang'";
                     continue;
                 }
 
+                // ── Normalisasi kode barang ───────────────────────────────────────────
+                // Format Ramayana POS: kode barang seringkali '-' (tidak ada kode artikel)
+                // Dalam kasus itu, gunakan nama barang sebagai identifier (kode dikosongkan)
+                $isDashKode = ($kodeBarang === '-' || $kodeBarang === '' || $kodeBarang === '0');
+                if ($isDashKode) {
+                    $kodeBarang = ''; // simpan kosong, sku = nama barang
+                } else {
+                    // Tolak kode yang terlalu pendek (< 3 char tanpa separator)
+                    $kodeClean = preg_replace('/[\s\-_\.]+/', '', $kodeBarang);
+                    if (strlen($kodeClean) < 3) {
+                        $skippedCount++;
+                        $debugLog[] = "SKIP[$i] kode tidak valid: '$kodeBarang'";
+                        continue;
+                    }
+                }
+
                 // ── Ekstrak qty ───────────────────────────────────────────────────────
+                // Format Ramayana POS: qty bisa negatif (saldo defisit) → ambil nilai absolut
                 $qty = 0;
                 if (is_numeric($qtyCell) && $qtyCell !== null && $qtyCell !== '') {
                     // PhpSpreadsheet mengembalikan angka langsung
-                    $qty = (int)round((float)$qtyCell);
+                    $qty = abs((int)round((float)$qtyCell));
                 } elseif (preg_match('/(-?\d+(\.\d+)?)/', $qtyRaw, $matches)) {
-                    $qty = (int)round((float)$matches[1]);
+                    $qty = abs((int)round((float)$matches[1]));
                 }
 
                 $satuan = 'PSG';
-                if (preg_match('/\d+\.?\d*\s+([A-Za-z]+)/', $qtyRaw, $unitMatches)) {
+                if (preg_match('/[-\d]+\.?\d*\s+([A-Za-z]+)/', $qtyRaw, $unitMatches)) {
                     $unitUp = strtoupper($unitMatches[1]);
                     // Hanya ambil unit yang masuk akal
                     if (in_array($unitUp, ['PSG', 'PCS', 'BJ', 'LSN', 'LUSIN', 'KODI', 'SET', 'BOX', 'DOS'])) {
@@ -426,6 +441,7 @@ class RamayanaStockController extends Controller
                 if (!empty($sizeExcel)) {
                     $size = $sizeExcel;
                 } else {
+                    // Pola: nama diakhiri spasi + 2-3 digit (ukuran sepatu)
                     if (preg_match('/\s(\d{2,3})$/', $namaBarang, $matches)) {
                         $size = $matches[1];
                         $sku  = trim(substr($namaBarang, 0, -strlen($matches[0])));
@@ -435,7 +451,9 @@ class RamayanaStockController extends Controller
                 $warna = $warnaExcel;
 
                 if ($importMode === 'replace') {
-                    $saleKey  = $kodeBarang . '|' . $size;
+                    // Kunci pencarian: gunakan kode jika ada, fallback ke sku
+                    $lookupKey = ($kodeBarang !== '') ? $kodeBarang : $sku;
+                    $saleKey  = $lookupKey . '|' . $size;
                     $totalOut = isset($existingSales[$saleKey]) ? (int)$existingSales[$saleKey]->total_out : 0;
                     $finalQty = $qty + $totalOut;
                     $insertType = 'stock_in';
@@ -464,10 +482,11 @@ class RamayanaStockController extends Controller
 
                 $successCount++;
                 if ($successCount <= 5) {
-                    $debugLog[] = "OK[$i]: kode=$kodeBarang | nama=$namaBarang | sku=$sku | size=$size | qty=$qty | finalQty=$finalQty";
+                    $debugLog[] = "OK[$i]: kode=$kodeBarang | sku=$sku | size=$size | qty=$qty | finalQty=$finalQty";
                 }
             }
             $debugLog[] = "Parsed OK: $successCount | Skipped: $skippedCount";
+
 
             $debugLog[] = "Total rows parsed: $successCount";
             $debugLog[] = "Total records to insert: " . count($insertData);
