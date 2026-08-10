@@ -3,27 +3,27 @@
 @section('content')
     <div class="space-y-6">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" x-data="{
-                showImportModal: false,
-                locations: {{ Illuminate\Support\Js::from($locations->map(fn($l) => ['id' => $l->id, 'name' => $l->name])->values()) }},
-                locQuery: '',
-                locOpen: false,
-                locSelectedId: '',
-                get filteredLocations() {
-                    if (this.locQuery.trim() === '') return this.locations;
-                    const q = this.locQuery.toLowerCase();
-                    return this.locations.filter(l => l.name.toLowerCase().includes(q));
-                },
-                selectLocation(loc) {
-                    this.locSelectedId = loc.id;
-                    this.locQuery = loc.name;
-                    this.locOpen = false;
-                },
-                resetLocation() {
-                    this.locQuery = '';
-                    this.locSelectedId = '';
-                    this.locOpen = false;
-                }
-            }">
+                    showImportModal: false,
+                    locations: {{ Illuminate\Support\Js::from($locations->map(fn($l) => ['id' => $l->id, 'name' => $l->name])->values()) }},
+                    locQuery: '',
+                    locOpen: false,
+                    locSelectedId: '',
+                    get filteredLocations() {
+                        if (this.locQuery.trim() === '') return this.locations;
+                        const q = this.locQuery.toLowerCase();
+                        return this.locations.filter(l => l.name.toLowerCase().includes(q));
+                    },
+                    selectLocation(loc) {
+                        this.locSelectedId = loc.id;
+                        this.locQuery = loc.name;
+                        this.locOpen = false;
+                    },
+                    resetLocation() {
+                        this.locQuery = '';
+                        this.locSelectedId = '';
+                        this.locOpen = false;
+                    }
+                }">
             <div>
                 <h2 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Manajemen Stok Ramayana</h2>
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Pantau dan Kelola Stok Real-time Counter</p>
@@ -271,7 +271,8 @@
                         <p class="text-xs font-black uppercase tracking-widest mb-1 opacity-80 text-fuchsia-100">Total
                             Keseluruhan Stok</p>
                         <p class="text-3xl font-black drop-shadow-md">{{ number_format($totalOverallStock, 0, ',', '.') }}
-                            <span class="text-lg opacity-80 font-medium">ITEMS</span></p>
+                            <span class="text-lg opacity-80 font-medium">ITEMS</span>
+                        </p>
                     </div>
                     <div
                         class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
@@ -318,7 +319,8 @@
                                     <td class="p-4 text-sm font-medium text-slate-400 text-center">{{ $no++ }}</td>
                                     <td class="p-4">
                                         <div class="text-sm font-bold text-slate-800 dark:text-slate-200">
-                                            {{ $counter['spg_name'] }}</div>
+                                            {{ $counter['spg_name'] }}
+                                        </div>
                                     </td>
                                     <td class="p-4">
                                         <span
@@ -334,9 +336,9 @@
                                     </td>
                                     <td class="p-4 text-center">
                                         <span class="inline-flex items-center justify-center min-w-[64px] px-3 py-1.5 rounded-lg text-sm font-black
-                                        @if($counter['total_stock'] == 0) bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400
-                                        @else bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400
-                                        @endif">
+                                                @if($counter['total_stock'] == 0) bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400
+                                                @else bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400
+                                                @endif">
                                             {{ abs($counter['total_stock']) }} ITEMS
                                         </span>
                                     </td>

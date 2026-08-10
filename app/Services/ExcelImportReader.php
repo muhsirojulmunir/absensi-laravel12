@@ -14,8 +14,18 @@ class ExcelImportReader
      * Baca file Excel apapun formatnya (xlsx, xls, ods, csv) dan
      * kembalikan array baris (0-indexed) mirip SimpleXLSX::rows().
      *
-     * Untuk Excel 97-2003 (.xls): menggunakan formatData=true agar nilai
-     * yang terformat (seperti "-1.00 PSG") terbaca dengan benar.
+     * CATATAN PENTING soal memori:
+     * - setReadDataOnly(true) dipakai untuk SEMUA format supaya PhpSpreadsheet TIDAK
+     *   memuat info style/border/format ke memori, hanya isi cell-nya saja. Nilai qty
+     *   di export Ramayana (mis. "-1.00 PSG") sudah tersimpan sebagai TEKS APA ADANYA
+     *   di dalam cell (bukan angka dengan format tampilan), jadi tetap terbaca persis
+     *   sama walau style tidak dimuat.
+     * - Export .xls lama sering punya ratusan kolom "kosong" yang sebenarnya cuma
+     *   berisi border/format tanpa nilai (highestColumn bisa sampai kolom ke-257!).
+     *   Kalau semua itu ikut dimuat, penggunaan memori bisa 10x lipat lebih besar dan
+     *   menyebabkan proses gagal/crash (500) di server dengan limit memori kecil.
+     *   Makanya kita batasi pembacaan hanya sampai getHighestDataColumn()/Row() —
+     *   kolom & baris yang BENAR-BENAR berisi data.
      *
      * CATATAN: Kita tidak pakai IOFactory::identify() karena PHP upload
      * menyimpan file tanpa ekstensi di /tmp sehingga identify() bisa crash.
@@ -42,14 +52,21 @@ class ExcelImportReader
                 break;
         }
 
-        // XLS lama: baca format cell agar nilai string terbaca sesuai tampilan Excel
-        $reader->setReadDataOnly(!$isLegacyXls);
+        // Selalu skip info style/format — jauh lebih hemat memori, dan nilai cell
+        // (termasuk teks berformat seperti "-1.00 PSG") tetap terbaca apa adanya.
+        $reader->setReadDataOnly(true);
 
         $spreadsheet = $reader->load($path);
         $sheet       = $spreadsheet->getActiveSheet();
 
-        // toArray($nullValue, $calculateFormulas, $formatData, $returnCellRef)
-        $rows = $sheet->toArray(null, true, $isLegacyXls, false);
+        // Batasi ke kolom/baris yang benar-benar berisi data (lihat catatan di atas).
+        $highestDataColumn = $sheet->getHighestDataColumn();
+        $highestDataRow    = $sheet->getHighestDataRow();
+        $range = "A1:{$highestDataColumn}{$highestDataRow}";
+
+        // rangeToArray($range, $nullValue, $calculateFormulas, $formatData, $returnCellRef)
+        // formatData=false karena style/number-format tidak dimuat (readDataOnly=true).
+        $rows = $sheet->rangeToArray($range, null, true, false, false);
 
         // Normalisasi encoding: XLS 97-2003 kadang Windows-1252
         if ($isLegacyXls) {
