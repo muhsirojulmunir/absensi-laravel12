@@ -80,9 +80,11 @@ class RamayanaStockController extends Controller
             ->where('si.date', '<=', $filterDate)
             ->groupBy('loc_key', 'si.sku', 'si.satuan');
 
+        // Hitung SEMUA SKU yang qty-nya tidak nol (termasuk yang minus/defisit), supaya
+        // konsisten dengan halaman detail yang juga menampilkan SKU minus apa adanya.
         $aggByLocKey = DB::query()->fromSub($inner, 't')
             ->select('loc_key', DB::raw('SUM(stock) as total_stock'), DB::raw('COUNT(*) as total_sku'))
-            ->where('stock', '>', 0)
+            ->where('stock', '!=', 0)
             ->groupBy('loc_key')
             ->get()
             ->keyBy('loc_key');
@@ -275,57 +277,6 @@ class RamayanaStockController extends Controller
             }
             $debugLog[] = "User ID found: $userId";
 
-            // =====================================================
-            // AUTO-DETECT KOLOM: Cari baris header untuk menentukan
-            // posisi kolom Kode Barang, Nama Barang, Warna, Size, Qty
-            // =====================================================
-            $colKode = null;
-            $colNama = null;
-            $colWarna = null;
-            $colSize = null;
-            $colQty  = null;
-            $headerRowIndex = null;
-
-            // ── Deteksi baris header & kolom ──────────────────────────────────────────
-            // Keyword yang dikenali dari export Ramayana POS / template internal
-            $kodeKeywords  = ['kode', 'artikel', 'barcode', 'article', 'product code', 'item code'];
-            $namaKeywords  = ['nama', 'deskripsi', 'description', 'produk', 'barang', 'item', 'keterangan barang'];
-            $qtyKeywords   = ['qty', 'quantity', 'jumlah', 'stok', 'stock', 'total qty', 'total quantity', 'saldo'];
-            $sizeKeywords  = ['size', 'ukuran', 'no.', 'nomor'];
-            $warnaKeywords = ['warna', 'color', 'colour'];
-
-            foreach ($rows as $ri => $row) {
-                foreach ($row as $ci => $cell) {
-                    $val = strtolower(trim((string)$cell));
-                    if ($val === '') continue;
-
-                    foreach ($kodeKeywords as $kw) {
-                        if (strpos($val, $kw) !== false) { $colKode = $ci; $headerRowIndex = $ri; break; }
-                    }
-                    foreach ($namaKeywords as $kw) {
-                        if (strpos($val, $kw) !== false) { $colNama = $ci; break; }
-                    }
-                    foreach ($qtyKeywords as $kw) {
-                        if (strpos($val, $kw) !== false) { $colQty = $ci; break; }
-                    }
-                    foreach ($sizeKeywords as $kw) {
-                        if (strpos($val, $kw) !== false) { $colSize = $ci; break; }
-                    }
-                    foreach ($warnaKeywords as $kw) {
-                        if (strpos($val, $kw) !== false) { $colWarna = $ci; break; }
-                    }
-                }
-                if ($colKode !== null && $colQty !== null) break;
-            }
-
-            // Fallback jika header tidak ditemukan — pakai kolom 0 dan 1 sebagai default
-            if ($colKode === null) $colKode = 0;
-            if ($colNama === null) $colNama = 1;
-            if ($colQty === null)  $colQty  = 2;
-            if ($headerRowIndex === null) $headerRowIndex = 0;
-
-            $debugLog[] = "Detected columns: Kode=$colKode, Nama=$colNama, Warna=" . ($colWarna ?? 'null') . ", Size=" . ($colSize ?? 'null') . ", Qty=$colQty, HeaderRow=$headerRowIndex";
-
             $successCount = 0;
             $skippedCount = 0;
             $insertData = [];
@@ -367,16 +318,53 @@ class RamayanaStockController extends Controller
             }
 
             // ── Parsing baris data ──────────────────────────────────────────────────────
-            for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
-                $row = $rows[$i];
+            // Deteksi kolom PER BARIS berdasarkan pola isinya, bukan posisi kolom header.
+            // Laporan JAYA MANDIRI/Ramayana memakai merged-cell yang membuat posisi kolom
+            // data bergeser dari posisi kolom header (mis. header "Nama Barang" ada di
+            // kolom 10, tapi isi nama barangnya sendiri ada di kolom 11; qty demikian juga).
+            // Jadi tiap baris dipindai ulang: kolom "kode" = sel berisi angka murni (>=4
+            // digit), kolom "qty" = sel pertama berpola "angka + satuan" setelah kolom kode,
+            // kolom "nama" = sel teks pertama yang berada di antara kolom kode dan kolom qty.
+            foreach ($rows as $i => $row) {
+                $colKode = null;
+                foreach ($row as $ci => $cell) {
+                    if (preg_match('/^\d{4,}$/', trim((string)$cell))) {
+                        $colKode = $ci;
+                        break;
+                    }
+                }
+                if ($colKode === null) {
+                    continue; // baris tanpa kode barang numerik (header/separator/footer/subtotal)
+                }
+                $kodeBarang = trim((string)$row[$colKode]);
 
-                $kodeBarang = isset($row[$colKode]) ? trim((string)$row[$colKode]) : '';
-                $namaBarang = isset($row[$colNama]) ? trim((string)$row[$colNama]) : '';
-                // Qty bisa berupa angka (int/float dari PhpSpreadsheet) atau string format Ramayana
-                $qtyCell    = $row[$colQty] ?? null;
-                $qtyRaw     = trim((string)$qtyCell);
-                $warnaExcel = ($colWarna !== null && isset($row[$colWarna])) ? trim((string)$row[$colWarna]) : '';
-                $sizeExcel  = ($colSize !== null && isset($row[$colSize])) ? trim((string)$row[$colSize]) : '';
+                $colQty = null;
+                $qtyCell = null;
+                foreach ($row as $ci => $cell) {
+                    if ($ci <= $colKode) continue;
+                    $val = trim((string)$cell);
+                    if ($val === '' || $val[0] === '(') continue; // lewati sel "Keterangan" berformat "( ... )"
+                    if (is_numeric($cell) || preg_match('/^-?\d+(\.\d+)?\s*[A-Za-z]+/', $val)) {
+                        $colQty = $ci;
+                        $qtyCell = $cell;
+                        break;
+                    }
+                }
+                if ($colQty === null) {
+                    $skippedCount++;
+                    $debugLog[] = "SKIP[$i] qty tidak ditemukan: kode=$kodeBarang";
+                    continue;
+                }
+                $qtyRaw = trim((string)$qtyCell);
+
+                $colNama = null;
+                foreach ($row as $ci => $cell) {
+                    if ($ci <= $colKode || $ci >= $colQty) continue;
+                    if (trim((string)$cell) !== '') { $colNama = $ci; break; }
+                }
+                $namaBarang = $colNama !== null ? trim((string)$row[$colNama]) : '';
+                $warnaExcel = '';
+                $sizeExcel  = '';
 
                 // ── Filter baris tidak valid ──────────────────────────────────────────
                 // 1. Baris kosong — nama barang wajib ada (kode boleh '-' atau kosong)
@@ -418,13 +406,15 @@ class RamayanaStockController extends Controller
                 }
 
                 // ── Ekstrak qty ───────────────────────────────────────────────────────
-                // Format Ramayana POS: qty bisa negatif (saldo defisit) → ambil nilai absolut
+                // Format Ramayana POS: qty bisa negatif (saldo defisit) → PERTAHANKAN tanda
+                // minusnya persis seperti di Excel (jangan di-abs()), supaya stok yang
+                // ditampilkan sama persis dengan sumber datanya.
                 $qty = 0;
                 if (is_numeric($qtyCell) && $qtyCell !== null && $qtyCell !== '') {
                     // PhpSpreadsheet mengembalikan angka langsung
-                    $qty = abs((int)round((float)$qtyCell));
+                    $qty = (int)round((float)$qtyCell);
                 } elseif (preg_match('/(-?\d+(\.\d+)?)/', $qtyRaw, $matches)) {
-                    $qty = abs((int)round((float)$matches[1]));
+                    $qty = (int)round((float)$matches[1]);
                 }
 
                 $satuan = 'PSG';
