@@ -26,6 +26,24 @@ class LeaveRequestController extends Controller
 
         $leaveRequests = $query->paginate(5)->appends($request->all());
 
+        // Pesan dari Super Admin / PIC yang belum dibaca karyawan (untuk banner notifikasi).
+        // Diambil SEBELUM ditandai terbaca, supaya karyawan tetap melihat notifikasinya
+        // saat pertama kali membuka halaman ini.
+        $unreadMessages = $user->leaveRequests()
+            ->whereNotNull('admin_message')
+            ->whereNull('admin_message_read_at')
+            ->latest('admin_message_at')
+            ->get();
+
+        // Tandai pesan yang tampil di halaman ini sebagai sudah dibaca.
+        // Hanya mengubah kolom penanda baca — tidak menyentuh data pengajuan lainnya.
+        if ($unreadMessages->isNotEmpty()) {
+            $user->leaveRequests()
+                ->whereNotNull('admin_message')
+                ->whereNull('admin_message_read_at')
+                ->update(['admin_message_read_at' => now()]);
+        }
+
         // Monthly Stats Reset
         $statsQuery = $user->leaveRequests()
             ->whereMonth('created_at', now()->month)
@@ -37,11 +55,12 @@ class LeaveRequestController extends Controller
         $rejectedCount = (clone $statsQuery)->where('status', 'rejected')->count();
 
         return view('karyawan.leave-requests.index', compact(
-            'leaveRequests', 
-            'totalCount', 
-            'pendingCount', 
-            'approvedCount', 
-            'rejectedCount'
+            'leaveRequests',
+            'totalCount',
+            'pendingCount',
+            'approvedCount',
+            'rejectedCount',
+            'unreadMessages'
         ));
     }
 
@@ -49,6 +68,18 @@ class LeaveRequestController extends Controller
     {
         $isLupaAbsen = $request->type === 'Lupa Absen';
         $isAbsenDiluar = $request->type === 'Absen Diluar';
+
+        // ── PENTING: "Lupa Absen" & "Absen Diluar" adalah kejadian SATU MOMEN
+        // (satu tanggal + satu jam), bukan rentang tanggal. Field "Sampai" di form
+        // memang disembunyikan untuk tipe ini, tapi input yang cuma disembunyikan
+        // secara visual TETAP IKUT TERKIRIM — sehingga nilai end_date sisa dari tipe
+        // sebelumnya (mis. user sempat pilih 08–09 lalu ganti ke Lupa Absen) ikut
+        // tersimpan dan bikin data absensi jadi tidak masuk akal.
+        // Karena itu kita paksa end_date = start_date di sisi server (tidak bisa
+        // diakali dari browser).
+        if ($isLupaAbsen || $isAbsenDiluar) {
+            $request->merge(['end_date' => $request->start_date]);
+        }
 
         $isStaffKantor = Auth::user()->role->slug === 'karyawan';
         $startDateRule = 'required|date';

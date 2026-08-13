@@ -81,6 +81,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Leave Approvals untuk Super Admin (Bisa hapus dll)
         Route::get('/leave-approvals', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'index'])->name('leave-approvals.index');
+        Route::post('/leave-approvals/{leaveRequest}/message', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'sendMessage'])->name('leave-approvals.message');
         Route::delete('/leave-approvals/{leaveRequest}', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'destroy'])->name('leave-approvals.destroy');
 
         // Sales Reports
@@ -112,6 +113,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/leave-approvals', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'index'])->name('leave-approvals.index');
         Route::put('/leave-approvals/{leaveRequest}/approve', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'approve'])->name('leave-approvals.approve');
         Route::put('/leave-approvals/{leaveRequest}/reject', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'reject'])->name('leave-approvals.reject');
+        Route::post('/leave-approvals/{leaveRequest}/message', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'sendMessage'])->name('leave-approvals.message');
         Route::delete('/leave-approvals/{leaveRequest}', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'destroy'])->name('leave-approvals.destroy');
 
         // Divisional Employees
@@ -132,6 +134,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/leave-approvals', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'index'])->name('leave-approvals.index');
         Route::put('/leave-approvals/{leaveRequest}/approve', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'approve'])->name('leave-approvals.approve');
         Route::put('/leave-approvals/{leaveRequest}/reject', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'reject'])->name('leave-approvals.reject');
+        Route::post('/leave-approvals/{leaveRequest}/message', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'sendMessage'])->name('leave-approvals.message');
         Route::delete('/leave-approvals/{leaveRequest}', [App\Http\Controllers\PIC\LeaveApprovalController::class, 'destroy'])->name('leave-approvals.destroy');
 
         // Divisional Employees

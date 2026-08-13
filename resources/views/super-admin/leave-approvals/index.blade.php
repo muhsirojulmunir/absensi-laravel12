@@ -2,7 +2,19 @@
 @section('title', 'Rekap Izin')
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-8 pb-20 animate-[fadeIn_0.5s_ease-out]">
+<div class="max-w-5xl mx-auto space-y-8 pb-20 animate-[fadeIn_0.5s_ease-out]"
+     x-data="{
+        msgOpen: false,
+        msgAction: '',
+        msgEmployee: '',
+        msgExisting: '',
+        openMessage(action, employee, existing) {
+            this.msgAction = action;
+            this.msgEmployee = employee;
+            this.msgExisting = existing || '';
+            this.msgOpen = true;
+        }
+     }">
     <!-- Header Section -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 group">
         <div class="space-y-1 transition-transform duration-300 group-hover:translate-x-1">
@@ -156,6 +168,10 @@
                                 <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-tight">
                                     <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                     <span class="whitespace-nowrap">{{ \Carbon\Carbon::parse($leave->start_date)->format('d M') }} — {{ \Carbon\Carbon::parse($leave->end_date)->format('d M Y') }}</span>
+                                    {{-- Durasi izin (inklusif): 13–14 = 2 hari --}}
+                                    <span class="px-1.5 py-0.5 rounded-md whitespace-nowrap {{ $leave->total_days > 1 ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
+                                        {{ $leave->total_days }} Hari
+                                    </span>
                                 </div>
                                 @if(in_array($leave->type, ['Lupa Absen', 'Absen Diluar']) && $leave->time_start)
                                     <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -194,6 +210,19 @@
                                     <span class="text-[9px] text-slate-400 font-bold italic">Oleh PIC</span>
                                 </div>
                             @endif
+
+                            {{-- Kirim pesan ke karyawan (tampil di halaman Izin karyawan) --}}
+                            <button type="button"
+                                @click="openMessage('{{ route('super-admin.leave-approvals.message', $leave) }}', @js($leave->user->name ?? '-'), @js($leave->admin_message))"
+                                class="mt-2 bg-white dark:bg-slate-900 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-800 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-sm inline-flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.9 9.9 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                                Pesan
+                            </button>
+                            @if($leave->admin_message)
+                                <p class="text-[8px] font-bold text-indigo-400 dark:text-indigo-500 italic mt-1">
+                                    Terkirim{{ $leave->admin_message_read_at ? ' · dibaca' : ' · belum dibaca' }}
+                                </p>
+                            @endif
                         </td>
                     </tr>
                     @empty
@@ -217,6 +246,52 @@
         <p class="text-[10px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-widest italic">Menampilkan {{ $leaveRequests->count() }} Data Tinjauan</p>
         <div>
             {{ $leaveRequests->links() }}
+        </div>
+    </div>
+
+    <!-- Modal: Kirim Pesan ke Karyawan -->
+    <div x-show="msgOpen" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-end sm:items-center justify-center min-h-screen px-4 py-6 text-center">
+            <div x-show="msgOpen" x-transition.opacity class="fixed inset-0 bg-slate-900/75" @click="msgOpen = false"></div>
+
+            <div x-show="msgOpen" x-transition.scale.origin.bottom
+                 class="relative z-10 w-full sm:max-w-lg bg-white dark:bg-slate-900 rounded-3xl text-left shadow-2xl border border-slate-200 dark:border-slate-800">
+                <form :action="msgAction" method="POST">
+                    @csrf
+                    <div class="px-5 pt-5 pb-4 sm:px-6">
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.9 9.9 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                            </div>
+                            <div class="w-full">
+                                <h3 class="text-base font-bold text-slate-900 dark:text-white">Kirim Pesan ke Karyawan</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                    Untuk: <span class="font-bold text-slate-700 dark:text-slate-200" x-text="msgEmployee"></span>
+                                </p>
+
+                                <div class="mt-4 text-left">
+                                    <label class="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Isi Pesan</label>
+                                    <textarea name="admin_message" rows="4" required maxlength="500"
+                                        x-model="msgExisting"
+                                        placeholder="Contoh: Tanggal yang Anda ajukan keliru. Untuk Lupa Absen cukup pilih 1 tanggal saja, mohon ajukan ulang."
+                                        class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 px-4 py-3 text-xs font-medium resize-none placeholder:text-slate-400"></textarea>
+                                    <p class="text-[10px] text-slate-400 mt-2">Pesan ini akan langsung tampil di halaman Izin karyawan tersebut.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-b-3xl px-5 py-4 sm:px-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <button type="button" @click="msgOpen = false"
+                            class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                            Batal
+                        </button>
+                        <button type="submit"
+                            class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors shadow-sm">
+                            Kirim Pesan
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>

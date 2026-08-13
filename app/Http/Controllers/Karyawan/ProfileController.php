@@ -31,17 +31,15 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
+        // ── Field yang boleh diubah SENDIRI oleh karyawan ────────────────────
+        // Hanya NAMA, FOTO, dan KATA SANDI. Data biodata lain (email, telepon,
+        // alamat, tempat/tanggal lahir, kontak darurat) hanya boleh diubah oleh
+        // Super Admin lewat menu Pengguna — supaya data karyawan tidak berubah
+        // sembarangan. Pembatasan ini dipasang di SISI SERVER, jadi tetap aman
+        // walaupun ada yang mencoba mengirim field terkunci lewat browser.
         $rules = [
-            'name'               => 'required|string|max:255',
-            'email'              => 'nullable|email|max:255|unique:users,email,' . $user->id,
-            'phone'              => 'nullable|string|max:20',
-            'emergency_name'     => 'nullable|string|max:255',
-            'emergency_phone'    => 'nullable|string|max:20',
-            'emergency_relation' => 'nullable|string|max:100',
-            'address'            => 'nullable|string|max:500',
-            'birth_place'        => 'nullable|string|max:255',
-            'birth_date'         => 'nullable|date',
-            'password'           => 'nullable|string|min:8|confirmed',
+            'name'     => 'required|string|max:255',
+            'password' => 'nullable|string|min:8|confirmed',
         ];
 
         if (!$request->filled('avatar_cropped')) {
@@ -58,16 +56,11 @@ class ProfileController extends Controller
             'password.min'      => 'Kata sandi minimal 8 karakter.',
         ]);
 
+        // Hanya nama yang diambil dari input. Field biodata lain SENGAJA tidak
+        // disertakan di sini, sehingga nilainya di database tidak akan berubah
+        // meskipun dikirim dari form.
         $data = [
-            'name'               => $request->name,
-            'email'              => $request->email,
-            'phone'              => $request->phone,
-            'emergency_name'     => $request->emergency_name,
-            'emergency_phone'    => $request->emergency_phone,
-            'emergency_relation' => $request->emergency_relation,
-            'address'            => $request->address,
-            'birth_place'        => $request->birth_place,
-            'birth_date'         => $request->birth_date,
+            'name' => $request->name,
         ];
 
         if ($request->filled('delete_avatar') && $request->delete_avatar == '1') {

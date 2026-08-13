@@ -2,18 +2,12 @@
 @section('title', 'Pengajuan Izin')
 
 @section('content')
-    <div class="space-y-6 md:space-y-10 animate-[fadeIn_0.5s_ease-out]" x-data="{ 
-        selectedType: '{{ old('type') }}',
-        activeTab: new URLSearchParams(window.location.search).has('page') ? 'riwayat' : 'pengajuan',
-        subType: '{{ old('sub_type') }}',
-        today: '{{ date('Y-m-d') }}',
-        startOfMonth: '{{ date('Y-m-01') }}',
-        isStaffKantor: {{ Auth::user()->role->slug === 'karyawan' ? 'true' : 'false' }},
-        startDate: '{{ old('start_date') }}',
-        get minStartDate() { return this.selectedType === 'Lupa Absen' ? this.startOfMonth : (this.isStaffKantor ? this.startOfMonth : this.today); },
-        get maxStartDate() { return this.selectedType === 'Lupa Absen' ? this.today : ''; },
-        get minEndDate() { return this.startDate ? this.startDate : (this.isStaffKantor ? this.startOfMonth : this.today); }
-    }">
+    {{-- CATATAN: seluruh logika Alpine ditaruh di fungsi leaveFormHandler() pada blok
+         <script> di bawah halaman ini, BUKAN ditulis panjang di dalam atribut x-data.
+         Alasannya: teks di dalam atribut HTML tidak boleh mengandung tanda kutip ganda
+         (") karena akan memutus atributnya di tengah jalan — akibatnya kode bocor
+         tampil sebagai teks di halaman dan Alpine gagal jalan. --}}
+    <div class="space-y-6 md:space-y-10 animate-[fadeIn_0.5s_ease-out]" x-data="leaveFormHandler()">
         <!-- Header: Bold & Minimalist -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 group">
             <div class="space-y-1 transition-transform duration-300 group-hover:translate-x-1">
@@ -40,6 +34,47 @@
                 </div>
             </div>
         </div>
+
+        <!-- Notifikasi: Pesan baru dari Super Admin / PIC -->
+        @if(isset($unreadMessages) && $unreadMessages->count() > 0)
+            <div class="space-y-3">
+                @foreach($unreadMessages as $msg)
+                    {{-- Bisa diklik: langsung membuka tab Riwayat dan menyorot pengajuan yang dimaksud --}}
+                    <a href="#leave-{{ $msg->id }}"
+                       @click="activeTab = 'riwayat'; sorotPengajuan({{ $msg->id }})"
+                       class="block rounded-3xl border-2 border-indigo-300 dark:border-indigo-500/70 bg-indigo-50 dark:bg-indigo-950/40 px-5 py-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-indigo-400 dark:hover:border-indigo-400 hover:shadow-[0_8px_30px_rgb(99,102,241,0.25)] transition-all cursor-pointer group/msg">
+                        <div class="flex items-start gap-3">
+                            <div class="w-9 h-9 shrink-0 rounded-xl bg-indigo-100 dark:bg-indigo-500/25 flex items-center justify-center text-base border border-indigo-200 dark:border-indigo-500/50">
+                                💬
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2 mb-1">
+                                    <p class="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-200">
+                                        Pesan dari Admin
+                                    </p>
+                                    <span class="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[8px] font-black uppercase tracking-widest">Baru</span>
+                                </div>
+                                <p class="text-xs font-semibold text-indigo-950 dark:text-white leading-relaxed whitespace-pre-line break-words">
+                                    {{ $msg->admin_message }}
+                                </p>
+                                <p class="text-[9px] font-bold text-indigo-500 dark:text-indigo-300 italic mt-2">
+                                    Terkait pengajuan
+                                    <span class="uppercase">{{ $msg->type }}</span>
+                                    {{ \Carbon\Carbon::parse($msg->start_date)->translatedFormat('d M Y') }}
+                                    @if($msg->admin_message_at)
+                                        &middot; {{ $msg->admin_message_at->diffForHumans() }}
+                                    @endif
+                                </p>
+                                <p class="text-[9px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-300 mt-2 inline-flex items-center gap-1 group-hover/msg:gap-2 transition-all">
+                                    Lihat pengajuan yang dimaksud
+                                    <span aria-hidden="true">&rarr;</span>
+                                </p>
+                            </div>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        @endif
 
         <!-- Stats Snapshot (Matching Attendance Style) -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
@@ -260,18 +295,25 @@
                                             value="{{ old('start_date') }}"
                                             class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-50 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-full text-blue-900 dark:text-blue-100 px-4 py-3 text-xs font-bold transition-all shadow-sm">
                                     </div>
-                                    <div class="space-y-1.5" x-show="selectedType !== 'Lupa Absen' && selectedType !== 'Absen Diluar'">
+                                    <div class="space-y-1.5" x-show="!isSingleDayType">
                                         <label
                                             class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">Sampai</label>
+                                        {{-- PENTING: pakai :disabled saat tipe satu-hari. x-show hanya menyembunyikan
+                                             secara visual — input yang disembunyikan TETAP IKUT TERKIRIM. Input yang
+                                             disabled tidak ikut terkirim, sehingga tanggal sisa dari tipe sebelumnya
+                                             tidak nyasar terkirim untuk Lupa Absen / Absen Diluar. --}}
                                         <input type="date" name="end_date"
-                                            :required="selectedType !== 'Lupa Absen' && selectedType !== 'Absen Diluar'"
+                                            x-model="endDate"
+                                            :required="!isSingleDayType"
+                                            :disabled="isSingleDayType"
                                             :min="minEndDate"
                                             value="{{ old('end_date') }}"
                                             class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-50 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-full text-blue-900 dark:text-blue-100 px-4 py-3 text-xs font-bold transition-all shadow-sm">
                                     </div>
-                                    {{-- For Lupa Absen & Absen Diluar, end_date = start_date (same day) --}}
-                                    <template x-if="selectedType === 'Lupa Absen' || selectedType === 'Absen Diluar'">
-                                        <input type="hidden" name="end_date" :value="$el.closest('form').querySelector('[name=start_date]').value || today">
+                                    {{-- Lupa Absen & Absen Diluar: end_date SELALU = start_date (kejadian 1 momen).
+                                         Sisi server juga memaksa hal yang sama, ini hanya lapis tambahan di browser. --}}
+                                    <template x-if="isSingleDayType">
+                                        <input type="hidden" name="end_date" :value="startDate || today">
                                     </template>
                                 </div>
                                 <div class="space-y-1.5">
@@ -290,8 +332,52 @@
                                 </div>
                             </div>
 
+                            {{-- Ringkasan durasi izin: biar karyawan langsung sadar berapa hari yang diajukan --}}
+                            <template x-if="selectedType && !isSingleDayType && totalDays > 0">
+                                <div class="flex items-start gap-3 rounded-2xl border px-4 py-3"
+                                     :class="totalDays > 1
+                                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/60'
+                                        : 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800/60'">
+                                    <span class="text-lg leading-none mt-0.5" x-text="totalDays > 1 ? '⚠️' : 'ℹ️'"></span>
+                                    <div class="space-y-0.5">
+                                        <p class="text-[11px] font-black uppercase tracking-widest"
+                                           :class="totalDays > 1 ? 'text-amber-700 dark:text-amber-300' : 'text-blue-700 dark:text-blue-300'">
+                                            Total <span x-text="totalDays"></span> Hari Izin
+                                        </p>
+                                        <p class="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                                            <span x-text="formatTanggal(startDate)"></span>
+                                            <template x-if="totalDays > 1">
+                                                <span> s/d <span x-text="formatTanggal(endDate)"></span></span>
+                                            </template>
+                                            <template x-if="totalDays > 1">
+                                                <span class="block mt-0.5 font-bold text-amber-700 dark:text-amber-300">
+                                                    Tanggal mulai dan tanggal akhir ikut terhitung sebagai hari izin.
+                                                </span>
+                                            </template>
+                                        </p>
+                                    </div>
+                                </div>
+                            </template>
+
+                            {{-- Penegasan untuk tipe satu-momen: hanya berlaku 1 tanggal --}}
+                            <template x-if="isSingleDayType && startDate">
+                                <div class="flex items-start gap-3 rounded-2xl border border-blue-100 dark:border-blue-800/60 bg-blue-50 dark:bg-blue-900/20 px-4 py-3">
+                                    <span class="text-lg leading-none mt-0.5">ℹ️</span>
+                                    <div class="space-y-0.5">
+                                        <p class="text-[11px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-300">
+                                            Berlaku 1 Hari Saja
+                                        </p>
+                                        <p class="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                                            <span x-text="selectedType"></span> hanya untuk tanggal
+                                            <span class="font-bold" x-text="formatTanggal(startDate)"></span>.
+                                        </p>
+                                    </div>
+                                </div>
+                            </template>
+
                             <div class="flex justify-center md:justify-end pt-2">
                                 <button type="submit"
+                                    @click="confirmSubmit($event)"
                                     class="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-10 rounded-full shadow-lg shadow-blue-600/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 text-xs uppercase tracking-[0.15em]">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
@@ -361,7 +447,9 @@
                             </thead>
                             <tbody class="divide-y divide-blue-50 dark:divide-slate-700">
                                 @forelse($leaveRequests as $leave)
-                                    <tr class="hover:bg-blue-50/30 dark:hover:bg-slate-700/30 transition-colors group">
+                                    <tr id="leave-{{ $leave->id }}"
+                                        :class="pengajuanDisorot === {{ $leave->id }} ? 'bg-indigo-100 dark:bg-indigo-500/20 ring-2 ring-inset ring-indigo-400 dark:ring-indigo-400' : ''"
+                                        class="hover:bg-blue-50/30 dark:hover:bg-slate-700/30 transition-colors group scroll-mt-24">
                                         <td class="px-6 md:px-10 py-5">
                                             <div class="flex items-center space-x-4">
                                                 <div
@@ -386,6 +474,27 @@
                                                     @endif
                                                     <p class="text-[10px] text-blue-400 dark:text-blue-500 font-bold truncate max-w-[200px] italic mt-1">
                                                         "{{ $leave->reason }}"</p>
+
+                                                    {{-- Pesan dari Super Admin / PIC (tanpa menu baru, tampil langsung di sini) --}}
+                                                    @if($leave->admin_message)
+                                                        <div class="mt-2 max-w-[260px] rounded-xl border border-indigo-300 dark:border-indigo-500/60 bg-indigo-50 dark:bg-indigo-950/50 px-3 py-2">
+                                                            <div class="flex items-center gap-1.5 mb-1">
+                                                                <span class="text-[11px] leading-none">💬</span>
+                                                                <span class="text-[8px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-200">
+                                                                    Pesan dari Admin
+                                                                </span>
+                                                                @if(is_null($leave->admin_message_read_at))
+                                                                    <span class="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[7px] font-black uppercase tracking-wider">Baru</span>
+                                                                @endif
+                                                            </div>
+                                                            <p class="text-[10px] font-semibold text-indigo-900 dark:text-white leading-relaxed whitespace-pre-line break-words">{{ $leave->admin_message }}</p>
+                                                            @if($leave->admin_message_at)
+                                                                <p class="text-[8px] font-bold text-indigo-500 dark:text-indigo-300 italic mt-1">
+                                                                    {{ $leave->admin_message_at->diffForHumans() }}
+                                                                </p>
+                                                            @endif
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </td>
@@ -395,6 +504,10 @@
                                                 {{ \Carbon\Carbon::parse($leave->start_date)->translatedFormat('d M') }} -
                                                 {{ \Carbon\Carbon::parse($leave->end_date)->translatedFormat('d M Y') }}
                                             </span>
+                                            {{-- Durasi izin (inklusif): 13–14 = 2 hari --}}
+                                            <p class="text-[9px] font-black uppercase tracking-widest mt-1.5 {{ $leave->total_days > 1 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500' }}">
+                                                {{ $leave->total_days }} Hari
+                                            </p>
                                         </td>
                                         <td class="px-6 md:px-10 py-5 whitespace-nowrap text-right">
                                             @php
@@ -444,4 +557,119 @@
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
+
+    <script>
+        function leaveFormHandler() {
+            return {
+                selectedType: @json(old('type', '')),
+                activeTab: new URLSearchParams(window.location.search).has('page') ? 'riwayat' : 'pengajuan',
+                subType: @json(old('sub_type', '')),
+                today: @json(date('Y-m-d')),
+                startOfMonth: @json(date('Y-m-01')),
+                isStaffKantor: @json(Auth::user()->role->slug === 'karyawan'),
+                startDate: @json(old('start_date', '')),
+                endDate: @json(old('end_date', '')),
+
+                // ID pengajuan yang sedang disorot (setelah pesan admin diklik)
+                pengajuanDisorot: null,
+
+                /**
+                 * Dipanggil saat karyawan mengklik pesan dari admin.
+                 * Pindah ke tab Riwayat, lalu gulir + sorot baris pengajuan
+                 * yang dimaksud supaya karyawan langsung tahu mana yang salah.
+                 */
+                sorotPengajuan(id) {
+                    this.pengajuanDisorot = id;
+                    this.$nextTick(() => {
+                        const baris = document.getElementById('leave-' + id);
+                        if (baris) {
+                            baris.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
+                    // Hapus sorotan setelah beberapa detik supaya tidak mengganggu
+                    setTimeout(() => {
+                        if (this.pengajuanDisorot === id) this.pengajuanDisorot = null;
+                    }, 5000);
+                },
+
+                get minStartDate() {
+                    if (this.selectedType === 'Lupa Absen') return this.startOfMonth;
+                    return this.isStaffKantor ? this.startOfMonth : this.today;
+                },
+                get maxStartDate() {
+                    return this.selectedType === 'Lupa Absen' ? this.today : '';
+                },
+                get minEndDate() {
+                    if (this.startDate) return this.startDate;
+                    return this.isStaffKantor ? this.startOfMonth : this.today;
+                },
+
+                // Tipe yang sifatnya SATU MOMEN (satu tanggal + satu jam), bukan rentang tanggal
+                get isSingleDayType() {
+                    return this.selectedType === 'Lupa Absen' || this.selectedType === 'Absen Diluar';
+                },
+
+                // Hitung jumlah hari izin (inklusif). Contoh: 13 s/d 14 = 2 hari
+                get totalDays() {
+                    if (this.isSingleDayType) return 1;
+                    if (!this.startDate || !this.endDate) return 0;
+                    const a = new Date(this.startDate + 'T00:00:00');
+                    const b = new Date(this.endDate + 'T00:00:00');
+                    if (isNaN(a) || isNaN(b) || b < a) return 0;
+                    return Math.round((b - a) / 86400000) + 1;
+                },
+
+                // Label tanggal yang enak dibaca, mis. 13 Agustus 2026
+                formatTanggal(value) {
+                    if (!value) return '-';
+                    const d = new Date(value + 'T00:00:00');
+                    if (isNaN(d)) return value;
+                    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                },
+
+                // Konfirmasi sebelum kirim, supaya karyawan benar-benar paham berapa hari
+                // izin yang diajukan dan tidak salah pilih tanggal.
+                confirmSubmit(event) {
+                    if (!this.selectedType) return true;
+
+                    const jenis = this.selectedType + (this.subType ? ' (' + this.subType + ')' : '');
+                    let pesan;
+
+                    if (this.isSingleDayType) {
+                        pesan =
+                            'KONFIRMASI PENGAJUAN\n\n' +
+                            'Jenis   : ' + jenis + '\n' +
+                            'Tanggal : ' + this.formatTanggal(this.startDate) + '\n\n' +
+                            'Pengajuan ini berlaku untuk 1 HARI saja (tanggal di atas).\n\n' +
+                            'Sudah benar? Tekan OK untuk mengirim.';
+                    } else {
+                        const hari = this.totalDays;
+
+                        if (hari === 0) {
+                            window.alert('Tanggal belum lengkap, atau tanggal akhir lebih awal dari tanggal mulai. Mohon periksa kembali.');
+                            event.preventDefault();
+                            return false;
+                        }
+
+                        pesan =
+                            'KONFIRMASI PENGAJUAN\n\n' +
+                            'Jenis  : ' + jenis + '\n' +
+                            'Dari   : ' + this.formatTanggal(this.startDate) + '\n' +
+                            'Sampai : ' + this.formatTanggal(this.endDate) + '\n' +
+                            'Total  : ' + hari + ' HARI izin\n\n' +
+                            (hari > 1
+                                ? 'PERHATIAN: Anda mengajukan izin selama ' + hari + ' hari penuh (tanggal mulai dan tanggal akhir ikut terhitung).\n\n'
+                                : 'Pengajuan ini berlaku untuk 1 hari saja.\n\n') +
+                            'Sudah benar? Tekan OK untuk mengirim.';
+                    }
+
+                    if (!window.confirm(pesan)) {
+                        event.preventDefault();
+                        return false;
+                    }
+                    return true;
+                }
+            };
+        }
+    </script>
 @endsection

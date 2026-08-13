@@ -147,38 +147,52 @@
                             <span class="w-2 h-2 bg-indigo-400 rounded-full group-hover/form:scale-125 transition-transform"></span>
                             <h2 class="text-xs font-bold text-blue-900 dark:text-blue-100 uppercase tracking-widest leading-none">Biodata Pribadi</h2>
                         </div>
+                        {{-- Info: field terkunci. Semua input di bawah memakai atribut `disabled`
+                             sehingga nilainya tidak ikut terkirim sama sekali. Sisi server juga
+                             sudah membatasi field yang boleh diubah. --}}
+                        <div class="flex items-start gap-3 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+                            <span class="text-base leading-none mt-0.5">🔒</span>
+                            <div class="space-y-0.5">
+                                <p class="text-[10px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-300">Sebagian Data Terkunci</p>
+                                <p class="text-[11px] font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
+                                    Anda hanya dapat mengubah <span class="font-bold">Nama Lengkap</span>, <span class="font-bold">Foto Profil</span>, dan <span class="font-bold">Kata Sandi</span>.
+                                    Untuk mengubah data lainnya, silakan hubungi Admin.
+                                </p>
+                            </div>
+                        </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-3">
                                 <label class="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">Nama Lengkap</label>
-                                <input type="text" name="name" value="{{ $user->name }}" required 
+                                <input type="text" name="name" value="{{ $user->name }}" required
                                        class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-blue-950 dark:text-blue-100 text-sm font-bold focus:ring-2 focus:ring-blue-600 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 shadow-inner focus:bg-white dark:focus:bg-slate-950 text-shadow-sm">
                             </div>
                             <div class="space-y-3">
-                                <label class="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">Nomer Telepon</label>
-                                <input type="text" name="phone" value="{{ $user->phone }}" 
-                                       class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-blue-950 dark:text-blue-100 text-sm font-bold focus:ring-2 focus:ring-blue-600 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 shadow-inner focus:bg-white dark:focus:bg-slate-950 text-shadow-sm">
+                                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nomer Telepon <span class="normal-case font-normal">🔒</span></label>
+                                <input type="text" value="{{ $user->phone }}" disabled
+                                       class="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3.5 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-not-allowed shadow-inner">
                             </div>
                         </div>
                         <div class="space-y-3">
-                            <label class="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">Alamat Email <span class="text-slate-400 normal-case font-normal">(Digunakan untuk Lupa Password)</span></label>
-                            <input type="email" name="email" value="{{ $user->email }}" placeholder="contoh: karyawan@perusahaan.com"
-                                   class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-blue-950 dark:text-blue-100 text-sm font-bold focus:ring-2 focus:ring-blue-600 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 shadow-inner focus:bg-white dark:focus:bg-slate-950 text-shadow-sm">
+                            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Alamat Email <span class="normal-case font-normal">🔒 (Digunakan untuk Lupa Password)</span></label>
+                            <input type="email" value="{{ $user->email }}" disabled
+                                   class="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3.5 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-not-allowed shadow-inner">
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-3">
-                                <label class="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">Tempat Lahir</label>
-                                <input type="text" name="birth_place" value="{{ $user->birth_place }}" placeholder="Contoh: Jakarta"
-                                       class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-blue-950 dark:text-blue-100 text-sm font-bold focus:ring-2 focus:ring-blue-600 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 shadow-inner focus:bg-white dark:focus:bg-slate-950 text-shadow-sm">
+                                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tempat Lahir <span class="normal-case font-normal">🔒</span></label>
+                                <input type="text" value="{{ $user->birth_place }}" disabled
+                                       class="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3.5 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-not-allowed shadow-inner">
                             </div>
                             <div class="space-y-3">
-                                <label class="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">Tanggal Lahir</label>
-                                <input type="date" name="birth_date" value="{{ $user->birth_date }}" 
-                                       class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-blue-950 dark:text-blue-100 text-sm font-bold focus:ring-2 focus:ring-blue-600 outline-none transition-all shadow-inner focus:bg-white dark:focus:bg-slate-950 text-shadow-sm">
+                                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tanggal Lahir <span class="normal-case font-normal">🔒</span></label>
+                                <input type="date" value="{{ $user->birth_date }}" disabled
+                                       class="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3.5 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-not-allowed shadow-inner">
                             </div>
                         </div>
                         <div class="space-y-3">
-                            <label class="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">Alamat Lengkap Tempat Tinggal</label>
-                            <textarea name="address" rows="3" class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-2xl px-5 py-4 text-blue-950 dark:text-blue-100 text-sm font-bold focus:ring-2 focus:ring-blue-600 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 shadow-inner focus:bg-white dark:focus:bg-slate-950 text-shadow-sm">{{ $user->address }}</textarea>
+                            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Alamat Lengkap Tempat Tinggal <span class="normal-case font-normal">🔒</span></label>
+                            <textarea rows="3" disabled class="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-not-allowed shadow-inner resize-none">{{ $user->address }}</textarea>
                         </div>
                     </div>
 
@@ -192,26 +206,21 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-3">
-                                <label class="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">Nama Orang Kesayangan/Keluarga</label>
-                                <input type="text" name="emergency_name" value="{{ $user->emergency_name }}" placeholder="Contoh: Siti Aminah"
-                                       class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-blue-950 dark:text-blue-100 text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 shadow-inner focus:bg-white dark:focus:bg-slate-950 text-shadow-sm">
+                                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nama Orang Kesayangan/Keluarga <span class="normal-case font-normal">🔒</span></label>
+                                <input type="text" value="{{ $user->emergency_name }}" disabled
+                                       class="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3.5 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-not-allowed shadow-inner">
                             </div>
                             <div class="space-y-3">
-                                <label class="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">Status Hubungan</label>
-                                <select name="emergency_relation" class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-blue-950 dark:text-blue-100 text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none transition-all shadow-inner focus:bg-white dark:focus:bg-slate-950 text-shadow-sm">
-                                    <option value="" disabled {{ !$user->emergency_relation ? 'selected' : '' }} class="dark:bg-slate-900">-- Pilih Hubungan Darurat --</option>
-                                    <option value="Orang tua (Ibu/Ayah)" {{ $user->emergency_relation == 'Orang tua (Ibu/Ayah)' ? 'selected' : '' }} class="dark:bg-slate-900">Orang tua (Ibu/Ayah)</option>
-                                    <option value="Pasangan (Suami/Istri)" {{ $user->emergency_relation == 'Pasangan (Suami/Istri)' ? 'selected' : '' }} class="dark:bg-slate-900">Pasangan (Suami/Istri)</option>
-                                    <option value="Saudara Kandung (Kakak/Adik)" {{ $user->emergency_relation == 'Saudara Kandung (Kakak/Adik)' ? 'selected' : '' }} class="dark:bg-slate-900">Saudara Kandung (Kakak/Adik)</option>
-                                    <option value="Teman Dekat / Tetangga" {{ $user->emergency_relation == 'Teman Dekat / Tetangga' ? 'selected' : '' }} class="dark:bg-slate-900">Teman Dekat / Tetangga</option>
-                                </select>
+                                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Status Hubungan <span class="normal-case font-normal">🔒</span></label>
+                                <input type="text" value="{{ $user->emergency_relation ?: '-' }}" disabled
+                                       class="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3.5 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-not-allowed shadow-inner">
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                              <div class="space-y-3">
-                                <label class="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider">Nomer HP Darurat / Whatsapp</label>
-                                <input type="text" name="emergency_phone" value="{{ $user->emergency_phone }}" 
-                                       class="w-full bg-slate-50 dark:bg-slate-900 border border-blue-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-blue-950 dark:text-blue-100 text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 shadow-inner focus:bg-white dark:focus:bg-slate-950 text-shadow-sm">
+                                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nomer HP Darurat / Whatsapp <span class="normal-case font-normal">🔒</span></label>
+                                <input type="text" value="{{ $user->emergency_phone }}" disabled
+                                       class="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3.5 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-not-allowed shadow-inner">
                             </div>
                         </div>
                     </div>
@@ -307,11 +316,43 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.classList.add('hidden'), 3000);
 }
 
+/**
+ * Tampilkan pratinjau foto yang dipilih tanpa proses crop.
+ * Dipakai sebagai CADANGAN kalau library Cropper gagal dimuat (mis. CDN diblokir
+ * atau internet lambat) — file tetap terkirim apa adanya lewat input file biasa,
+ * sehingga foto TETAP BISA diunggah.
+ */
+function previewTanpaCrop(dataUrl) {
+    const mainPhotoPreview = document.getElementById('main-photo-preview');
+    if (mainPhotoPreview) {
+        mainPhotoPreview.src = dataUrl;
+    } else {
+        const container = document.getElementById('photo-preview-container');
+        if (container) {
+            container.innerHTML = '<img src="' + dataUrl + '" class="w-full h-full object-cover" id="main-photo-preview">';
+        }
+    }
+
+    const sidebarAvatar = document.getElementById('sidebar-avatar');
+    if (sidebarAvatar) {
+        sidebarAvatar.src = dataUrl;
+    } else {
+        const sbInit = document.getElementById('avatar-initial');
+        if (sbInit) {
+            const newImg = document.createElement('img');
+            newImg.src = dataUrl;
+            newImg.id = 'sidebar-avatar';
+            newImg.className = 'w-full h-full object-cover';
+            sbInit.replaceWith(newImg);
+        }
+    }
+}
+
 avatarInput.addEventListener('change', function(e) {
     const files = e.target.files;
     if (files && files.length > 0) {
         const file = files[0];
-        
+
         if (!file.type.match('image.*')) {
             showToast('File harus berupa gambar!', 'error');
             return;
@@ -319,32 +360,54 @@ avatarInput.addEventListener('change', function(e) {
 
         const reader = new FileReader();
         reader.onload = function(event) {
+            // Kalau library Cropper tidak tersedia, lewati proses crop dan
+            // langsung pakai file aslinya. Ini mencegah foto gagal diunggah
+            // hanya karena library dari internet tidak bisa dimuat.
+            if (typeof window.Cropper === 'undefined') {
+                document.getElementById('avatar_cropped').value = '';
+                previewTanpaCrop(event.target.result);
+                showToast('Foto siap diunggah. Tekan "Simpan Pembaruan" untuk menyimpan.');
+                return;
+            }
+
             cropperImage.src = event.target.result;
             cropperModal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden'; 
-            
+            document.body.style.overflow = 'hidden';
+
             if (cropper) {
                 cropper.destroy();
             }
-            
-            cropper = new Cropper(cropperImage, {
-                aspectRatio: 3 / 4,
-                viewMode: 1, 
-                dragMode: 'move',
-                autoCropArea: 0.8,
-                restore: false,
-                guides: true,
-                center: true,
-                highlight: true,
-                cropBoxMovable: true,
-                cropBoxResizable: true,
-                toggleDragModeOnDblclick: false,
-                minContainerWidth: 200,
-                minContainerHeight: 300,
-                ready() {
-                    zoomRange.value = cropper.getData().scaleX || 1;
-                }
-            });
+
+            try {
+                cropper = new Cropper(cropperImage, {
+                    aspectRatio: 3 / 4,
+                    viewMode: 1,
+                    dragMode: 'move',
+                    autoCropArea: 0.8,
+                    restore: false,
+                    guides: true,
+                    center: true,
+                    highlight: true,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    toggleDragModeOnDblclick: false,
+                    minContainerWidth: 200,
+                    minContainerHeight: 300,
+                    ready() {
+                        if (zoomRange) zoomRange.value = cropper.getData().scaleX || 1;
+                    }
+                });
+            } catch (err) {
+                // Cropper gagal dijalankan — jangan sampai foto tidak bisa diunggah.
+                // Tutup modal crop dan pakai file aslinya apa adanya.
+                console.error(err);
+                cropperModal.classList.add('hidden');
+                document.body.style.overflow = '';
+                cropper = null;
+                document.getElementById('avatar_cropped').value = '';
+                previewTanpaCrop(event.target.result);
+                showToast('Foto siap diunggah. Tekan "Simpan Pembaruan" untuk menyimpan.');
+            }
         };
         reader.onerror = () => showToast('Gagal membaca file gambar.', 'error');
         reader.readAsDataURL(file);
@@ -438,11 +501,13 @@ function closeCropper() {
     avatarInput.value = '';
 }
 
-zoomRange.addEventListener('input', function() {
-    if (cropper) {
-        cropper.zoomTo(this.value);
-    }
-});
+if (zoomRange) {
+    zoomRange.addEventListener('input', function() {
+        if (cropper) {
+            cropper.zoomTo(this.value);
+        }
+    });
+}
 </script>
 <style>
     /* Styling modern cropper library overides agar tema biru white-mode match */

@@ -80,12 +80,9 @@ class LeaveApprovalController extends Controller
 
     public function approve(LeaveRequest $leaveRequest)
     {
-        $leaveRequest->update([
-            'status'      => 'approved',
-            'approved_by' => Auth::id()
-        ]);
-
         // ── AUTO-FILL ABSENSI untuk pengajuan "Lupa Absen" & "Absen Diluar" ──
+        // Dicek DULU sebelum status diubah, supaya kalau jamnya tidak masuk akal
+        // pengajuan tidak terlanjur disetujui dengan data absensi yang salah.
         if (in_array($leaveRequest->type, ['Lupa Absen', 'Absen Diluar']) && $leaveRequest->time_start) {
             $date    = Carbon::parse($leaveRequest->start_date)->toDateString();
             $userId  = $leaveRequest->user_id;
@@ -98,6 +95,31 @@ class LeaveApprovalController extends Controller
             $attendance = Attendance::where('user_id', $userId)
                 ->whereDate('date', $date)
                 ->first();
+
+            // ── Validasi logika waktu ────────────────────────────────────────
+            // Cegah data absensi mustahil seperti "masuk 16:10, pulang 10:10".
+            // Kalau jamnya bentrok, pengajuan TIDAK disetujui dan admin diminta
+            // memperbaiki dulu — data absensi lama tidak disentuh sama sekali.
+            if ($attendance) {
+                $jamBaru = Carbon::parse($time);
+
+                if ($subType === 'Absen Masuk' && $attendance->check_out) {
+                    $jamPulang = Carbon::parse($attendance->check_out);
+                    if ($jamBaru->greaterThanOrEqualTo($jamPulang)) {
+                        return back()->with('error',
+                            'Pengajuan TIDAK disetujui: jam masuk (' . $jamBaru->format('H:i') . ') tidak boleh sama atau lebih lambat dari jam pulang yang sudah tercatat (' . $jamPulang->format('H:i') . ') pada ' . Carbon::parse($date)->translatedFormat('d M Y') . '. Mohon minta karyawan mengajukan ulang dengan jam yang benar, atau perbaiki lewat menu Monitor Absensi.');
+                    }
+                }
+
+                if ($subType === 'Absen Pulang' && $attendance->check_in) {
+                    $jamMasuk = Carbon::parse($attendance->check_in);
+                    if ($jamBaru->lessThanOrEqualTo($jamMasuk)) {
+                        return back()->with('error',
+                            'Pengajuan TIDAK disetujui: jam pulang (' . $jamBaru->format('H:i') . ') tidak boleh sama atau lebih awal dari jam masuk yang sudah tercatat (' . $jamMasuk->format('H:i') . ') pada ' . Carbon::parse($date)->translatedFormat('d M Y') . '. Mohon minta karyawan mengajukan ulang dengan jam yang benar, atau perbaiki lewat menu Monitor Absensi.');
+                    }
+                }
+            }
+            // ─────────────────────────────────────────────────────────────────
 
             if ($subType === 'Absen Masuk') {
                 if ($attendance) {
@@ -138,7 +160,33 @@ class LeaveApprovalController extends Controller
         }
         // ────────────────────────────────────────────────────────────────────
 
+        $leaveRequest->update([
+            'status'      => 'approved',
+            'approved_by' => Auth::id()
+        ]);
+
         return back()->with('success', 'Pengajuan disetujui dan absensi karyawan telah diperbarui secara otomatis.');
+    }
+
+    /**
+     * Kirim pesan/catatan dari Super Admin atau PIC ke karyawan terkait pengajuan izinnya.
+     * Dipakai untuk memberi tahu karyawan bila pengajuannya keliru (mis. salah tanggal),
+     * tanpa perlu menu baru di sisi karyawan — pesan tampil langsung di kartu pengajuan.
+     */
+    public function sendMessage(Request $request, LeaveRequest $leaveRequest)
+    {
+        $request->validate([
+            'admin_message' => 'required|string|max:500',
+        ]);
+
+        $leaveRequest->update([
+            'admin_message'         => $request->admin_message,
+            'admin_message_by'      => Auth::id(),
+            'admin_message_at'      => now(),
+            'admin_message_read_at' => null, // reset supaya karyawan lihat sebagai pesan baru
+        ]);
+
+        return back()->with('success', 'Pesan berhasil dikirim ke karyawan.');
     }
 
     public function reject(LeaveRequest $leaveRequest)
