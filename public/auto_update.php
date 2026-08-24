@@ -25,13 +25,35 @@ $branch     = 'main';
 $baseUrl = "https://raw.githubusercontent.com/{$githubUser}/{$githubRepo}/{$branch}";
 
 $filesToUpdate = [
+    'app/Http/Controllers/Karyawan/LeaveRequestController.php',
+    'resources/views/karyawan/leave-requests/index.blade.php',
     'app/Http/Controllers/Karyawan/ProfileController.php',
     'resources/views/karyawan/profile/edit.blade.php',
+    'app/Http/Controllers/SuperAdmin/RamayanaStockController.php',
+    'app/Http/Controllers/PIC/RamayanaStockController.php',
+    'app/Services/ExcelImportReader.php',
+    'routes/web.php',
     'config/filesystems.php',
+    'public/storage_setup.php',
 ];
 // ====== END KONFIGURASI ======
 
 $results = [];
+
+// Buat folder storage jika belum ada
+$storageFolders = [
+    $root . '/public/storage',
+    $root . '/public/storage/avatars',
+    $root . '/public/storage/lupa-absen',
+];
+foreach ($storageFolders as $sf) {
+    if (!is_dir($sf)) {
+        @mkdir($sf, 0775, true);
+    }
+    if (is_dir($sf)) {
+        @chmod($sf, 0775);
+    }
+}
 
 foreach ($filesToUpdate as $relativePath) {
     $targetPath = $root . '/' . $relativePath;

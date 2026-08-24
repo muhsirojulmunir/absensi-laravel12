@@ -218,6 +218,21 @@ class LeaveRequestController extends Controller
     }
 
     /**
+     * Pastikan folder lupa-absen selalu ada dan memiliki izin tulis.
+     */
+    private function ensureLupaAbsenDirectoryExists(): string
+    {
+        $dir = public_path('storage/lupa-absen');
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        if (is_dir($dir)) {
+            @chmod($dir, 0775);
+        }
+        return $dir;
+    }
+
+    /**
      * Jalur UTAMA: foto dikirim sebagai file upload asli (multipart/form-data).
      */
     private function simpanFotoDariUpload(Request $request)
@@ -230,10 +245,7 @@ class LeaveRequestController extends Controller
             'photo.max'   => 'Ukuran foto terlalu besar. Silakan ambil ulang foto.',
         ]);
 
-        $dir = public_path('storage/lupa-absen');
-        if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
-        }
+        $dir = $this->ensureLupaAbsenDirectoryExists();
 
         $file = $request->file('photo');
         $fileName = 'lupa-absen/' . Auth::id() . '_' . now()->format('Ymd_His') . '_' . uniqid() . '.jpg';
@@ -282,11 +294,7 @@ class LeaveRequestController extends Controller
             ]);
         }
 
-        $dir = public_path('storage/lupa-absen');
-        if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
-        }
-
+        $dir = $this->ensureLupaAbsenDirectoryExists();
         $fileName = 'lupa-absen/' . Auth::id() . '_' . now()->format('Ymd_His') . '_' . uniqid() . '.jpg';
 
         if (file_put_contents(public_path('storage/' . $fileName), $binary) === false) {

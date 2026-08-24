@@ -11,9 +11,10 @@ if ($key !== 'setup2024') {
 
 header('Content-Type: text/html; charset=utf-8');
 
-$publicPath  = __DIR__;
-$storagePath = $publicPath . '/storage';
-$avatarsPath = $storagePath . '/avatars';
+$publicPath   = __DIR__;
+$storagePath  = $publicPath . '/storage';
+$avatarsPath  = $storagePath . '/avatars';
+$lupaAbsenPath = $storagePath . '/lupa-absen';
 
 $results = [];
 
@@ -41,29 +42,52 @@ if (!is_dir($avatarsPath)) {
     $results[] = ['ok' => true, 'msg' => "✅ Folder <b>public/storage/avatars/</b> sudah ada."];
 }
 
-// Set permission
-if (is_dir($storagePath))  { @chmod($storagePath,  0775); }
-if (is_dir($avatarsPath))  { @chmod($avatarsPath,  0775); }
-
-// Buat .htaccess agar gambar bisa diakses
-$htaccess = $storagePath . '/.htaccess';
-if (!file_exists($htaccess)) {
-    $content = "Options -Indexes\n<FilesMatch \"\.(jpg|jpeg|png|gif|webp)$\">\n    Allow from all\n</FilesMatch>\n";
-    if (@file_put_contents($htaccess, $content)) {
-        $results[] = ['ok' => true,  'msg' => "✅ File <b>.htaccess</b> dibuat di public/storage/."];
+// Buat folder lupa-absen
+if (!is_dir($lupaAbsenPath)) {
+    if (@mkdir($lupaAbsenPath, 0775, true)) {
+        $results[] = ['ok' => true,  'msg' => "✅ Folder <b>public/storage/lupa-absen/</b> berhasil dibuat."];
+    } else {
+        $err = error_get_last()['message'] ?? 'unknown';
+        $results[] = ['ok' => false, 'msg' => "❌ Gagal buat public/storage/lupa-absen/: $err"];
     }
+} else {
+    $results[] = ['ok' => true, 'msg' => "✅ Folder <b>public/storage/lupa-absen/</b> sudah ada."];
 }
 
-// Test tulis file
+// Set permission
+if (is_dir($storagePath))   { @chmod($storagePath,   0775); }
+if (is_dir($avatarsPath))   { @chmod($avatarsPath,   0775); }
+if (is_dir($lupaAbsenPath)) { @chmod($lupaAbsenPath, 0775); }
+
+// Buat .htaccess agar gambar bisa diakses tanpa 403 (kompatibel Apache 2.4 & 2.2)
+$htaccess = $storagePath . '/.htaccess';
+$content = "Options -Indexes\n<FilesMatch \"\.(jpg|jpeg|png|gif|webp)$\">\n    <IfModule mod_authz_core.c>\n        Require all granted\n    </IfModule>\n    <IfModule !mod_authz_core.c>\n        Order allow,deny\n        Allow from all\n    </IfModule>\n</FilesMatch>\n";
+if (@file_put_contents($htaccess, $content)) {
+    $results[] = ['ok' => true,  'msg' => "✅ File <b>.htaccess</b> dibuat/diperbarui di public/storage/."];
+}
+
+// Test tulis file avatars
 $testFile = $avatarsPath . '/write_test_' . time() . '.txt';
-$canWrite = false;
+$canWriteAvatar = false;
 if (@file_put_contents($testFile, 'ok') !== false) {
     @unlink($testFile);
-    $canWrite = true;
+    $canWriteAvatar = true;
     $results[] = ['ok' => true,  'msg' => "✅ Test tulis ke public/storage/avatars/ <b>BERHASIL</b>!"];
 } else {
     $err = error_get_last()['message'] ?? 'unknown';
-    $results[] = ['ok' => false, 'msg' => "❌ Test tulis GAGAL: $err — Perlu set permission 775 manual via File Manager."];
+    $results[] = ['ok' => false, 'msg' => "❌ Test tulis avatars GAGAL: $err"];
+}
+
+// Test tulis file lupa-absen
+$testFileLupa = $lupaAbsenPath . '/write_test_' . time() . '.txt';
+$canWriteLupa = false;
+if (@file_put_contents($testFileLupa, 'ok') !== false) {
+    @unlink($testFileLupa);
+    $canWriteLupa = true;
+    $results[] = ['ok' => true,  'msg' => "✅ Test tulis ke public/storage/lupa-absen/ <b>BERHASIL</b>!"];
+} else {
+    $err = error_get_last()['message'] ?? 'unknown';
+    $results[] = ['ok' => false, 'msg' => "❌ Test tulis lupa-absen GAGAL: $err"];
 }
 
 // --- Buat symlink jika bisa
@@ -72,7 +96,7 @@ if (!is_link($storagePath) && function_exists('symlink')) {
     // Tidak overwrite folder yang sudah ada, lewati
 }
 
-$allOk = $canWrite && is_dir($avatarsPath);
+$allOk = $canWriteAvatar && $canWriteLupa && is_dir($avatarsPath) && is_dir($lupaAbsenPath);
 ?>
 <!DOCTYPE html>
 <html>

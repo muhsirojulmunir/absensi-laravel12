@@ -147,11 +147,10 @@
             <div x-show="activeTab === 'pengajuan'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
                 <div class="bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 rounded-[2rem] md:rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden relative">
                     <div class="absolute -right-20 -top-20 w-48 h-48 bg-blue-50/30 dark:bg-blue-900/10 rounded-full blur-3xl"></div>
-                    <div class="p-6 md:p-10 relative z-10">
                         {{-- PENTING: enctype="multipart/form-data" wajib ada. Foto bukti dikirim
                              sebagai FILE UPLOAD asli (bukan teks base64 raksasa di field
                              tersembunyi) — lihat catatan lengkap di bagian JS confirmSubmit(). --}}
-                        <form action="{{ route('karyawan.leave-requests.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                        <form action="{{ Route::has(Auth::user()->role->slug . '.leave-requests.store') ? route(Auth::user()->role->slug . '.leave-requests.store') : route('karyawan.leave-requests.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                             @csrf
                             <div class="space-y-4">
                                 <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-[0.2em] ml-2">Pilih
@@ -278,10 +277,9 @@
                                                  Diisi otomatis dari hasil jepretan kamera saat form dikirim
                                                  — lihat confirmSubmit() di bagian JS. --}}
                                             <input type="file" name="photo" x-ref="photoFileInput" accept="image/*" class="hidden">
-                                            {{-- Cadangan lama (base64) — tetap dikirim sebagai jaring pengaman
-                                                 kalau browser gagal membuat file asli, server tetap bisa
-                                                 memprosesnya lewat jalur lama. --}}
-                                            <input type="hidden" name="photo_data" x-model="photoData">
+                                            {{-- Cadangan lama (base64) — dinonaktifkan saat file asli berhasil dibuat
+                                                 agar tidak mengirim string base64 raksasa yang memicu 403 Forbidden di hosting. --}}
+                                            <input type="hidden" name="photo_data" x-ref="photoDataInput" :value="photoData">
 
                                             <div x-show="!photoData" class="flex flex-col gap-2">
                                                 <button type="button" @click="bukaKamera()"
@@ -460,7 +458,7 @@
                 
                 <!-- Filter Section -->
                 <div class="mb-6 flex flex-col md:flex-row items-end justify-between gap-4 px-2">
-                    <form action="{{ route('karyawan.leave-requests.index') }}" method="GET" class="flex flex-col md:flex-row items-end gap-3 w-full md:w-auto">
+                    <form action="{{ Route::has(Auth::user()->role->slug . '.leave-requests.index') ? route(Auth::user()->role->slug . '.leave-requests.index') : route('karyawan.leave-requests.index') }}" method="GET" class="flex flex-col md:flex-row items-end gap-3 w-full md:w-auto">
                         <div class="flex items-center gap-3 w-full md:w-auto">
                             <div class="flex-1 md:w-44">
                                 <label class="block text-[9px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-widest ml-2 mb-1.5">Dari Tanggal</label>
@@ -479,7 +477,7 @@
                                 <span>Filter</span>
                             </button>
                             @if(request('from') || request('to'))
-                                <a href="{{ route('karyawan.leave-requests.index') }}" class="flex-1 md:flex-none bg-slate-100 hover:bg-slate-200 text-slate-500 px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95">
+                                <a href="{{ Route::has(Auth::user()->role->slug . '.leave-requests.index') ? route(Auth::user()->role->slug . '.leave-requests.index') : route('karyawan.leave-requests.index') }}" class="flex-1 md:flex-none bg-slate-100 hover:bg-slate-200 text-slate-500 px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                                     <span>Reset</span>
                                 </a>
@@ -860,9 +858,15 @@
                     const video = this.$refs.video;
                     if (!video || !video.videoWidth) return;
 
+                    // Batasi lebar maksimum gambar sebelum dikompres. Foto bukti absensi tidak perlu
+                    // resolusi tinggi — 800px sudah sangat jelas terbaca dan ukuran berkas sangat ringan
+                    // (±50-90 KB) sehingga aman dari batas upload dan proteksi firewall WAF hosting.
+                    const LEBAR_MAKSIMAL = 800;
+                    const rasio = video.videoWidth > LEBAR_MAKSIMAL ? LEBAR_MAKSIMAL / video.videoWidth : 1;
+
                     const canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    canvas.width = Math.round(video.videoWidth * rasio);
+                    canvas.height = Math.round(video.videoHeight * rasio);
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
@@ -913,7 +917,9 @@
 
                     ctx.shadowBlur = 0;
 
-                    this.photoData = canvas.toDataURL('image/jpeg', 0.85);
+                    // Kualitas 0.55 pada lebar 800px menghasilkan file ±50-90 KB —
+                    // sangat tajam dan ringan, mencegah blokir 403 oleh WAF/ModSecurity hosting.
+                    this.photoData = canvas.toDataURL('image/jpeg', 0.55);
                     this.tutupKamera();
                 },
 
@@ -993,7 +999,14 @@
                     const biner = atob(bagian[1]);
                     const bytes = new Uint8Array(biner.length);
                     for (let i = 0; i < biner.length; i++) bytes[i] = biner.charCodeAt(i);
-                    return new File([bytes], namaFile, { type: mime });
+                    try {
+                        return new File([bytes], namaFile, { type: mime });
+                    } catch (e) {
+                        const blob = new Blob([bytes], { type: mime });
+                        blob.lastModifiedDate = new Date();
+                        blob.name = namaFile;
+                        return blob;
+                    }
                 },
 
                 // Konfirmasi sebelum kirim, supaya karyawan benar-benar paham berapa hari
@@ -1016,9 +1029,18 @@
                             const dt = new DataTransfer();
                             dt.items.add(file);
                             this.$refs.photoFileInput.files = dt.files;
+
+                            // PENTING: Karena file upload multipart asli sudah terpasang,
+                            // nonaktifkan input `photo_data` agar browser TIDAK mengirimkan
+                            // string base64 raksasa di body POST yang memicu pemblokiran 403 Forbidden
+                            // oleh ModSecurity/WAF pada hosting.
+                            if (this.$refs.photoDataInput) {
+                                this.$refs.photoDataInput.disabled = true;
+                                this.$refs.photoDataInput.value = '';
+                            }
                         } catch (e) {
-                            // Kalau browser sangat lawas dan tidak mendukung DataTransfer,
-                            // biarkan saja — server masih punya jalur cadangan base64.
+                            // Kalau browser lawas dan tidak mendukung DataTransfer,
+                            // biarkan photo_data tetap aktif sebagai jalur cadangan base64.
                             console.warn('Gagal membuat file upload dari foto, memakai jalur cadangan base64.', e);
                         }
                     }
