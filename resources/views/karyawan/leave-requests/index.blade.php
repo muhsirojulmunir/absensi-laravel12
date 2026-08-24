@@ -277,17 +277,23 @@
                                                  Diisi otomatis dari hasil jepretan kamera saat form dikirim
                                                  — lihat confirmSubmit() di bagian JS. --}}
                                             <input type="file" name="photo" x-ref="photoFileInput" accept="image/*" class="hidden">
+                                            {{-- Input kamera langsung HP (fallback native camera) --}}
+                                            <input type="file" accept="image/*" capture="environment" x-ref="nativeCameraInput" @change="prosesFotoDariInputFile($event)" class="hidden">
                                             {{-- Cadangan lama (base64) — dinonaktifkan saat file asli berhasil dibuat
                                                  agar tidak mengirim string base64 raksasa yang memicu 403 Forbidden di hosting. --}}
                                             <input type="hidden" name="photo_data" x-ref="photoDataInput" :value="photoData">
 
-                                            <div x-show="!photoData" class="flex flex-col gap-2">
+                                            <div x-show="!photoData" class="flex flex-col sm:flex-row gap-2">
                                                 <button type="button" @click="bukaKamera()"
-                                                    class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black py-3.5 px-6 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-600/20">
+                                                    class="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black py-3.5 px-6 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-600/20">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                                    Ambil Foto Sekarang
+                                                    Buka Kamera Langsung
                                                 </button>
-                                                <p x-show="kameraError" x-text="kameraError" class="text-[10px] font-bold text-rose-500 ml-2"></p>
+                                                <button type="button" @click="$refs.nativeCameraInput.click()"
+                                                    class="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black py-3.5 px-6 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95 border border-slate-200 dark:border-slate-700">
+                                                    <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                                                    Kamera HP
+                                                </button>
                                             </div>
 
                                             <div x-show="photoData" class="space-y-2">
@@ -295,10 +301,16 @@
                                                     <img :src="photoData" alt="Foto bukti" class="w-full max-h-72 object-contain bg-slate-900">
                                                     <span class="absolute top-2 left-2 px-2 py-1 rounded-lg bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest shadow">Foto Siap</span>
                                                 </div>
-                                                <button type="button" @click="photoData = ''; bukaKamera()"
-                                                    class="w-full bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 text-blue-600 dark:text-blue-400 font-black py-2.5 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95">
-                                                    Ambil Ulang Foto
-                                                </button>
+                                                <div class="flex gap-2">
+                                                    <button type="button" @click="photoData = ''; bukaKamera()"
+                                                        class="flex-1 bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 text-blue-600 dark:text-blue-400 font-black py-2.5 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95">
+                                                        Ambil Ulang (Kamera)
+                                                    </button>
+                                                    <button type="button" @click="photoData = ''; $refs.nativeCameraInput.click()"
+                                                        class="flex-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black py-2.5 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95">
+                                                        Kamera HP
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     @endif
@@ -626,96 +638,75 @@
                 </button>
             </div>
 
-            {{-- Kamera bermasalah: tampilkan panduan yang jelas + tombol aksi,
-                 BUKAN cuma teks merah kecil tanpa solusi. --}}
-            <template x-if="kameraErrorJenis">
-                <div class="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center overflow-y-auto">
-                    <div class="w-16 h-16 rounded-full bg-rose-500/15 border-2 border-rose-400/40 flex items-center justify-center mb-4">
-                        <svg class="w-8 h-8 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <template x-if="kameraErrorJenis === 'ditolak'">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2zM3 3l18 18"/>
-                            </template>
-                            <template x-if="kameraErrorJenis !== 'ditolak'">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-                            </template>
-                        </svg>
-                    </div>
+            {{-- Kamera bermasalah: tampilkan panduan yang jelas + tombol aksi --}}
+            <div x-show="kameraErrorJenis" class="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center overflow-y-auto">
+                <div class="w-16 h-16 rounded-full bg-rose-500/15 border-2 border-rose-400/40 flex items-center justify-center mb-4">
+                    <svg class="w-8 h-8 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+                    </svg>
+                </div>
 
-                    <p class="text-sm font-black text-white uppercase tracking-widest mb-2">
-                        <span x-show="kameraErrorJenis === 'ditolak'">Izin Kamera Diblokir</span>
-                        <span x-show="kameraErrorJenis === 'tidak-aman'">Koneksi Belum Aman</span>
-                        <span x-show="kameraErrorJenis === 'tidak-ada'">Kamera Tidak Ditemukan</span>
-                        <span x-show="kameraErrorJenis === 'dipakai-lain'">Kamera Sedang Dipakai</span>
-                        <span x-show="kameraErrorJenis === 'tidak-didukung'">Browser Tidak Mendukung</span>
-                    </p>
-                    <p class="text-[12px] text-white/70 font-medium max-w-sm leading-relaxed" x-text="kameraError"></p>
+                <p class="text-sm font-black text-white uppercase tracking-widest mb-2">
+                    <span x-show="kameraErrorJenis === 'ditolak'">Izin Kamera Diblokir</span>
+                    <span x-show="kameraErrorJenis === 'tidak-aman'">Koneksi Belum Aman</span>
+                    <span x-show="kameraErrorJenis === 'tidak-ada'">Kamera Tidak Ditemukan</span>
+                    <span x-show="kameraErrorJenis === 'dipakai-lain'">Kamera Sedang Dipakai</span>
+                    <span x-show="kameraErrorJenis === 'tidak-didukung'">Browser Tidak Mendukung</span>
+                </p>
+                <p class="text-[12px] text-white/70 font-medium max-w-sm leading-relaxed mb-4" x-text="kameraError"></p>
 
-                    {{-- Langkah manual — hanya relevan kalau izinnya benar-benar diblokir --}}
-                    <template x-if="kameraErrorJenis === 'ditolak'">
-                        <div class="mt-5 w-full max-w-sm bg-white/5 border border-white/10 rounded-2xl p-4 text-left space-y-2.5">
-                            <p class="text-[10px] font-black text-white/80 uppercase tracking-widest mb-1">Cara Mengizinkan di Chrome:</p>
-                            <p class="text-[11px] text-white/70 leading-relaxed flex gap-2"><span class="font-black text-white/90">1.</span> Tekan ikon 🔒 / ⓘ di sebelah alamat situs (di atas layar).</p>
-                            <p class="text-[11px] text-white/70 leading-relaxed flex gap-2"><span class="font-black text-white/90">2.</span> Pilih <span class="font-bold text-white">"Izin"</span> / "Permissions", cari <span class="font-bold text-white">Kamera</span>.</p>
-                            <p class="text-[11px] text-white/70 leading-relaxed flex gap-2"><span class="font-black text-white/90">3.</span> Ubah jadi <span class="font-bold text-emerald-300">"Izinkan"</span> / Allow.</p>
-                            <p class="text-[11px] text-white/70 leading-relaxed flex gap-2"><span class="font-black text-white/90">4.</span> Kembali ke sini, tekan <span class="font-bold text-white">"Muat Ulang Halaman"</span> di bawah.</p>
-                            <p class="text-[10px] text-amber-300/90 font-bold pt-1 border-t border-white/10 mt-2">
-                                Sudah pernah mengizinkan tapi masih tertolak? Wajib tekan "Muat Ulang Halaman" — perubahan izin baru berlaku setelah halaman dimuat ulang.
-                            </p>
-                        </div>
-                    </template>
-
-                    <div class="mt-6 flex flex-col sm:flex-row gap-3 w-full max-w-sm">
-                        <template x-if="kameraErrorJenis !== 'tidak-aman' && kameraErrorJenis !== 'tidak-didukung'">
-                            <button type="button" @click="mulaiStream()"
-                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95">
-                                Coba Lagi
-                            </button>
-                        </template>
+                <div class="flex flex-col gap-3 w-full max-w-sm">
+                    <button type="button" @click="tutupKamera(); $refs.nativeCameraInput.click()"
+                        class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-3.5 px-4 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        Buka Kamera HP Langsung
+                    </button>
+                    <div class="flex gap-2">
+                        <button type="button" @click="mulaiStream()"
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95">
+                            Coba Lagi
+                        </button>
                         <button type="button" @click="window.location.reload()"
                             class="flex-1 bg-white/10 hover:bg-white/20 text-white font-black py-3 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95">
-                            Muat Ulang Halaman
+                            Muat Ulang
                         </button>
                     </div>
                 </div>
-            </template>
+            </div>
 
             {{-- Tampilan kamera normal (tidak ada error) --}}
-            <template x-if="!kameraErrorJenis">
-                <div class="flex-1 flex items-center justify-center overflow-hidden px-3">
-                    {{-- Pratinjau kamera depan dibuat seperti cermin agar terasa natural.
-                         Foto yang TERSIMPAN tetap tidak dicerminkan supaya tulisan di
-                         latar (papan nama counter, dll) tetap terbaca normal. --}}
-                    <video x-ref="video" autoplay playsinline muted
-                           :style="arahKamera === 'user' ? 'transform: scaleX(-1)' : ''"
-                           class="max-h-full max-w-full rounded-2xl bg-black"></video>
+            <div x-show="!kameraErrorJenis" class="flex-1 flex items-center justify-center overflow-hidden px-3">
+                <video x-ref="video" autoplay playsinline muted
+                       :style="arahKamera === 'user' ? 'transform: scaleX(-1)' : ''"
+                       class="max-h-full max-w-full rounded-2xl bg-black"></video>
+            </div>
+
+            <div x-show="!kameraErrorJenis" class="px-5 py-6 flex-shrink-0 flex flex-col items-center gap-3">
+                <div class="flex items-center justify-center gap-8">
+                    {{-- Tombol ganti kamera depan / belakang --}}
+                    <button type="button" @click="gantiKamera()"
+                        class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors active:scale-95"
+                        :title="'Ganti ke ' + (arahKamera === 'user' ? 'kamera belakang' : 'kamera depan')">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </button>
+
+                    <button type="button" @click="jepretFoto()" :disabled="!kameraSiap"
+                        :class="kameraSiap ? 'bg-white hover:bg-slate-100 active:scale-95' : 'bg-white/30 cursor-not-allowed'"
+                        class="w-16 h-16 rounded-full border-4 border-white/50 flex items-center justify-center transition-all">
+                        <span class="w-11 h-11 rounded-full bg-blue-600"></span>
+                    </button>
+
+                    <button type="button" @click="tutupKamera(); $refs.nativeCameraInput.click()"
+                        class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-amber-400 transition-colors active:scale-95"
+                        title="Buka Kamera HP">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </button>
                 </div>
-            </template>
 
-            <template x-if="!kameraErrorJenis">
-                <div class="px-5 py-6 flex-shrink-0 flex flex-col items-center gap-3">
-                    <div class="flex items-center justify-center gap-8">
-                        {{-- Tombol ganti kamera depan / belakang --}}
-                        <button type="button" @click="gantiKamera()"
-                            class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors active:scale-95"
-                            :title="'Ganti ke ' + (arahKamera === 'user' ? 'kamera belakang' : 'kamera depan')">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                        </button>
-
-                        <button type="button" @click="jepretFoto()" :disabled="!kameraSiap"
-                            :class="kameraSiap ? 'bg-white hover:bg-slate-100 active:scale-95' : 'bg-white/30 cursor-not-allowed'"
-                            class="w-16 h-16 rounded-full border-4 border-white/50 flex items-center justify-center transition-all">
-                            <span class="w-11 h-11 rounded-full bg-blue-600"></span>
-                        </button>
-
-                        {{-- Penyeimbang agar tombol jepret tetap di tengah --}}
-                        <span class="w-12 h-12"></span>
-                    </div>
-
-                    <p class="text-[10px] text-white/60 font-bold uppercase tracking-widest">
-                        <span x-text="labelKamera"></span> &middot; Tekan lingkaran untuk memotret
-                    </p>
-                </div>
-            </template>
+                <p class="text-[10px] text-white/60 font-bold uppercase tracking-widest">
+                    <span x-text="labelKamera"></span> &middot; Tekan lingkaran untuk memotret
+                </p>
+            </div>
         </div>
         @endif
 
@@ -751,15 +742,9 @@
                 kameraTerbuka: false,
                 kameraSiap: false,
                 kameraError: '',
-                // Jenis masalah kamera, dipakai untuk menampilkan panduan & tombol yang
-                // tepat sesuai penyebabnya (bukan cuma teks merah tanpa solusi):
-                // 'ditolak' | 'tidak-aman' | 'tidak-ada' | 'dipakai-lain' | 'tidak-didukung' | ''
                 kameraErrorJenis: '',
                 _stream: null,
 
-                // Kamera mana yang sedang dipakai: 'user' = depan (selfie bersama counter),
-                // 'environment' = belakang. Karyawan bisa berganti sesuai kebutuhan, karena
-                // foto harus memperlihatkan counter DAN karyawannya.
                 arahKamera: 'user',
                 get labelKamera() { return this.arahKamera === 'user' ? 'Kamera Depan' : 'Kamera Belakang'; },
 
@@ -767,31 +752,26 @@
                     this.kameraError = '';
                     this.kameraErrorJenis = '';
                     this.kameraSiap = false;
+                    this.kameraTerbuka = true;
 
-                    // Kamera HANYA bisa diakses lewat HTTPS (atau localhost). Ini sering
-                    // jadi sumber kebingungan: karyawan sudah mengizinkan kamera di
-                    // pengaturan Chrome, tapi tetap ditolak karena alamat situsnya http://
-                    // biasa — pengaturan izin Chrome tidak berlaku untuk koneksi tidak aman.
+                    await this.$nextTick();
+
                     if (!window.isSecureContext) {
-                        this.kameraTerbuka = true;
                         this.kameraErrorJenis = 'tidak-aman';
-                        this.kameraError = 'Situs ini belum diakses lewat HTTPS, jadi kamera tidak bisa dibuka sama sekali — izin di pengaturan Chrome pun tidak akan berpengaruh. Mohon buka situs ini dengan alamat yang diawali "https://".';
+                        this.kameraError = 'Situs belum diakses via HTTPS. Silakan gunakan tombol "Kamera HP" di bawah.';
                         return;
                     }
 
                     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        this.kameraTerbuka = true;
                         this.kameraErrorJenis = 'tidak-didukung';
-                        this.kameraError = 'Perangkat/browser ini tidak mendukung kamera. Silakan buka lewat browser HP Anda (disarankan Chrome versi terbaru).';
+                        this.kameraError = 'Browser ini tidak mendukung stream kamera langsung. Silakan gunakan tombol "Kamera HP".';
                         return;
                     }
 
-                    this.kameraTerbuka = true;
                     await this.mulaiStream();
                 },
 
                 async mulaiStream() {
-                    // Hentikan stream lama dulu agar kamera tidak bentrok saat berganti arah
                     if (this._stream) {
                         this._stream.getTracks().forEach(t => t.stop());
                         this._stream = null;
@@ -800,38 +780,61 @@
                     this.kameraError = '';
                     this.kameraErrorJenis = '';
 
+                    await this.$nextTick();
+
                     try {
-                        this._stream = await navigator.mediaDevices.getUserMedia({
-                            video: {
-                                facingMode: { ideal: this.arahKamera },
-                                width: { ideal: 1280 },
-                                height: { ideal: 960 }
-                            },
-                            audio: false
-                        });
+                        let stream = null;
+                        try {
+                            stream = await navigator.mediaDevices.getUserMedia({
+                                video: {
+                                    facingMode: { ideal: this.arahKamera },
+                                    width: { ideal: 1280 },
+                                    height: { ideal: 960 }
+                                },
+                                audio: false
+                            });
+                        } catch (e1) {
+                            try {
+                                stream = await navigator.mediaDevices.getUserMedia({
+                                    video: { facingMode: this.arahKamera },
+                                    audio: false
+                                });
+                            } catch (e2) {
+                                stream = await navigator.mediaDevices.getUserMedia({
+                                    video: true,
+                                    audio: false
+                                });
+                            }
+                        }
+
+                        this._stream = stream;
+                        await this.$nextTick();
                         const video = this.$refs.video;
-                        video.srcObject = this._stream;
-                        await video.play();
-                        this.kameraSiap = true;
-                        this.kameraError = '';
-                        this.kameraErrorJenis = '';
+                        if (video) {
+                            video.srcObject = stream;
+                            try {
+                                await video.play();
+                            } catch (playErr) {
+                                console.warn('video.play() notice:', playErr);
+                            }
+                            this.kameraSiap = true;
+                            this.kameraError = '';
+                            this.kameraErrorJenis = '';
+                        }
                     } catch (e) {
                         this.kameraSiap = false;
-                        if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
+                        if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError' || e.name === 'PermissionDeniedError')) {
                             this.kameraErrorJenis = 'ditolak';
-                            this.kameraError = 'Izin kamera untuk situs ini masih diblokir di browser Anda.';
+                            this.kameraError = 'Izin kamera untuk situs ini belum diizinkan di browser Anda.';
                         } else if (e && e.name === 'NotFoundError') {
                             this.kameraErrorJenis = 'tidak-ada';
                             this.kameraError = 'Kamera tidak ditemukan pada perangkat ini.';
                         } else if (e && (e.name === 'NotReadableError' || e.name === 'TrackStartError')) {
                             this.kameraErrorJenis = 'dipakai-lain';
-                            this.kameraError = 'Kamera sedang dipakai aplikasi lain. Tutup aplikasi kamera/video call lain, lalu coba lagi.';
-                        } else if (e && e.name === 'OverconstrainedError') {
-                            this.kameraErrorJenis = 'ditolak';
-                            this.kameraError = 'Kamera ' + this.labelKamera.toLowerCase() + ' tidak tersedia. Coba ganti ke kamera satunya di bawah.';
+                            this.kameraError = 'Kamera sedang dipakai aplikasi lain. Tutup aplikasi kamera/video lain lalu coba lagi.';
                         } else {
                             this.kameraErrorJenis = 'ditolak';
-                            this.kameraError = 'Kamera gagal dibuka. Coba tekan "Coba Lagi" di bawah, atau muat ulang halaman ini.';
+                            this.kameraError = 'Kamera langsung tidak dapat dibuka pada perangkat/browser ini. Anda bisa langsung menggunakan tombol "Buka Kamera HP Langsung".';
                         }
                     }
                 },
@@ -851,29 +854,18 @@
                 },
 
                 /**
-                 * Ambil gambar dari kamera lalu CAP tanggal, jam, dan nama counter
-                 * langsung ke gambarnya, supaya bukti tidak bisa dipakai ulang.
+                 * Cap waktu, tanggal, lokasi counter & nama karyawan ke gambar
                  */
-                jepretFoto() {
-                    const video = this.$refs.video;
-                    if (!video || !video.videoWidth) return;
-
-                    // Batasi lebar maksimum gambar sebelum dikompres. Foto bukti absensi tidak perlu
-                    // resolusi tinggi — 800px sudah sangat jelas terbaca dan ukuran berkas sangat ringan
-                    // (±50-90 KB) sehingga aman dari batas upload dan proteksi firewall WAF hosting.
+                capWatermarkPadaCanvas(imageOrVideo, lebarAsli, tinggiAsli) {
                     const LEBAR_MAKSIMAL = 800;
-                    const rasio = video.videoWidth > LEBAR_MAKSIMAL ? LEBAR_MAKSIMAL / video.videoWidth : 1;
+                    const rasio = lebarAsli > LEBAR_MAKSIMAL ? LEBAR_MAKSIMAL / lebarAsli : 1;
 
                     const canvas = document.createElement('canvas');
-                    canvas.width = Math.round(video.videoWidth * rasio);
-                    canvas.height = Math.round(video.videoHeight * rasio);
+                    canvas.width = Math.round(lebarAsli * rasio);
+                    canvas.height = Math.round(tinggiAsli * rasio);
                     const ctx = canvas.getContext('2d');
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(imageOrVideo, 0, 0, canvas.width, canvas.height);
 
-                    // ── Cap waktu, lokasi & nama karyawan ──
-                    // Dicap langsung ke piksel gambar (bukan metadata), sehingga tidak
-                    // bisa dihapus tanpa merusak fotonya. Server juga mencatat waktu
-                    // simpannya sendiri sebagai pembanding.
                     const now = new Date();
                     const tanggal = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                     const jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -884,7 +876,6 @@
                     const fontKecil = Math.max(11, Math.round(22 * skala));
                     const tinggiBar = fontBesar + fontKecil * 3 + pad * 3.2;
 
-                    // Gradasi gelap agar teks tetap terbaca di latar terang maupun gelap
                     const grad = ctx.createLinearGradient(0, canvas.height - tinggiBar, 0, canvas.height);
                     grad.addColorStop(0, 'rgba(0,0,0,0.30)');
                     grad.addColorStop(1, 'rgba(0,0,0,0.82)');
@@ -917,10 +908,31 @@
 
                     ctx.shadowBlur = 0;
 
-                    // Kualitas 0.55 pada lebar 800px menghasilkan file ±50-90 KB —
-                    // sangat tajam dan ringan, mencegah blokir 403 oleh WAF/ModSecurity hosting.
-                    this.photoData = canvas.toDataURL('image/jpeg', 0.55);
+                    return canvas.toDataURL('image/jpeg', 0.55);
+                },
+
+                jepretFoto() {
+                    const video = this.$refs.video;
+                    if (!video || !video.videoWidth) return;
+                    this.photoData = this.capWatermarkPadaCanvas(video, video.videoWidth, video.videoHeight);
                     this.tutupKamera();
+                },
+
+                prosesFotoDariInputFile(event) {
+                    const file = event.target.files && event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            this.photoData = this.capWatermarkPadaCanvas(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
+                            this.tutupKamera();
+                            event.target.value = ''; // reset
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
                 },
 
                 /**
