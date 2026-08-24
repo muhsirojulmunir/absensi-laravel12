@@ -628,40 +628,96 @@
                 </button>
             </div>
 
-            <div class="flex-1 flex items-center justify-center overflow-hidden px-3">
-                {{-- Pratinjau kamera depan dibuat seperti cermin agar terasa natural.
-                     Foto yang TERSIMPAN tetap tidak dicerminkan supaya tulisan di
-                     latar (papan nama counter, dll) tetap terbaca normal. --}}
-                <video x-ref="video" autoplay playsinline muted
-                       :style="arahKamera === 'user' ? 'transform: scaleX(-1)' : ''"
-                       class="max-h-full max-w-full rounded-2xl bg-black"></video>
-            </div>
+            {{-- Kamera bermasalah: tampilkan panduan yang jelas + tombol aksi,
+                 BUKAN cuma teks merah kecil tanpa solusi. --}}
+            <template x-if="kameraErrorJenis">
+                <div class="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center overflow-y-auto">
+                    <div class="w-16 h-16 rounded-full bg-rose-500/15 border-2 border-rose-400/40 flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <template x-if="kameraErrorJenis === 'ditolak'">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2zM3 3l18 18"/>
+                            </template>
+                            <template x-if="kameraErrorJenis !== 'ditolak'">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+                            </template>
+                        </svg>
+                    </div>
 
-            <div class="px-5 py-6 flex-shrink-0 flex flex-col items-center gap-3">
-                <p x-show="kameraError" x-text="kameraError" class="text-[11px] font-bold text-rose-300 text-center"></p>
+                    <p class="text-sm font-black text-white uppercase tracking-widest mb-2">
+                        <span x-show="kameraErrorJenis === 'ditolak'">Izin Kamera Diblokir</span>
+                        <span x-show="kameraErrorJenis === 'tidak-aman'">Koneksi Belum Aman</span>
+                        <span x-show="kameraErrorJenis === 'tidak-ada'">Kamera Tidak Ditemukan</span>
+                        <span x-show="kameraErrorJenis === 'dipakai-lain'">Kamera Sedang Dipakai</span>
+                        <span x-show="kameraErrorJenis === 'tidak-didukung'">Browser Tidak Mendukung</span>
+                    </p>
+                    <p class="text-[12px] text-white/70 font-medium max-w-sm leading-relaxed" x-text="kameraError"></p>
 
-                <div class="flex items-center justify-center gap-8">
-                    {{-- Tombol ganti kamera depan / belakang --}}
-                    <button type="button" @click="gantiKamera()"
-                        class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors active:scale-95"
-                        :title="'Ganti ke ' + (arahKamera === 'user' ? 'kamera belakang' : 'kamera depan')">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    </button>
+                    {{-- Langkah manual — hanya relevan kalau izinnya benar-benar diblokir --}}
+                    <template x-if="kameraErrorJenis === 'ditolak'">
+                        <div class="mt-5 w-full max-w-sm bg-white/5 border border-white/10 rounded-2xl p-4 text-left space-y-2.5">
+                            <p class="text-[10px] font-black text-white/80 uppercase tracking-widest mb-1">Cara Mengizinkan di Chrome:</p>
+                            <p class="text-[11px] text-white/70 leading-relaxed flex gap-2"><span class="font-black text-white/90">1.</span> Tekan ikon 🔒 / ⓘ di sebelah alamat situs (di atas layar).</p>
+                            <p class="text-[11px] text-white/70 leading-relaxed flex gap-2"><span class="font-black text-white/90">2.</span> Pilih <span class="font-bold text-white">"Izin"</span> / "Permissions", cari <span class="font-bold text-white">Kamera</span>.</p>
+                            <p class="text-[11px] text-white/70 leading-relaxed flex gap-2"><span class="font-black text-white/90">3.</span> Ubah jadi <span class="font-bold text-emerald-300">"Izinkan"</span> / Allow.</p>
+                            <p class="text-[11px] text-white/70 leading-relaxed flex gap-2"><span class="font-black text-white/90">4.</span> Kembali ke sini, tekan <span class="font-bold text-white">"Muat Ulang Halaman"</span> di bawah.</p>
+                            <p class="text-[10px] text-amber-300/90 font-bold pt-1 border-t border-white/10 mt-2">
+                                Sudah pernah mengizinkan tapi masih tertolak? Wajib tekan "Muat Ulang Halaman" — perubahan izin baru berlaku setelah halaman dimuat ulang.
+                            </p>
+                        </div>
+                    </template>
 
-                    <button type="button" @click="jepretFoto()" :disabled="!kameraSiap"
-                        :class="kameraSiap ? 'bg-white hover:bg-slate-100 active:scale-95' : 'bg-white/30 cursor-not-allowed'"
-                        class="w-16 h-16 rounded-full border-4 border-white/50 flex items-center justify-center transition-all">
-                        <span class="w-11 h-11 rounded-full bg-blue-600"></span>
-                    </button>
-
-                    {{-- Penyeimbang agar tombol jepret tetap di tengah --}}
-                    <span class="w-12 h-12"></span>
+                    <div class="mt-6 flex flex-col sm:flex-row gap-3 w-full max-w-sm">
+                        <template x-if="kameraErrorJenis !== 'tidak-aman' && kameraErrorJenis !== 'tidak-didukung'">
+                            <button type="button" @click="mulaiStream()"
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95">
+                                Coba Lagi
+                            </button>
+                        </template>
+                        <button type="button" @click="window.location.reload()"
+                            class="flex-1 bg-white/10 hover:bg-white/20 text-white font-black py-3 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95">
+                            Muat Ulang Halaman
+                        </button>
+                    </div>
                 </div>
+            </template>
 
-                <p class="text-[10px] text-white/60 font-bold uppercase tracking-widest">
-                    <span x-text="labelKamera"></span> &middot; Tekan lingkaran untuk memotret
-                </p>
-            </div>
+            {{-- Tampilan kamera normal (tidak ada error) --}}
+            <template x-if="!kameraErrorJenis">
+                <div class="flex-1 flex items-center justify-center overflow-hidden px-3">
+                    {{-- Pratinjau kamera depan dibuat seperti cermin agar terasa natural.
+                         Foto yang TERSIMPAN tetap tidak dicerminkan supaya tulisan di
+                         latar (papan nama counter, dll) tetap terbaca normal. --}}
+                    <video x-ref="video" autoplay playsinline muted
+                           :style="arahKamera === 'user' ? 'transform: scaleX(-1)' : ''"
+                           class="max-h-full max-w-full rounded-2xl bg-black"></video>
+                </div>
+            </template>
+
+            <template x-if="!kameraErrorJenis">
+                <div class="px-5 py-6 flex-shrink-0 flex flex-col items-center gap-3">
+                    <div class="flex items-center justify-center gap-8">
+                        {{-- Tombol ganti kamera depan / belakang --}}
+                        <button type="button" @click="gantiKamera()"
+                            class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors active:scale-95"
+                            :title="'Ganti ke ' + (arahKamera === 'user' ? 'kamera belakang' : 'kamera depan')">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        </button>
+
+                        <button type="button" @click="jepretFoto()" :disabled="!kameraSiap"
+                            :class="kameraSiap ? 'bg-white hover:bg-slate-100 active:scale-95' : 'bg-white/30 cursor-not-allowed'"
+                            class="w-16 h-16 rounded-full border-4 border-white/50 flex items-center justify-center transition-all">
+                            <span class="w-11 h-11 rounded-full bg-blue-600"></span>
+                        </button>
+
+                        {{-- Penyeimbang agar tombol jepret tetap di tengah --}}
+                        <span class="w-12 h-12"></span>
+                    </div>
+
+                    <p class="text-[10px] text-white/60 font-bold uppercase tracking-widest">
+                        <span x-text="labelKamera"></span> &middot; Tekan lingkaran untuk memotret
+                    </p>
+                </div>
+            </template>
         </div>
         @endif
 
@@ -697,6 +753,10 @@
                 kameraTerbuka: false,
                 kameraSiap: false,
                 kameraError: '',
+                // Jenis masalah kamera, dipakai untuk menampilkan panduan & tombol yang
+                // tepat sesuai penyebabnya (bukan cuma teks merah tanpa solusi):
+                // 'ditolak' | 'tidak-aman' | 'tidak-ada' | 'dipakai-lain' | 'tidak-didukung' | ''
+                kameraErrorJenis: '',
                 _stream: null,
 
                 // Kamera mana yang sedang dipakai: 'user' = depan (selfie bersama counter),
@@ -707,10 +767,24 @@
 
                 async bukaKamera() {
                     this.kameraError = '';
+                    this.kameraErrorJenis = '';
                     this.kameraSiap = false;
 
+                    // Kamera HANYA bisa diakses lewat HTTPS (atau localhost). Ini sering
+                    // jadi sumber kebingungan: karyawan sudah mengizinkan kamera di
+                    // pengaturan Chrome, tapi tetap ditolak karena alamat situsnya http://
+                    // biasa — pengaturan izin Chrome tidak berlaku untuk koneksi tidak aman.
+                    if (!window.isSecureContext) {
+                        this.kameraTerbuka = true;
+                        this.kameraErrorJenis = 'tidak-aman';
+                        this.kameraError = 'Situs ini belum diakses lewat HTTPS, jadi kamera tidak bisa dibuka sama sekali — izin di pengaturan Chrome pun tidak akan berpengaruh. Mohon buka situs ini dengan alamat yang diawali "https://".';
+                        return;
+                    }
+
                     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        this.kameraError = 'Perangkat/browser ini tidak mendukung kamera. Silakan buka lewat browser HP Anda.';
+                        this.kameraTerbuka = true;
+                        this.kameraErrorJenis = 'tidak-didukung';
+                        this.kameraError = 'Perangkat/browser ini tidak mendukung kamera. Silakan buka lewat browser HP Anda (disarankan Chrome versi terbaru).';
                         return;
                     }
 
@@ -725,6 +799,8 @@
                         this._stream = null;
                     }
                     this.kameraSiap = false;
+                    this.kameraError = '';
+                    this.kameraErrorJenis = '';
 
                     try {
                         this._stream = await navigator.mediaDevices.getUserMedia({
@@ -740,16 +816,24 @@
                         await video.play();
                         this.kameraSiap = true;
                         this.kameraError = '';
+                        this.kameraErrorJenis = '';
                     } catch (e) {
                         this.kameraSiap = false;
                         if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
-                            this.kameraError = 'Izin kamera ditolak. Aktifkan izin kamera untuk situs ini di pengaturan browser, lalu coba lagi.';
+                            this.kameraErrorJenis = 'ditolak';
+                            this.kameraError = 'Izin kamera untuk situs ini masih diblokir di browser Anda.';
                         } else if (e && e.name === 'NotFoundError') {
+                            this.kameraErrorJenis = 'tidak-ada';
                             this.kameraError = 'Kamera tidak ditemukan pada perangkat ini.';
+                        } else if (e && (e.name === 'NotReadableError' || e.name === 'TrackStartError')) {
+                            this.kameraErrorJenis = 'dipakai-lain';
+                            this.kameraError = 'Kamera sedang dipakai aplikasi lain. Tutup aplikasi kamera/video call lain, lalu coba lagi.';
                         } else if (e && e.name === 'OverconstrainedError') {
-                            this.kameraError = 'Kamera ' + this.labelKamera.toLowerCase() + ' tidak tersedia. Coba ganti ke kamera satunya.';
+                            this.kameraErrorJenis = 'ditolak';
+                            this.kameraError = 'Kamera ' + this.labelKamera.toLowerCase() + ' tidak tersedia. Coba ganti ke kamera satunya di bawah.';
                         } else {
-                            this.kameraError = 'Kamera gagal dibuka. Pastikan situs dibuka lewat HTTPS dan tidak ada aplikasi lain yang memakai kamera.';
+                            this.kameraErrorJenis = 'ditolak';
+                            this.kameraError = 'Kamera gagal dibuka. Coba tekan "Coba Lagi" di bawah, atau muat ulang halaman ini.';
                         }
                     }
                 },
