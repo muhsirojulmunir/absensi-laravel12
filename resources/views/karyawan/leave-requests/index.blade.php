@@ -224,7 +224,24 @@
 
                             <template x-if="selectedType === 'Lupa Absen'">
                                 <div class="bg-blue-50/50 dark:bg-slate-900/50 p-5 rounded-3xl border border-blue-100 dark:border-slate-700 space-y-4">
-                                    <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-[0.2em] ml-2">Jenis Lupa Absen <span class="text-rose-500">*</span> <span class="text-amber-500 normal-case tracking-normal font-normal"> (Kesempatan hanya 1x dalam 1 bulan) </span> </label>
+                                    {{-- Sisa jatah Lupa Absen bulan ini (gabungan Masuk + Pulang) --}}
+                                    <div class="flex items-start gap-3 rounded-2xl border px-4 py-3 {{ $lupaAbsenRemaining > 0 ? 'bg-white dark:bg-slate-800 border-blue-100 dark:border-slate-700' : 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800/60' }}">
+                                        <span class="text-base leading-none mt-0.5">{{ $lupaAbsenRemaining > 0 ? '🎫' : '🚫' }}</span>
+                                        <div class="space-y-0.5">
+                                            <p class="text-[10px] font-black uppercase tracking-widest {{ $lupaAbsenRemaining > 0 ? 'text-blue-700 dark:text-blue-300' : 'text-rose-700 dark:text-rose-300' }}">
+                                                Sisa Jatah Bulan Ini: {{ $lupaAbsenRemaining }} dari {{ $lupaAbsenQuota }}
+                                            </p>
+                                            <p class="text-[11px] font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
+                                                @if($lupaAbsenRemaining > 0)
+                                                    Sudah terpakai {{ $lupaAbsenUsed }}x. Jatah dihitung gabungan Absen Masuk dan Absen Pulang, dan direset otomatis tiap awal bulan.
+                                                @else
+                                                    Jatah bulan ini sudah habis. Silakan hubungi Admin bila ada kondisi mendesak.
+                                                @endif
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-[0.2em] ml-2">Jenis Lupa Absen <span class="text-rose-500">*</span></label>
 
                                     <input type="hidden" name="sub_type" x-model="subType" :required="selectedType === 'Lupa Absen'">
 
@@ -240,6 +257,42 @@
                                         <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">Jam <span class="text-rose-500">*</span></label>
                                         <input type="time" name="time_start" value="{{ old('time_start') }}" :required="selectedType === 'Lupa Absen'" class="w-full md:w-1/2 bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 rounded-full text-blue-900 dark:text-blue-100 px-4 py-3 text-xs font-bold transition-all shadow-sm">
                                     </div>
+
+                                    @if($wajibFotoLupaAbsen)
+                                        {{-- ── Foto bukti WAJIB: diambil langsung dari kamera di counter ──
+                                             Foto otomatis dicap tanggal, jam, dan nama counter. Galeri tidak
+                                             bisa dipakai agar foto lama tidak digunakan ulang. --}}
+                                        <div class="space-y-2 pt-2 border-t border-blue-100 dark:border-slate-700">
+                                            <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">
+                                                Foto Bukti di Counter <span class="text-rose-500">*</span>
+                                            </label>
+                                            <p class="text-[10px] text-slate-500 dark:text-slate-400 ml-2 leading-relaxed">
+                                                Ambil foto langsung di counter Anda. Foto akan otomatis diberi cap tanggal, jam, dan nama counter.
+                                            </p>
+
+                                            <input type="hidden" name="photo_data" x-model="photoData">
+
+                                            <div x-show="!photoData" class="flex flex-col gap-2">
+                                                <button type="button" @click="bukaKamera()"
+                                                    class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black py-3.5 px-6 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-600/20">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                                    Ambil Foto Sekarang
+                                                </button>
+                                                <p x-show="kameraError" x-text="kameraError" class="text-[10px] font-bold text-rose-500 ml-2"></p>
+                                            </div>
+
+                                            <div x-show="photoData" class="space-y-2">
+                                                <div class="relative rounded-2xl overflow-hidden border-2 border-emerald-300 dark:border-emerald-700">
+                                                    <img :src="photoData" alt="Foto bukti" class="w-full max-h-72 object-contain bg-slate-900">
+                                                    <span class="absolute top-2 left-2 px-2 py-1 rounded-lg bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest shadow">Foto Siap</span>
+                                                </div>
+                                                <button type="button" @click="photoData = ''; bukaKamera()"
+                                                    class="w-full bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 text-blue-600 dark:text-blue-400 font-black py-2.5 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95">
+                                                    Ambil Ulang Foto
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             </template>
 
@@ -549,6 +602,37 @@
             </div>
         </div>
 
+        {{-- ── Modal Kamera untuk foto bukti Lupa Absen ────────────────────────
+             Memakai kamera perangkat secara langsung (bukan galeri), lalu hasil
+             jepretan dicap tanggal, jam, dan nama counter sebelum dikirim. --}}
+        @if($wajibFotoLupaAbsen ?? false)
+        <div x-show="kameraTerbuka" x-cloak class="fixed inset-0 z-[300] bg-black/90 flex flex-col" role="dialog" aria-modal="true">
+            <div class="flex items-center justify-between px-5 py-4 text-white flex-shrink-0">
+                <div>
+                    <p class="text-sm font-black uppercase tracking-widest">Ambil Foto Bukti</p>
+                    <p class="text-[10px] text-white/60 font-medium">Arahkan kamera ke area counter Anda</p>
+                </div>
+                <button type="button" @click="tutupKamera()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="flex-1 flex items-center justify-center overflow-hidden px-3">
+                <video x-ref="video" autoplay playsinline muted class="max-h-full max-w-full rounded-2xl bg-black"></video>
+            </div>
+
+            <div class="px-5 py-6 flex-shrink-0 flex flex-col items-center gap-3">
+                <p x-show="kameraError" x-text="kameraError" class="text-[11px] font-bold text-rose-300 text-center"></p>
+                <button type="button" @click="jepretFoto()" :disabled="!kameraSiap"
+                    :class="kameraSiap ? 'bg-white hover:bg-slate-100 active:scale-95' : 'bg-white/30 cursor-not-allowed'"
+                    class="w-16 h-16 rounded-full border-4 border-white/50 flex items-center justify-center transition-all">
+                    <span class="w-11 h-11 rounded-full bg-blue-600"></span>
+                </button>
+                <p class="text-[10px] text-white/50 font-bold uppercase tracking-widest">Tekan untuk memotret</p>
+            </div>
+        </div>
+        @endif
+
     </div>
 
     <style>
@@ -572,6 +656,105 @@
 
                 // ID pengajuan yang sedang disorot (setelah pesan admin diklik)
                 pengajuanDisorot: null,
+
+                // ── Kamera untuk foto bukti "Lupa Absen" ──────────────────────
+                wajibFoto: @json($wajibFotoLupaAbsen ?? false),
+                namaCounter: @json(Auth::user()->location->name ?? (Auth::user()->division->name ?? '-')),
+                photoData: '',
+                kameraTerbuka: false,
+                kameraSiap: false,
+                kameraError: '',
+                _stream: null,
+
+                async bukaKamera() {
+                    this.kameraError = '';
+                    this.kameraSiap = false;
+
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        this.kameraError = 'Perangkat/browser ini tidak mendukung kamera. Silakan buka lewat browser HP Anda.';
+                        return;
+                    }
+
+                    this.kameraTerbuka = true;
+                    try {
+                        // facingMode 'environment' = kamera belakang (untuk memotret counter)
+                        this._stream = await navigator.mediaDevices.getUserMedia({
+                            video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } },
+                            audio: false
+                        });
+                        const video = this.$refs.video;
+                        video.srcObject = this._stream;
+                        await video.play();
+                        this.kameraSiap = true;
+                    } catch (e) {
+                        this.kameraSiap = false;
+                        if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
+                            this.kameraError = 'Izin kamera ditolak. Aktifkan izin kamera untuk situs ini di pengaturan browser, lalu coba lagi.';
+                        } else if (e && e.name === 'NotFoundError') {
+                            this.kameraError = 'Kamera tidak ditemukan pada perangkat ini.';
+                        } else {
+                            this.kameraError = 'Kamera gagal dibuka. Pastikan situs dibuka lewat HTTPS dan tidak ada aplikasi lain yang memakai kamera.';
+                        }
+                    }
+                },
+
+                tutupKamera() {
+                    if (this._stream) {
+                        this._stream.getTracks().forEach(t => t.stop());
+                        this._stream = null;
+                    }
+                    this.kameraSiap = false;
+                    this.kameraTerbuka = false;
+                },
+
+                /**
+                 * Ambil gambar dari kamera lalu CAP tanggal, jam, dan nama counter
+                 * langsung ke gambarnya, supaya bukti tidak bisa dipakai ulang.
+                 */
+                jepretFoto() {
+                    const video = this.$refs.video;
+                    if (!video || !video.videoWidth) return;
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // ── Cap waktu & lokasi ──
+                    const now = new Date();
+                    const tanggal = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                    const jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                    const skala = canvas.width / 1000;
+                    const pad = Math.round(18 * skala);
+                    const fontBesar = Math.max(14, Math.round(30 * skala));
+                    const fontKecil = Math.max(11, Math.round(22 * skala));
+                    const tinggiBar = fontBesar + fontKecil * 2 + pad * 3;
+
+                    ctx.fillStyle = 'rgba(0,0,0,0.62)';
+                    ctx.fillRect(0, canvas.height - tinggiBar, canvas.width, tinggiBar);
+
+                    ctx.textBaseline = 'top';
+                    let y = canvas.height - tinggiBar + pad;
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '700 ' + fontBesar + 'px sans-serif';
+                    ctx.fillText(jam + ' WIB', pad, y);
+                    y += fontBesar + Math.round(pad / 2);
+
+                    ctx.fillStyle = '#e2e8f0';
+                    ctx.font = '600 ' + fontKecil + 'px sans-serif';
+                    ctx.fillText(tanggal, pad, y);
+                    y += fontKecil + Math.round(pad / 4);
+
+                    ctx.fillStyle = '#93c5fd';
+                    ctx.font = '700 ' + fontKecil + 'px sans-serif';
+                    ctx.fillText(this.namaCounter, pad, y);
+
+                    this.photoData = canvas.toDataURL('image/jpeg', 0.85);
+                    this.tutupKamera();
+                },
 
                 /**
                  * Dipanggil saat karyawan mengklik pesan dari admin.
@@ -631,6 +814,13 @@
                 // izin yang diajukan dan tidak salah pilih tanggal.
                 confirmSubmit(event) {
                     if (!this.selectedType) return true;
+
+                    // Foto bukti wajib untuk Lupa Absen (khusus Karyawan Ramayana)
+                    if (this.selectedType === 'Lupa Absen' && this.wajibFoto && !this.photoData) {
+                        window.alert('Foto bukti di counter wajib diambil terlebih dahulu.\n\nTekan tombol "Ambil Foto Sekarang" pada bagian Lupa Absen.');
+                        event.preventDefault();
+                        return false;
+                    }
 
                     const jenis = this.selectedType + (this.subType ? ' (' + this.subType + ')' : '');
                     let pesan;

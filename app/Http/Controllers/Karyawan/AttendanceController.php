@@ -8,6 +8,12 @@ use Illuminate\Support\Facades\Auth;
 
 class AttendanceController extends Controller
 {
+    /**
+     * Mulai jam berapa Karyawan Ramayana yang belum absen masuk hanya boleh
+     * melakukan absen PULANG (mode "pulang saja").
+     */
+    private const JAM_MODE_PULANG_SAJA = 16;
+
     private function hasActiveLupaAbsenRequestOnDate($user, $date): bool
     {
         return $user->leaveRequests()
@@ -101,6 +107,19 @@ class AttendanceController extends Controller
             return response()->json(['success' => false, 'message' => 'Anda sudah melakukan Clock In hari ini.']);
         }
 
+        // ── Mode "Pulang Saja" (khusus Karyawan Ramayana) ────────────────────
+        // Mulai jam 16:00, karyawan yang belum absen masuk TIDAK boleh lagi absen
+        // masuk — karena hampir pasti yang dimaksud adalah absen pulang (lupa absen
+        // masuk di pagi hari). Ini mencegah data tercatat sebagai "masuk jam 19:00"
+        // yang selama ini bikin absensi jadi tidak masuk akal.
+        // Aturan ini TIDAK berlaku untuk staff kantor & live streamer.
+        if ($user->role->slug === 'karyawan_ramayana' && (int) $now->format('H') >= self::JAM_MODE_PULANG_SAJA) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sudah lewat jam ' . self::JAM_MODE_PULANG_SAJA . ':00, absen masuk tidak bisa dilakukan. Jika Anda lupa absen masuk pagi tadi, silakan ajukan lewat menu Izin → Lupa Absen.',
+            ]);
+        }
+
         if ($attendance && !$attendance->check_in) {
             $attendance->update([
                 'check_in' => $now->format('H:i:s'),
@@ -151,6 +170,28 @@ class AttendanceController extends Controller
 
         if ($attendance && $attendance->check_out) {
             return response()->json(['success' => false, 'message' => 'Anda sudah melakukan Clock Out.']);
+        }
+
+        // ── Absen pulang tanpa absen masuk ───────────────────────────────────
+        // Hanya diizinkan untuk Karyawan Ramayana dan mulai jam 16:00 (mode
+        // "pulang saja"). Sebelum jam itu, absen pulang tetap mensyaratkan absen
+        // masuk agar tidak ada absen pulang "liar" di pagi hari.
+        $belumAbsenMasuk = !$attendance || !$attendance->check_in;
+
+        if ($belumAbsenMasuk && !$isLiveStreaming) {
+            if ($user->role->slug !== 'karyawan_ramayana') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda belum melakukan Clock In hari ini.',
+                ]);
+            }
+
+            if ((int) $now->format('H') < self::JAM_MODE_PULANG_SAJA) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda belum melakukan Clock In hari ini. Absen pulang tanpa absen masuk baru bisa dilakukan mulai jam ' . self::JAM_MODE_PULANG_SAJA . ':00.',
+                ]);
+            }
         }
 
         $isPulangCepat = false;

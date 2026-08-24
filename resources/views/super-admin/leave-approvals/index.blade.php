@@ -186,6 +186,20 @@
                         </td>
                         <td class="px-6 py-5 align-top">
                             <p class="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed max-w-xs break-words">"{{ $leave->reason }}"</p>
+
+                            {{-- Foto bukti di counter (khusus pengajuan Lupa Absen) --}}
+                            @if($leave->photo)
+                                <a href="{{ asset('storage/' . $leave->photo) }}" target="_blank" rel="noopener"
+                                   class="mt-2 inline-block group/foto">
+                                    <img src="{{ asset('storage/' . $leave->photo) }}" alt="Foto bukti"
+                                         class="w-32 h-24 object-cover rounded-xl border-2 border-blue-100 dark:border-slate-700 group-hover/foto:border-blue-500 transition-colors shadow-sm">
+                                    <span class="block mt-1 text-[9px] font-black uppercase tracking-wider text-blue-500 group-hover/foto:text-blue-600">
+                                        📷 Lihat Foto Bukti
+                                    </span>
+                                </a>
+                            @elseif($leave->type === 'Lupa Absen')
+                                <span class="mt-2 inline-block text-[9px] font-bold uppercase tracking-wider text-slate-400 italic">Tanpa foto bukti</span>
+                            @endif
                         </td>
                         <td class="px-6 py-5 align-top">
                             @if($leave->status === 'pending')

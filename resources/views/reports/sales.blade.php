@@ -220,10 +220,14 @@
     {{-- Backdrop --}}
     <div class="absolute inset-0 bg-blue-950/60 backdrop-blur-sm" onclick="closeSpgDetailModal()"></div>
 
-    {{-- Drawer --}}
-    <div id="spg-detail-drawer" class="absolute right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300 ease-out">
+    {{-- Panel detail: SATU LAYAR PENUH agar tabel transaksi lega dan mudah dibaca --}}
+    <div id="spg-detail-drawer" class="absolute inset-0 w-full h-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300 ease-out">
         {{-- Drawer Header --}}
-        <div class="flex items-center justify-between px-6 py-5 border-b border-blue-100 dark:border-slate-800 flex-shrink-0">
+        {{-- Catatan tata letak: panel memang selebar layar, tapi ISI-nya dibatasi
+             lebar maksimum dan ditengahkan (max-w-6xl mx-auto) supaya tabel tidak
+             melebar berlebihan di monitor besar — kolom Nominal tetap dekat dengan
+             kolom lain sehingga mudah dibaca menyamping. --}}
+        <div class="w-full max-w-6xl mx-auto flex items-center justify-between px-6 md:px-8 py-5 border-b border-blue-100 dark:border-slate-800 flex-shrink-0">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-xl flex items-center justify-center">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
@@ -239,21 +243,27 @@
         </div>
 
         {{-- Summary badges in modal --}}
-        <div id="spg-modal-summary" class="px-6 py-3 border-b border-blue-50 dark:border-slate-800 flex items-center gap-4 flex-shrink-0 flex-wrap">
+        <div id="spg-modal-summary" class="w-full max-w-6xl mx-auto px-6 md:px-8 py-3 border-b border-blue-50 dark:border-slate-800 flex items-center gap-4 flex-shrink-0 flex-wrap">
             <span class="text-xs font-bold text-slate-400">Memuat...</span>
         </div>
 
         {{-- Table --}}
-        <div class="overflow-y-auto flex-1 px-2 py-2">
-            <table class="w-full text-sm">
-                <thead class="sticky top-0">
+        <div class="overflow-y-auto overflow-x-auto flex-1 w-full max-w-6xl mx-auto px-4 md:px-6 py-2">
+            {{-- Lebar kolom diatur agar rapi di layar penuh: kolom Produk/SKU
+                 mengambil sisa ruang, kolom lain dibuat pas isinya.
+                 min-w-[860px] penting untuk layar HP: tanpa itu, total lebar kolom
+                 tetap (576px) melebihi lebar layar sehingga kolom Produk/SKU
+                 terjepit sampai 0px dan nama barang tidak terbaca. Dengan lebar
+                 minimum ini tabel cukup digeser ke samping di layar kecil. --}}
+            <table class="w-full min-w-[860px] text-sm table-fixed">
+                <thead class="sticky top-0 z-10">
                     <tr class="bg-slate-50 dark:bg-slate-800 border-b border-blue-100 dark:border-slate-700">
-                        <th class="text-left px-4 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">No</th>
-                        <th class="text-left px-4 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Tanggal</th>
+                        <th class="w-16 text-left px-4 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">No</th>
+                        <th class="w-36 text-left px-4 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Tanggal</th>
                         <th class="text-left px-4 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Produk / SKU</th>
-                        <th class="text-left px-4 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Size</th>
-                        <th class="text-right px-4 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Qty</th>
-                        <th class="text-right px-4 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Nominal</th>
+                        <th class="w-24 text-left px-4 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Size</th>
+                        <th class="w-24 text-right px-4 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Qty</th>
+                        <th class="w-44 text-right px-4 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Nominal</th>
                     </tr>
                 </thead>
                 <tbody id="spg-modal-tbody" class="divide-y divide-blue-50 dark:divide-slate-800">
@@ -263,7 +273,7 @@
         </div>
 
         {{-- Footer total --}}
-        <div id="spg-modal-footer" class="px-6 py-4 border-t border-blue-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-center justify-between flex-shrink-0 gap-4 flex-wrap">
+        <div id="spg-modal-footer" class="w-full max-w-6xl mx-auto px-6 md:px-8 py-4 border-t border-blue-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-center justify-between flex-shrink-0 gap-4 flex-wrap">
             <button type="button" onclick="closeSpgDetailModal()" class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 Kembali ke Peringkat
@@ -384,7 +394,7 @@ function openSpgDetailModal(spgId, spgName) {
                         <span class="font-semibold text-blue-900 dark:text-white text-xs">${dateStr}</span>
                     </td>
                     <td class="px-4 py-3">
-                        <span class="text-xs font-medium text-slate-700 dark:text-slate-300">${t.sku ?? '-'}</span>
+                        <span class="text-xs font-medium text-slate-700 dark:text-slate-300 break-words">${t.sku ?? '-'}</span>
                     </td>
                     <td class="px-4 py-3">
                         <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">${t.size ?? '-'}</span>
@@ -406,17 +416,29 @@ function openSpgDetailModal(spgId, spgName) {
     }
 
     // Show modal + animate drawer in
+    //
+    // PENTING: panel ini memakai kelas Tailwind `translate-x-full` untuk posisi
+    // awal (tersembunyi di luar layar kanan). Di Tailwind v4, kelas translate-*
+    // memakai properti CSS `translate` (translate: 100% 0) — BUKAN `transform`
+    // seperti pada Tailwind v3. Jadi menimpa `style.transform` TIDAK berpengaruh
+    // sama sekali: panel tetap tergeser 100% ke kanan sehingga isinya tidak
+    // terlihat walaupun modal sudah terbuka dan datanya sudah ter-render.
+    // Karena itu di sini kita menimpa properti `translate` (bukan `transform`).
     modal.classList.remove('hidden');
-    requestAnimationFrame(() => {
-        drawer.style.transform = 'translateX(0)';
-    });
+    // Pakai setTimeout (bukan requestAnimationFrame) supaya panel tetap terbuka
+    // walau tab sedang tidak aktif/tidak menggambar — rAF tidak berjalan pada
+    // kondisi itu sehingga panel bisa gagal muncul.
+    setTimeout(() => {
+        drawer.style.translate = '0 0';
+    }, 10);
     document.body.style.overflow = 'hidden';
 }
 
 function closeSpgDetailModal() {
     const modal  = document.getElementById('spg-detail-modal');
     const drawer = document.getElementById('spg-detail-drawer');
-    drawer.style.transform = 'translateX(100%)';
+    // Lihat catatan di openSpgDetailModal(): pakai `translate`, bukan `transform`.
+    drawer.style.translate = '100% 0';
     setTimeout(() => {
         modal.classList.add('hidden');
         document.body.style.overflow = '';

@@ -54,13 +54,25 @@ class LeaveRequestController extends Controller
         $approvedCount = (clone $statsQuery)->where('status', 'approved')->count();
         $rejectedCount = (clone $statsQuery)->where('status', 'rejected')->count();
 
+        // Sisa jatah "Lupa Absen" bulan ini (gabungan Absen Masuk + Absen Pulang)
+        $lupaAbsenQuota     = LeaveRequest::LUPA_ABSEN_QUOTA_PER_MONTH;
+        $lupaAbsenUsed      = LeaveRequest::lupaAbsenUsedInMonth($user->id, now());
+        $lupaAbsenRemaining = max(0, $lupaAbsenQuota - $lupaAbsenUsed);
+
+        // Foto bukti hanya diwajibkan untuk Karyawan Ramayana
+        $wajibFotoLupaAbsen = $user->role->slug === 'karyawan_ramayana';
+
         return view('karyawan.leave-requests.index', compact(
             'leaveRequests',
             'totalCount',
             'pendingCount',
             'approvedCount',
             'rejectedCount',
-            'unreadMessages'
+            'unreadMessages',
+            'lupaAbsenQuota',
+            'lupaAbsenUsed',
+            'lupaAbsenRemaining',
+            'wajibFotoLupaAbsen'
         ));
     }
 
@@ -116,25 +128,34 @@ class LeaveRequestController extends Controller
             'reason' => 'required|string|max:500',
         ]);
 
-        // ── Cek batasan 1 kali sebulan untuk Lupa Absen (Masuk/Pulang) ─────
-        // Rule: dalam 1 bulan kalender, user hanya boleh 1x mengajukan
-        // Lupa Absen (baik Absen Masuk maupun Absen Pulang).
-        // Rejected tidak dihitung, jadi user tetap bisa mengajukan ulang.
+        // ── Batasan jatah Lupa Absen per bulan ─────────────────────────────
+        // Dalam 1 bulan kalender, karyawan boleh mengajukan Lupa Absen maksimal
+        // 3 kali, dihitung GABUNGAN antara Absen Masuk dan Absen Pulang.
+        // Pengajuan yang DITOLAK tidak dihitung, jadi tetap bisa mengajukan ulang.
+        $photoPath = null;
+        $photoTakenAt = null;
+
         if ($request->type === 'Lupa Absen') {
             $startDate = Carbon::parse($request->start_date);
+            $terpakai  = LeaveRequest::lupaAbsenUsedInMonth(Auth::id(), $startDate);
+            $kuota     = LeaveRequest::LUPA_ABSEN_QUOTA_PER_MONTH;
 
-            $alreadyExistsThisMonth = Auth::user()->leaveRequests()
-                ->where('type', 'Lupa Absen')
-                ->whereIn('status', ['pending', 'approved'])          // rejected tidak dihitung
-                ->whereMonth('start_date', $startDate->month)         // ← fix: pakai start_date
-                ->whereYear('start_date', $startDate->year)           // ← fix: pakai start_date
-                ->exists();
-
-            if ($alreadyExistsThisMonth) {
+            if ($terpakai >= $kuota) {
                 $bulan = $startDate->locale('id')->isoFormat('MMMM Y');
                 return redirect()->back()->withInput()->withErrors([
-                    'type' => "Anda sudah menggunakan jatah Lupa Absen (Absen Masuk/Pulang) untuk bulan {$bulan}. Kesempatan hanya 1 kali per bulan dan akan reset di bulan berikutnya.",
+                    'type' => "Jatah Lupa Absen bulan {$bulan} sudah habis (terpakai {$terpakai} dari {$kuota} kali). Jatah akan direset otomatis di bulan berikutnya.",
                 ]);
+            }
+
+            // ── Wajib foto bukti di counter (khusus Karyawan Ramayana) ──────
+            // Foto diambil langsung dari kamera dan sudah dicap tanggal/jam +
+            // nama counter oleh halaman pengajuan.
+            if ($this->wajibFotoLupaAbsen()) {
+                $result = $this->simpanFotoLupaAbsen($request);
+                if ($result instanceof \Illuminate\Http\RedirectResponse) {
+                    return $result;
+                }
+                [$photoPath, $photoTakenAt] = $result;
             }
         }
         // ────────────────────────────────────────────────────────────────────
@@ -147,9 +168,84 @@ class LeaveRequestController extends Controller
             'time_start' => $request->time_start,
             'time_end' => $request->time_end,
             'reason' => $request->reason,
+            'photo' => $photoPath,
+            'photo_taken_at' => $photoTakenAt,
             'status' => 'pending',
         ]);
 
-        return redirect()->route('karyawan.leave-requests.index')->with('success', 'Pengajuan berhasil dibuat.');
+        // Arahkan kembali ke halaman izin sesuai peran user (karyawan / karyawan_ramayana),
+        // bukan selalu ke rute 'karyawan.*'.
+        $routeName = Auth::user()->role->slug . '.leave-requests.index';
+        if (!\Illuminate\Support\Facades\Route::has($routeName)) {
+            $routeName = 'karyawan.leave-requests.index';
+        }
+
+        return redirect()->route($routeName)->with('success', 'Pengajuan berhasil dibuat.');
+    }
+
+    /**
+     * Apakah user wajib melampirkan foto saat mengajukan "Lupa Absen"?
+     * Berlaku KHUSUS Karyawan Ramayana. Staff kantor & live streamer tidak wajib.
+     */
+    private function wajibFotoLupaAbsen(): bool
+    {
+        return Auth::user()->role->slug === 'karyawan_ramayana';
+    }
+
+    /**
+     * Simpan foto bukti "Lupa Absen" yang dikirim sebagai data URL dari kamera.
+     *
+     * Mengembalikan [path, waktuPengambilan] jika berhasil, atau RedirectResponse
+     * berisi pesan error jika gagal.
+     *
+     * @return array{0:string,1:\Carbon\Carbon}|\Illuminate\Http\RedirectResponse
+     */
+    private function simpanFotoLupaAbsen(Request $request)
+    {
+        $dataUrl = $request->input('photo_data');
+
+        if (empty($dataUrl)) {
+            return redirect()->back()->withInput()->withErrors([
+                'photo_data' => 'Foto bukti wajib diambil menggunakan kamera di counter Anda.',
+            ]);
+        }
+
+        if (!preg_match('/^data:image\/(jpeg|jpg|png);base64,/', $dataUrl, $m)) {
+            return redirect()->back()->withInput()->withErrors([
+                'photo_data' => 'Format foto tidak valid. Silakan ambil ulang foto menggunakan kamera.',
+            ]);
+        }
+
+        $binary = base64_decode(substr($dataUrl, strpos($dataUrl, ',') + 1), true);
+
+        if ($binary === false || strlen($binary) < 1024) {
+            return redirect()->back()->withInput()->withErrors([
+                'photo_data' => 'Foto gagal diproses atau rusak. Silakan ambil ulang foto.',
+            ]);
+        }
+
+        // Batas ukuran wajar agar tidak membebani penyimpanan (± 6 MB)
+        if (strlen($binary) > 6 * 1024 * 1024) {
+            return redirect()->back()->withInput()->withErrors([
+                'photo_data' => 'Ukuran foto terlalu besar. Silakan ambil ulang foto.',
+            ]);
+        }
+
+        $dir = public_path('storage/lupa-absen');
+        if (!is_dir($dir)) {
+            mkdir($dir, 0775, true);
+        }
+
+        $fileName = 'lupa-absen/' . Auth::id() . '_' . now()->format('Ymd_His') . '_' . uniqid() . '.jpg';
+
+        if (file_put_contents(public_path('storage/' . $fileName), $binary) === false) {
+            return redirect()->back()->withInput()->withErrors([
+                'photo_data' => 'Foto gagal disimpan di server. Silakan coba lagi.',
+            ]);
+        }
+
+        // Waktu pengambilan dicatat dari SERVER (bukan dari perangkat karyawan),
+        // supaya tidak bisa dimanipulasi lewat pengaturan jam di HP.
+        return [$fileName, now()];
     }
 }

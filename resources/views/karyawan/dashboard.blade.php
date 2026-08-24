@@ -86,6 +86,90 @@
             @endif
         </div>
 
+        {{-- ── Pengingat: LUPA ABSEN PULANG ────────────────────────────────────
+             Muncul di hari-hari berikutnya selama karyawan punya hari kerja yang
+             sudah absen masuk tapi TIDAK ada absen pulang. Pengingat otomatis
+             hilang begitu karyawan mengajukan Lupa Absen untuk tanggal tersebut.
+             Khusus Karyawan Ramayana. --}}
+        @php
+            $lupaAbsenPulang = collect();
+
+            if (Auth::user()->role->slug === 'karyawan_ramayana') {
+                $belumPulang = Auth::user()->attendances()
+                    ->whereNotNull('check_in')
+                    ->whereNull('check_out')
+                    ->whereDate('date', '<', \Carbon\Carbon::today())
+                    ->orderByDesc('date')
+                    ->limit(10)
+                    ->get();
+
+                if ($belumPulang->isNotEmpty()) {
+                    // Tanggal yang SUDAH diajukan Lupa Absen tidak perlu diingatkan lagi
+                    $sudahDiajukan = Auth::user()->leaveRequests()
+                        ->where('type', 'Lupa Absen')
+                        ->whereIn('status', ['pending', 'approved'])
+                        ->whereIn('start_date', $belumPulang->pluck('date')->map(fn($d) => \Carbon\Carbon::parse($d)->toDateString()))
+                        ->pluck('start_date')
+                        ->map(fn($d) => \Carbon\Carbon::parse($d)->toDateString())
+                        ->all();
+
+                    $lupaAbsenPulang = $belumPulang->reject(function ($a) use ($sudahDiajukan) {
+                        return in_array(\Carbon\Carbon::parse($a->date)->toDateString(), $sudahDiajukan, true);
+                    })->values();
+                }
+            }
+
+            $sisaJatahLupaAbsen = Auth::user()->role->slug === 'karyawan_ramayana'
+                ? \App\Models\LeaveRequest::lupaAbsenRemainingInMonth(Auth::id(), now())
+                : null;
+        @endphp
+
+        @if($lupaAbsenPulang->count() > 0)
+            <div class="rounded-2xl border-2 border-amber-300 dark:border-amber-600/70 bg-amber-50 dark:bg-amber-950/40 p-4 md:p-5 shadow-lg shadow-amber-500/10">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 shrink-0 rounded-xl bg-amber-100 dark:bg-amber-500/25 border border-amber-300 dark:border-amber-600/60 flex items-center justify-center text-lg">
+                        ⏰
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <p class="text-[11px] font-black uppercase tracking-widest text-amber-800 dark:text-amber-200">
+                                Anda Lupa Absen Pulang
+                            </p>
+                            <span class="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[8px] font-black uppercase tracking-widest">
+                                {{ $lupaAbsenPulang->count() }} Hari
+                            </span>
+                        </div>
+
+                        <p class="text-xs font-medium text-amber-900 dark:text-amber-100 leading-relaxed">
+                            Tanggal berikut tercatat sudah absen masuk tetapi <span class="font-bold">tidak ada absen pulang</span>:
+                        </p>
+
+                        <div class="flex flex-wrap gap-1.5 mt-2">
+                            @foreach($lupaAbsenPulang as $a)
+                                <span class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900/70 border border-amber-300 dark:border-amber-700/60 text-[10px] font-black text-amber-800 dark:text-amber-200">
+                                    {{ \Carbon\Carbon::parse($a->date)->translatedFormat('d M Y') }}
+                                    <span class="font-medium opacity-70">· masuk {{ \Carbon\Carbon::parse($a->check_in)->format('H:i') }}</span>
+                                </span>
+                            @endforeach
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3 mt-3">
+                            <a href="{{ route(Auth::user()->role->slug . '.leave-requests.index') }}"
+                               class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm">
+                                Ajukan Lupa Absen
+                                <span aria-hidden="true">&rarr;</span>
+                            </a>
+                            @if(!is_null($sisaJatahLupaAbsen))
+                                <span class="text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                                    Sisa jatah bulan ini: {{ $sisaJatahLupaAbsen }} dari {{ \App\Models\LeaveRequest::LUPA_ABSEN_QUOTA_PER_MONTH }}
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @php
             $upcomingHolidays = \App\Models\Holiday::whereDate('date', '>=', \Carbon\Carbon::today())
                 ->where(function ($q) {
@@ -151,9 +235,10 @@
                 </div>
 
                 <!-- Clock In / Clock Out Buttons -->
-                <div class="grid grid-cols-2 gap-4 max-w-[320px] mx-auto my-6 w-full relative z-10">
-                    <!-- Clock In -->
-                    <button @click="submitAttendance('in')" :disabled="!isWithinRange || isSubmitting || hasCheckedIn"
+                <div class="max-w-[320px] mx-auto my-6 w-full relative z-10"
+                     :class="modeHanyaPulang ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-4'">
+                    <!-- Clock In (disembunyikan saat mode "pulang saja") -->
+                    <button x-show="!modeHanyaPulang" @click="submitAttendance('in')" :disabled="!isWithinRange || isSubmitting || hasCheckedIn"
                         :class="{
                                         'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/10 active:scale-95': isWithinRange && !hasCheckedIn && !isSubmitting,
                                         'bg-slate-50 dark:bg-slate-900/60 text-slate-350 dark:text-slate-700 border border-slate-200/30 dark:border-slate-850 cursor-not-allowed': !isWithinRange || hasCheckedIn,
@@ -179,12 +264,14 @@
 
                     <!-- Clock Out -->
                     <button @click="submitAttendance('out')"
-                        :disabled="!isWithinRange || isSubmitting || !hasCheckedIn || hasCheckedOut" :class="{
-                                        'bg-orange-500 text-white hover:bg-orange-600 shadow-md shadow-orange-500/10 active:scale-95': isWithinRange && hasCheckedIn && !hasCheckedOut && !isSubmitting,
-                                        'bg-slate-50 dark:bg-slate-900/60 text-slate-350 dark:text-slate-700 border border-slate-200/30 dark:border-slate-850 cursor-not-allowed': !isWithinRange || !hasCheckedIn || hasCheckedOut,
-                                        'opacity-60 cursor-wait': isSubmitting
+                        :disabled="!isWithinRange || isSubmitting || !bisaAbsenKeluar" :class="{
+                                        'bg-orange-500 text-white hover:bg-orange-600 shadow-md shadow-orange-500/10 active:scale-95': isWithinRange && bisaAbsenKeluar && !isSubmitting,
+                                        'bg-slate-50 dark:bg-slate-900/60 text-slate-350 dark:text-slate-700 border border-slate-200/30 dark:border-slate-850 cursor-not-allowed': !isWithinRange || !bisaAbsenKeluar,
+                                        'opacity-60 cursor-wait': isSubmitting,
+                                        'aspect-square': !modeHanyaPulang,
+                                        'py-8': modeHanyaPulang
                                     }"
-                        class="relative aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all duration-350 group cursor-pointer">
+                        class="relative rounded-2xl flex flex-col items-center justify-center gap-2 transition-all duration-350 group cursor-pointer">
                         <svg class="w-7 h-7 transition-transform group-hover:scale-110" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -192,6 +279,7 @@
                             </path>
                         </svg>
                         <span class="text-[10px] font-bold uppercase tracking-widest">Absen Keluar</span>
+                        <span x-show="modeHanyaPulang" class="text-[9px] font-medium normal-case tracking-normal opacity-80">Anda belum absen masuk hari ini</span>
                         <div x-show="hasCheckedOut"
                             class="absolute inset-0 bg-emerald-500/5 backdrop-blur-[0.5px] rounded-2xl flex items-center justify-center">
                             <div class="bg-emerald-500 rounded-full p-2 shadow-md shadow-emerald-500/30">
@@ -570,10 +658,32 @@
                         ->latest()
                         ->first();
                 @endphp
-                            hasCheckedIn: {{ $todayAttendance ? 'true' : 'false' }},
+                            {{-- hasCheckedIn kini berarti "check_in benar-benar terisi", bukan sekadar
+                                 barisnya ada. Ini penting sejak absen pulang bisa dilakukan tanpa absen
+                                 masuk (mode pulang saja), yang membuat baris absensi bisa ada tapi
+                                 check_in-nya kosong. --}}
+                hasCheckedIn: {{ ($todayAttendance && $todayAttendance->check_in) ? 'true' : 'false' }},
                 hasCheckedOut: {{ ($todayAttendance && $todayAttendance->check_out) ? 'true' : 'false' }},
                 checkInTime: '{{ $todayAttendance ? $todayAttendance->check_in : '' }}',
                 requiredHours: {{ Auth::user()->role->slug === 'karyawan_ramayana' ? 7 : 8 }},
+
+                {{-- ── Mode "Pulang Saja" (khusus Karyawan Ramayana) ─────────────────
+                     Kalau karyawan belum absen masuk dan jam sudah >= 16:00, maka yang
+                     ditampilkan HANYA tombol Absen Keluar. Tujuannya supaya karyawan yang
+                     lupa absen masuk tidak keliru tercatat sebagai "absen masuk" di sore/
+                     malam hari. Staff kantor & live streamer TIDAK terkena aturan ini. --}}
+                isRamayana: {{ Auth::user()->role->slug === 'karyawan_ramayana' ? 'true' : 'false' }},
+                jamPulangSaja: 16,
+                jamSekarang: new Date().getHours(),
+                get modeHanyaPulang() {
+                    return this.isRamayana
+                        && !this.hasCheckedIn
+                        && !this.hasCheckedOut
+                        && this.jamSekarang >= this.jamPulangSaja;
+                },
+                get bisaAbsenKeluar() {
+                    return (this.hasCheckedIn || this.modeHanyaPulang) && !this.hasCheckedOut;
+                },
                 locations: [
                     @if(Auth::user()->role->slug == 'karyawan_ramayana')
                         @foreach(Auth::user()->all_locations as $loc)
@@ -748,8 +858,10 @@
                 submitAttendance(type) {
 
                     if (this.isSubmitting || !this.isWithinRange) return;
-                    if (type === 'in' && this.hasCheckedIn) return;
-                    if (type === 'out' && (!this.hasCheckedIn || this.hasCheckedOut)) return;
+                    if (type === 'in' && (this.hasCheckedIn || this.modeHanyaPulang)) return;
+                    // Absen keluar kini boleh dilakukan tanpa absen masuk saat mode
+                    // "pulang saja" aktif (Karyawan Ramayana, jam >= 16:00).
+                    if (type === 'out' && !this.bisaAbsenKeluar) return;
 
                     const proceed = () => {
                         this.isSubmitting = true;
