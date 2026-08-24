@@ -267,7 +267,8 @@
                                                 Foto Bukti di Counter <span class="text-rose-500">*</span>
                                             </label>
                                             <p class="text-[10px] text-slate-500 dark:text-slate-400 ml-2 leading-relaxed">
-                                                Ambil foto langsung di counter Anda. Foto akan otomatis diberi cap tanggal, jam, dan nama counter.
+                                                Ambil foto langsung di counter Anda &mdash; pastikan <span class="font-bold">wajah Anda dan area counter terlihat</span>.
+                                                Bisa memakai kamera depan maupun belakang. Foto otomatis diberi cap jam, tanggal, nama counter, dan nama Anda sehingga tidak bisa dimanipulasi.
                                             </p>
 
                                             <input type="hidden" name="photo_data" x-model="photoData">
@@ -610,7 +611,7 @@
             <div class="flex items-center justify-between px-5 py-4 text-white flex-shrink-0">
                 <div>
                     <p class="text-sm font-black uppercase tracking-widest">Ambil Foto Bukti</p>
-                    <p class="text-[10px] text-white/60 font-medium">Arahkan kamera ke area counter Anda</p>
+                    <p class="text-[10px] text-white/60 font-medium">Pastikan wajah Anda dan area counter terlihat</p>
                 </div>
                 <button type="button" @click="tutupKamera()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -618,17 +619,38 @@
             </div>
 
             <div class="flex-1 flex items-center justify-center overflow-hidden px-3">
-                <video x-ref="video" autoplay playsinline muted class="max-h-full max-w-full rounded-2xl bg-black"></video>
+                {{-- Pratinjau kamera depan dibuat seperti cermin agar terasa natural.
+                     Foto yang TERSIMPAN tetap tidak dicerminkan supaya tulisan di
+                     latar (papan nama counter, dll) tetap terbaca normal. --}}
+                <video x-ref="video" autoplay playsinline muted
+                       :style="arahKamera === 'user' ? 'transform: scaleX(-1)' : ''"
+                       class="max-h-full max-w-full rounded-2xl bg-black"></video>
             </div>
 
             <div class="px-5 py-6 flex-shrink-0 flex flex-col items-center gap-3">
                 <p x-show="kameraError" x-text="kameraError" class="text-[11px] font-bold text-rose-300 text-center"></p>
-                <button type="button" @click="jepretFoto()" :disabled="!kameraSiap"
-                    :class="kameraSiap ? 'bg-white hover:bg-slate-100 active:scale-95' : 'bg-white/30 cursor-not-allowed'"
-                    class="w-16 h-16 rounded-full border-4 border-white/50 flex items-center justify-center transition-all">
-                    <span class="w-11 h-11 rounded-full bg-blue-600"></span>
-                </button>
-                <p class="text-[10px] text-white/50 font-bold uppercase tracking-widest">Tekan untuk memotret</p>
+
+                <div class="flex items-center justify-center gap-8">
+                    {{-- Tombol ganti kamera depan / belakang --}}
+                    <button type="button" @click="gantiKamera()"
+                        class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors active:scale-95"
+                        :title="'Ganti ke ' + (arahKamera === 'user' ? 'kamera belakang' : 'kamera depan')">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </button>
+
+                    <button type="button" @click="jepretFoto()" :disabled="!kameraSiap"
+                        :class="kameraSiap ? 'bg-white hover:bg-slate-100 active:scale-95' : 'bg-white/30 cursor-not-allowed'"
+                        class="w-16 h-16 rounded-full border-4 border-white/50 flex items-center justify-center transition-all">
+                        <span class="w-11 h-11 rounded-full bg-blue-600"></span>
+                    </button>
+
+                    {{-- Penyeimbang agar tombol jepret tetap di tengah --}}
+                    <span class="w-12 h-12"></span>
+                </div>
+
+                <p class="text-[10px] text-white/60 font-bold uppercase tracking-widest">
+                    <span x-text="labelKamera"></span> &middot; Tekan lingkaran untuk memotret
+                </p>
             </div>
         </div>
         @endif
@@ -660,11 +682,18 @@
                 // ── Kamera untuk foto bukti "Lupa Absen" ──────────────────────
                 wajibFoto: @json($wajibFotoLupaAbsen ?? false),
                 namaCounter: @json(Auth::user()->location->name ?? (Auth::user()->division->name ?? '-')),
+                namaKaryawan: @json(Auth::user()->name),
                 photoData: '',
                 kameraTerbuka: false,
                 kameraSiap: false,
                 kameraError: '',
                 _stream: null,
+
+                // Kamera mana yang sedang dipakai: 'user' = depan (selfie bersama counter),
+                // 'environment' = belakang. Karyawan bisa berganti sesuai kebutuhan, karena
+                // foto harus memperlihatkan counter DAN karyawannya.
+                arahKamera: 'user',
+                get labelKamera() { return this.arahKamera === 'user' ? 'Kamera Depan' : 'Kamera Belakang'; },
 
                 async bukaKamera() {
                     this.kameraError = '';
@@ -676,26 +705,48 @@
                     }
 
                     this.kameraTerbuka = true;
+                    await this.mulaiStream();
+                },
+
+                async mulaiStream() {
+                    // Hentikan stream lama dulu agar kamera tidak bentrok saat berganti arah
+                    if (this._stream) {
+                        this._stream.getTracks().forEach(t => t.stop());
+                        this._stream = null;
+                    }
+                    this.kameraSiap = false;
+
                     try {
-                        // facingMode 'environment' = kamera belakang (untuk memotret counter)
                         this._stream = await navigator.mediaDevices.getUserMedia({
-                            video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } },
+                            video: {
+                                facingMode: { ideal: this.arahKamera },
+                                width: { ideal: 1280 },
+                                height: { ideal: 960 }
+                            },
                             audio: false
                         });
                         const video = this.$refs.video;
                         video.srcObject = this._stream;
                         await video.play();
                         this.kameraSiap = true;
+                        this.kameraError = '';
                     } catch (e) {
                         this.kameraSiap = false;
                         if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
                             this.kameraError = 'Izin kamera ditolak. Aktifkan izin kamera untuk situs ini di pengaturan browser, lalu coba lagi.';
                         } else if (e && e.name === 'NotFoundError') {
                             this.kameraError = 'Kamera tidak ditemukan pada perangkat ini.';
+                        } else if (e && e.name === 'OverconstrainedError') {
+                            this.kameraError = 'Kamera ' + this.labelKamera.toLowerCase() + ' tidak tersedia. Coba ganti ke kamera satunya.';
                         } else {
                             this.kameraError = 'Kamera gagal dibuka. Pastikan situs dibuka lewat HTTPS dan tidak ada aplikasi lain yang memakai kamera.';
                         }
                     }
+                },
+
+                async gantiKamera() {
+                    this.arahKamera = this.arahKamera === 'user' ? 'environment' : 'user';
+                    await this.mulaiStream();
                 },
 
                 tutupKamera() {
@@ -721,7 +772,10 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                    // ── Cap waktu & lokasi ──
+                    // ── Cap waktu, lokasi & nama karyawan ──
+                    // Dicap langsung ke piksel gambar (bukan metadata), sehingga tidak
+                    // bisa dihapus tanpa merusak fotonya. Server juga mencatat waktu
+                    // simpannya sendiri sebagai pembanding.
                     const now = new Date();
                     const tanggal = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                     const jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -730,12 +784,18 @@
                     const pad = Math.round(18 * skala);
                     const fontBesar = Math.max(14, Math.round(30 * skala));
                     const fontKecil = Math.max(11, Math.round(22 * skala));
-                    const tinggiBar = fontBesar + fontKecil * 2 + pad * 3;
+                    const tinggiBar = fontBesar + fontKecil * 3 + pad * 3.2;
 
-                    ctx.fillStyle = 'rgba(0,0,0,0.62)';
+                    // Gradasi gelap agar teks tetap terbaca di latar terang maupun gelap
+                    const grad = ctx.createLinearGradient(0, canvas.height - tinggiBar, 0, canvas.height);
+                    grad.addColorStop(0, 'rgba(0,0,0,0.30)');
+                    grad.addColorStop(1, 'rgba(0,0,0,0.82)');
+                    ctx.fillStyle = grad;
                     ctx.fillRect(0, canvas.height - tinggiBar, canvas.width, tinggiBar);
 
                     ctx.textBaseline = 'top';
+                    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+                    ctx.shadowBlur = Math.round(4 * skala);
                     let y = canvas.height - tinggiBar + pad;
 
                     ctx.fillStyle = '#ffffff';
@@ -750,7 +810,14 @@
 
                     ctx.fillStyle = '#93c5fd';
                     ctx.font = '700 ' + fontKecil + 'px sans-serif';
-                    ctx.fillText(this.namaCounter, pad, y);
+                    ctx.fillText('📍 ' + this.namaCounter, pad, y);
+                    y += fontKecil + Math.round(pad / 4);
+
+                    ctx.fillStyle = '#fcd34d';
+                    ctx.font = '700 ' + fontKecil + 'px sans-serif';
+                    ctx.fillText(this.namaKaryawan, pad, y);
+
+                    ctx.shadowBlur = 0;
 
                     this.photoData = canvas.toDataURL('image/jpeg', 0.85);
                     this.tutupKamera();
