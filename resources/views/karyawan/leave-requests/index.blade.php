@@ -262,55 +262,43 @@
 
                                     @if($wajibFotoLupaAbsen)
                                         {{-- ── Foto bukti WAJIB: diambil langsung dari kamera di counter ──
-                                             Foto otomatis dicap tanggal, jam, dan nama counter. Galeri tidak
-                                             bisa dipakai agar foto lama tidak digunakan ulang. --}}
+                                             Foto otomatis dicap tanggal, jam, nama counter, dan nama karyawan. --}}
                                         <div class="space-y-2 pt-2 border-t border-blue-100 dark:border-slate-700">
                                             <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-widest ml-2">
                                                 Foto Bukti di Counter <span class="text-rose-500">*</span>
                                             </label>
                                             <p class="text-[10px] text-slate-500 dark:text-slate-400 ml-2 leading-relaxed">
                                                 Ambil foto langsung di counter Anda &mdash; pastikan <span class="font-bold">wajah Anda dan area counter terlihat</span>.
-                                                Bisa memakai kamera depan maupun belakang. Foto otomatis diberi cap jam, tanggal, nama counter, dan nama Anda sehingga tidak bisa dimanipulasi.
+                                                Foto otomatis diberi cap jam, tanggal WIB, nama counter, dan nama Anda sehingga tidak bisa dimanipulasi.
                                             </p>
 
-                                            {{-- File asli yang benar-benar terkirim ke server (multipart).
-                                                 Diisi otomatis dari hasil jepretan kamera saat form dikirim
-                                                 — lihat confirmSubmit() di bagian JS. --}}
+                                            {{-- File asli yang benar-benar terkirim ke server (multipart) --}}
                                             <input type="file" name="photo" x-ref="photoFileInput" accept="image/*" class="hidden">
-                                            {{-- Input kamera langsung HP (fallback native camera) --}}
-                                            <input type="file" accept="image/*" capture="environment" x-ref="nativeCameraInput" @change="prosesFotoDariInputFile($event)" class="hidden">
-                                            {{-- Cadangan lama (base64) — dinonaktifkan saat file asli berhasil dibuat
-                                                 agar tidak mengirim string base64 raksasa yang memicu 403 Forbidden di hosting. --}}
+                                            {{-- Input kamera HP langsung --}}
+                                            <input type="file" accept="image/*" capture="environment" x-ref="cameraInput" @change="prosesFotoDariKamera($event)" class="hidden">
+                                            {{-- Cadangan lama (base64) --}}
                                             <input type="hidden" name="photo_data" x-ref="photoDataInput" :value="photoData">
 
-                                            <div x-show="!photoData" class="flex flex-col sm:flex-row gap-2">
-                                                <button type="button" @click="bukaKamera()"
-                                                    class="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black py-3.5 px-6 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-600/20">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                                    Buka Kamera Langsung
-                                                </button>
-                                                <button type="button" @click="$refs.nativeCameraInput.click()"
-                                                    class="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black py-3.5 px-6 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95 border border-slate-200 dark:border-slate-700">
-                                                    <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
-                                                    Kamera HP
+                                            <div x-show="!photoData">
+                                                <button type="button" @click="$refs.cameraInput.click()"
+                                                    class="w-full flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-2xl text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-600/20">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                                    <span>Ambil Foto Kamera</span>
                                                 </button>
                                             </div>
 
                                             <div x-show="photoData" class="space-y-2">
-                                                <div class="relative rounded-2xl overflow-hidden border-2 border-emerald-300 dark:border-emerald-700">
-                                                    <img :src="photoData" alt="Foto bukti" class="w-full max-h-72 object-contain bg-slate-900">
-                                                    <span class="absolute top-2 left-2 px-2 py-1 rounded-lg bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest shadow">Foto Siap</span>
+                                                <div class="relative rounded-2xl overflow-hidden border-2 border-emerald-400 dark:border-emerald-600 shadow-md">
+                                                    <img :src="photoData" alt="Foto bukti" class="w-full max-h-80 object-contain bg-slate-950">
+                                                    <span class="absolute top-3 left-3 px-3 py-1 rounded-xl bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5">
+                                                        <span>✓</span> Foto Siap
+                                                    </span>
                                                 </div>
-                                                <div class="flex gap-2">
-                                                    <button type="button" @click="photoData = ''; bukaKamera()"
-                                                        class="flex-1 bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 text-blue-600 dark:text-blue-400 font-black py-2.5 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95">
-                                                        Ambil Ulang (Kamera)
-                                                    </button>
-                                                    <button type="button" @click="photoData = ''; $refs.nativeCameraInput.click()"
-                                                        class="flex-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black py-2.5 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95">
-                                                        Kamera HP
-                                                    </button>
-                                                </div>
+                                                <button type="button" @click="photoData = ''; $refs.cameraInput.click()"
+                                                    class="w-full bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 hover:bg-blue-50/50 text-blue-600 dark:text-blue-400 font-black py-3 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                                    <span>Ambil Ulang Foto</span>
+                                                </button>
                                             </div>
                                         </div>
                                     @endif
@@ -623,93 +611,6 @@
             </div>
         </div>
 
-        {{-- ── Modal Kamera untuk foto bukti Lupa Absen ────────────────────────
-             Memakai kamera perangkat secara langsung (bukan galeri), lalu hasil
-             jepretan dicap tanggal, jam, dan nama counter sebelum dikirim. --}}
-        @if($wajibFotoLupaAbsen ?? false)
-        <div x-show="kameraTerbuka" x-cloak class="fixed inset-0 z-[300] bg-black/90 flex flex-col" role="dialog" aria-modal="true">
-            <div class="flex items-center justify-between px-5 py-4 text-white flex-shrink-0">
-                <div>
-                    <p class="text-sm font-black uppercase tracking-widest">Ambil Foto Bukti</p>
-                    <p class="text-[10px] text-white/60 font-medium">Pastikan wajah Anda dan area counter terlihat</p>
-                </div>
-                <button type="button" @click="tutupKamera()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-
-            {{-- Kamera bermasalah: tampilkan panduan yang jelas + tombol aksi --}}
-            <div x-show="kameraErrorJenis" class="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center overflow-y-auto">
-                <div class="w-16 h-16 rounded-full bg-rose-500/15 border-2 border-rose-400/40 flex items-center justify-center mb-4">
-                    <svg class="w-8 h-8 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-                    </svg>
-                </div>
-
-                <p class="text-sm font-black text-white uppercase tracking-widest mb-2">
-                    <span x-show="kameraErrorJenis === 'ditolak'">Izin Kamera Diblokir</span>
-                    <span x-show="kameraErrorJenis === 'tidak-aman'">Koneksi Belum Aman</span>
-                    <span x-show="kameraErrorJenis === 'tidak-ada'">Kamera Tidak Ditemukan</span>
-                    <span x-show="kameraErrorJenis === 'dipakai-lain'">Kamera Sedang Dipakai</span>
-                    <span x-show="kameraErrorJenis === 'tidak-didukung'">Browser Tidak Mendukung</span>
-                </p>
-                <p class="text-[12px] text-white/70 font-medium max-w-sm leading-relaxed mb-4" x-text="kameraError"></p>
-
-                <div class="flex flex-col gap-3 w-full max-w-sm">
-                    <button type="button" @click="tutupKamera(); $refs.nativeCameraInput.click()"
-                        class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-3.5 px-4 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        Buka Kamera HP Langsung
-                    </button>
-                    <div class="flex gap-2">
-                        <button type="button" @click="mulaiStream()"
-                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95">
-                            Coba Lagi
-                        </button>
-                        <button type="button" @click="window.location.reload()"
-                            class="flex-1 bg-white/10 hover:bg-white/20 text-white font-black py-3 rounded-2xl text-[11px] uppercase tracking-widest transition-all active:scale-95">
-                            Muat Ulang
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Tampilan kamera normal (tidak ada error) --}}
-            <div x-show="!kameraErrorJenis" class="flex-1 flex items-center justify-center overflow-hidden px-3">
-                <video x-ref="video" autoplay playsinline muted
-                       :style="arahKamera === 'user' ? 'transform: scaleX(-1)' : ''"
-                       class="max-h-full max-w-full rounded-2xl bg-black"></video>
-            </div>
-
-            <div x-show="!kameraErrorJenis" class="px-5 py-6 flex-shrink-0 flex flex-col items-center gap-3">
-                <div class="flex items-center justify-center gap-8">
-                    {{-- Tombol ganti kamera depan / belakang --}}
-                    <button type="button" @click="gantiKamera()"
-                        class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors active:scale-95"
-                        :title="'Ganti ke ' + (arahKamera === 'user' ? 'kamera belakang' : 'kamera depan')">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    </button>
-
-                    <button type="button" @click="jepretFoto()" :disabled="!kameraSiap"
-                        :class="kameraSiap ? 'bg-white hover:bg-slate-100 active:scale-95' : 'bg-white/30 cursor-not-allowed'"
-                        class="w-16 h-16 rounded-full border-4 border-white/50 flex items-center justify-center transition-all">
-                        <span class="w-11 h-11 rounded-full bg-blue-600"></span>
-                    </button>
-
-                    <button type="button" @click="tutupKamera(); $refs.nativeCameraInput.click()"
-                        class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-amber-400 transition-colors active:scale-95"
-                        title="Buka Kamera HP">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    </button>
-                </div>
-
-                <p class="text-[10px] text-white/60 font-bold uppercase tracking-widest">
-                    <span x-text="labelKamera"></span> &middot; Tekan lingkaran untuk memotret
-                </p>
-            </div>
-        </div>
-        @endif
-
     </div>
 
     <style>
@@ -739,119 +640,6 @@
                 namaCounter: @json(Auth::user()->location->name ?? (Auth::user()->division->name ?? '-')),
                 namaKaryawan: @json(Auth::user()->name),
                 photoData: '',
-                kameraTerbuka: false,
-                kameraSiap: false,
-                kameraError: '',
-                kameraErrorJenis: '',
-                _stream: null,
-
-                arahKamera: 'user',
-                get labelKamera() { return this.arahKamera === 'user' ? 'Kamera Depan' : 'Kamera Belakang'; },
-
-                async bukaKamera() {
-                    this.kameraError = '';
-                    this.kameraErrorJenis = '';
-                    this.kameraSiap = false;
-                    this.kameraTerbuka = true;
-
-                    await this.$nextTick();
-
-                    if (!window.isSecureContext) {
-                        this.kameraErrorJenis = 'tidak-aman';
-                        this.kameraError = 'Situs belum diakses via HTTPS. Silakan gunakan tombol "Kamera HP" di bawah.';
-                        return;
-                    }
-
-                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        this.kameraErrorJenis = 'tidak-didukung';
-                        this.kameraError = 'Browser ini tidak mendukung stream kamera langsung. Silakan gunakan tombol "Kamera HP".';
-                        return;
-                    }
-
-                    await this.mulaiStream();
-                },
-
-                async mulaiStream() {
-                    if (this._stream) {
-                        this._stream.getTracks().forEach(t => t.stop());
-                        this._stream = null;
-                    }
-                    this.kameraSiap = false;
-                    this.kameraError = '';
-                    this.kameraErrorJenis = '';
-
-                    await this.$nextTick();
-
-                    try {
-                        let stream = null;
-                        try {
-                            stream = await navigator.mediaDevices.getUserMedia({
-                                video: {
-                                    facingMode: { ideal: this.arahKamera },
-                                    width: { ideal: 1280 },
-                                    height: { ideal: 960 }
-                                },
-                                audio: false
-                            });
-                        } catch (e1) {
-                            try {
-                                stream = await navigator.mediaDevices.getUserMedia({
-                                    video: { facingMode: this.arahKamera },
-                                    audio: false
-                                });
-                            } catch (e2) {
-                                stream = await navigator.mediaDevices.getUserMedia({
-                                    video: true,
-                                    audio: false
-                                });
-                            }
-                        }
-
-                        this._stream = stream;
-                        await this.$nextTick();
-                        const video = this.$refs.video;
-                        if (video) {
-                            video.srcObject = stream;
-                            try {
-                                await video.play();
-                            } catch (playErr) {
-                                console.warn('video.play() notice:', playErr);
-                            }
-                            this.kameraSiap = true;
-                            this.kameraError = '';
-                            this.kameraErrorJenis = '';
-                        }
-                    } catch (e) {
-                        this.kameraSiap = false;
-                        if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError' || e.name === 'PermissionDeniedError')) {
-                            this.kameraErrorJenis = 'ditolak';
-                            this.kameraError = 'Izin kamera untuk situs ini belum diizinkan di browser Anda.';
-                        } else if (e && e.name === 'NotFoundError') {
-                            this.kameraErrorJenis = 'tidak-ada';
-                            this.kameraError = 'Kamera tidak ditemukan pada perangkat ini.';
-                        } else if (e && (e.name === 'NotReadableError' || e.name === 'TrackStartError')) {
-                            this.kameraErrorJenis = 'dipakai-lain';
-                            this.kameraError = 'Kamera sedang dipakai aplikasi lain. Tutup aplikasi kamera/video lain lalu coba lagi.';
-                        } else {
-                            this.kameraErrorJenis = 'ditolak';
-                            this.kameraError = 'Kamera langsung tidak dapat dibuka pada perangkat/browser ini. Anda bisa langsung menggunakan tombol "Buka Kamera HP Langsung".';
-                        }
-                    }
-                },
-
-                async gantiKamera() {
-                    this.arahKamera = this.arahKamera === 'user' ? 'environment' : 'user';
-                    await this.mulaiStream();
-                },
-
-                tutupKamera() {
-                    if (this._stream) {
-                        this._stream.getTracks().forEach(t => t.stop());
-                        this._stream = null;
-                    }
-                    this.kameraSiap = false;
-                    this.kameraTerbuka = false;
-                },
 
                 /**
                  * Cap waktu, tanggal, lokasi counter & nama karyawan ke gambar
@@ -911,14 +699,7 @@
                     return canvas.toDataURL('image/jpeg', 0.55);
                 },
 
-                jepretFoto() {
-                    const video = this.$refs.video;
-                    if (!video || !video.videoWidth) return;
-                    this.photoData = this.capWatermarkPadaCanvas(video, video.videoWidth, video.videoHeight);
-                    this.tutupKamera();
-                },
-
-                prosesFotoDariInputFile(event) {
+                prosesFotoDariKamera(event) {
                     const file = event.target.files && event.target.files[0];
                     if (!file) return;
 
@@ -927,8 +708,7 @@
                         const img = new Image();
                         img.onload = () => {
                             this.photoData = this.capWatermarkPadaCanvas(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
-                            this.tutupKamera();
-                            event.target.value = ''; // reset
+                            event.target.value = ''; // reset agar bisa dipotret ulang
                         };
                         img.src = e.target.result;
                     };
