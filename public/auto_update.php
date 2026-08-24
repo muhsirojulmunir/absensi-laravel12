@@ -7,17 +7,14 @@
 
 $key = $_GET['key'] ?? '';
 if ($key !== 'update2024') {
-    die('Access denied.');
+    die('Access denied. Gunakan ?key=update2024');
 }
 
 header('Content-Type: text/html; charset=utf-8');
 
 // ====== KONFIGURASI ======
-// Root Laravel (parent dari public/)
 $root = dirname(__DIR__);
 
-// Daftar file yang akan diupdate dari GitHub raw content
-// Format: [path relatif dari root Laravel => URL raw GitHub]
 $githubUser = 'muhsirojulmunir';
 $githubRepo = 'absensi-laravel12';
 $branch     = 'main';
@@ -38,9 +35,67 @@ $filesToUpdate = [
 ];
 // ====== END KONFIGURASI ======
 
+/**
+ * Fungsi download file dengan cURL + fallback file_get_contents
+ */
+function downloadFileContent($url) {
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL            => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS      => 5,
+            CURLOPT_TIMEOUT        => 25,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            CURLOPT_HTTPHEADER     => [
+                'Accept: text/plain, */*',
+                'Cache-Control: no-cache',
+            ],
+        ]);
+
+        $data = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $errorMsg = curl_error($ch);
+        curl_close($ch);
+
+        if ($data !== false && $httpCode >= 200 && $httpCode < 300 && strlen($data) > 0) {
+            return ['ok' => true, 'data' => $data];
+        }
+
+        $detail = $errorMsg ? "cURL: $errorMsg (HTTP $httpCode)" : "HTTP $httpCode";
+    } else {
+        $detail = "cURL tidak aktif di server";
+    }
+
+    // Fallback ke file_get_contents
+    $ctx = stream_context_create([
+        'http' => [
+            'timeout'        => 25,
+            'ignore_errors'  => true,
+            'user_agent'     => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        ],
+        'ssl' => [
+            'verify_peer'      => false,
+            'verify_peer_name' => false,
+        ]
+    ]);
+
+    $data = @file_get_contents($url, false, $ctx);
+    if ($data !== false && strlen($data) > 0) {
+        return ['ok' => true, 'data' => $data];
+    }
+
+    $lastErr = error_get_last()['message'] ?? 'Unknown error';
+    return ['ok' => false, 'msg' => "$detail | fopen: $lastErr"];
+}
+
 $results = [];
 
-// Buat folder storage jika belum ada
+// 1. Buat folder storage jika belum ada
 $storageFolders = [
     $root . '/public/storage',
     $root . '/public/storage/avatars',
@@ -55,59 +110,51 @@ foreach ($storageFolders as $sf) {
     }
 }
 
+// 2. Download dan update file dari GitHub
 foreach ($filesToUpdate as $relativePath) {
     $targetPath = $root . '/' . $relativePath;
-    $sourceUrl  = $baseUrl . '/' . $relativePath;
+    $sourceUrl  = $baseUrl . '/' . $relativePath . '?v=' . time(); // cache buster
 
-    // Buat direktori jika belum ada
     $dir = dirname($targetPath);
     if (!is_dir($dir)) {
         @mkdir($dir, 0775, true);
     }
 
-    // Download konten file dari GitHub
-    $context = stream_context_create([
-        'http' => [
-            'timeout'        => 15,
-            'ignore_errors'  => true,
-            'user_agent'     => 'PHP AutoUpdater/1.0',
-        ]
-    ]);
+    $download = downloadFileContent($sourceUrl);
 
-    $content = @file_get_contents($sourceUrl, false, $context);
-
-    if ($content === false || empty($content)) {
+    if (!$download['ok']) {
         $results[] = [
-            'path'    => $relativePath,
-            'ok'      => false,
-            'msg'     => 'Gagal download dari GitHub. URL: ' . $sourceUrl,
+            'path' => $relativePath,
+            'ok'   => false,
+            'msg'  => 'Gagal download dari GitHub: ' . ($download['msg'] ?? 'Error tidak diketahui'),
         ];
         continue;
     }
 
-    // Tulis ke file target
-    $written = @file_put_contents($targetPath, $content);
+    $written = @file_put_contents($targetPath, $download['data']);
 
     if ($written !== false) {
         $results[] = [
-            'path'    => $relativePath,
-            'ok'      => true,
-            'msg'     => 'Berhasil diupdate (' . number_format($written) . ' bytes)',
+            'path' => $relativePath,
+            'ok'   => true,
+            'msg'  => 'Berhasil diupdate (' . number_format($written) . ' bytes)',
         ];
     } else {
         $err = error_get_last()['message'] ?? 'unknown';
         $results[] = [
-            'path'    => $relativePath,
-            'ok'      => false,
-            'msg'     => 'Download OK tapi gagal menulis ke file: ' . $err,
+            'path' => $relativePath,
+            'ok'   => false,
+            'msg'  => 'Download OK tapi gagal menulis ke file: ' . $err,
         ];
     }
 }
 
-// Hapus cache config/view jika ada
+// 3. Bersihkan cache framework
 $cacheFiles = [
     $root . '/bootstrap/cache/config.php',
     $root . '/bootstrap/cache/routes-v7.php',
+    $root . '/bootstrap/cache/packages.php',
+    $root . '/bootstrap/cache/services.php',
 ];
 foreach ($cacheFiles as $cf) {
     if (file_exists($cf)) {
@@ -115,7 +162,6 @@ foreach ($cacheFiles as $cf) {
     }
 }
 
-// Hapus cached views
 $viewsCache = $root . '/storage/framework/views';
 if (is_dir($viewsCache)) {
     foreach (glob($viewsCache . '/*.php') as $f) {
@@ -149,7 +195,7 @@ code { background: #0f172a; padding: 2px 8px; border-radius: 4px; font-family: m
 
 <div class="banner <?= $allOk ? 'banner-ok' : 'banner-err' ?>">
     <?= $allOk
-        ? '🎉 Semua file berhasil diupdate dari GitHub! Foto profil seharusnya sudah bisa diubah.'
+        ? '🎉 Semua file berhasil diupdate dari GitHub! Pengajuan Lupa Absen dan Foto Profil sudah siap digunakan.'
         : '⚠️ Sebagian file gagal diupdate. Cek detail di bawah.' ?>
 </div>
 
@@ -164,10 +210,17 @@ code { background: #0f172a; padding: 2px 8px; border-radius: 4px; font-family: m
     </div>
     <?php endforeach; ?>
     <div class="item">
+        <span class="ok">📁</span>
+        <div>
+            <code>public/storage/avatars & public/storage/lupa-absen</code><br>
+            <span style="color:#86efac;font-size:12px;">Folder penyimpanan foto telah disiapkan dengan permission 0775.</span>
+        </div>
+    </div>
+    <div class="item">
         <span class="ok">🗑️</span>
         <div>
             <code>bootstrap/cache & storage/framework/views</code><br>
-            <span style="color:#86efac;font-size:12px;">Cache config dan view telah dibersihkan.</span>
+            <span style="color:#86efac;font-size:12px;">Cache config, route, dan view telah dibersihkan.</span>
         </div>
     </div>
 </div>
@@ -176,16 +229,15 @@ code { background: #0f172a; padding: 2px 8px; border-radius: 4px; font-family: m
 <div style="background:#1e293b;border-radius:12px;padding:20px 24px;border:1px solid #166534;">
     <h3 style="color:#22c55e;margin-top:0;">✅ Langkah Selanjutnya</h3>
     <ol style="line-height:2;font-size:14px;">
-        <li>Buka aplikasi dan coba ganti foto profil sekarang</li>
-        <li>Jika sudah berhasil, <b>hapus file-file ini</b> dari hosting:<br>
+        <li>Buka aplikasi dan coba kirim pengajuan <b>Lupa Absen</b> dengan foto bukti kamera sekarang</li>
+        <li>Jika sudah selesai dan berjalan lancar, <b>hapus file-file ini</b> dari hosting:<br>
             <code>public/auto_update.php</code><br>
-            <code>public/avatar_diag.php</code><br>
             <code>public/storage_setup.php</code>
         </li>
     </ol>
 </div>
 <?php endif; ?>
 
-<p style="color:#475569;font-size:11px;margin-top:32px;">⚠️ Hapus file ini: <code><?= __FILE__ ?></code></p>
+<p style="color:#475569;font-size:11px;margin-top:32px;">⚠️ Hapus file ini setelah selesai: <code><?= __FILE__ ?></code></p>
 </body>
 </html>
