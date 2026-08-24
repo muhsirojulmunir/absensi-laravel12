@@ -193,7 +193,15 @@ class LeaveRequestController extends Controller
     }
 
     /**
-     * Simpan foto bukti "Lupa Absen" yang dikirim sebagai data URL dari kamera.
+     * Simpan foto bukti "Lupa Absen".
+     *
+     * PENTING: jalur utama sekarang adalah FILE UPLOAD ASLI (multipart, field
+     * `photo`) — lihat dataUrlToFile() di halaman form untuk alasan lengkapnya:
+     * mengirim foto sebagai teks base64 raksasa di field tersembunyi (jalur lama)
+     * sering diblokir 403 oleh proteksi keamanan hosting (mod_security/WAF)
+     * sebelum request itu sempat sampai ke Laravel. Jalur base64 (`photo_data`)
+     * masih dipertahankan sebagai CADANGAN saja, untuk browser lama yang gagal
+     * membuat file upload dari JavaScript.
      *
      * Mengembalikan [path, waktuPengambilan] jika berhasil, atau RedirectResponse
      * berisi pesan error jika gagal.
@@ -201,6 +209,49 @@ class LeaveRequestController extends Controller
      * @return array{0:string,1:\Carbon\Carbon}|\Illuminate\Http\RedirectResponse
      */
     private function simpanFotoLupaAbsen(Request $request)
+    {
+        if ($request->hasFile('photo')) {
+            return $this->simpanFotoDariUpload($request);
+        }
+
+        return $this->simpanFotoDariBase64($request);
+    }
+
+    /**
+     * Jalur UTAMA: foto dikirim sebagai file upload asli (multipart/form-data).
+     */
+    private function simpanFotoDariUpload(Request $request)
+    {
+        $request->validate([
+            'photo' => 'required|image|mimes:jpeg,jpg,png|max:6144', // maks ± 6 MB
+        ], [
+            'photo.image' => 'File yang dikirim bukan gambar. Silakan ambil ulang foto.',
+            'photo.mimes' => 'Format foto tidak valid. Silakan ambil ulang foto menggunakan kamera.',
+            'photo.max'   => 'Ukuran foto terlalu besar. Silakan ambil ulang foto.',
+        ]);
+
+        $dir = public_path('storage/lupa-absen');
+        if (!is_dir($dir)) {
+            mkdir($dir, 0775, true);
+        }
+
+        $file = $request->file('photo');
+        $fileName = 'lupa-absen/' . Auth::id() . '_' . now()->format('Ymd_His') . '_' . uniqid() . '.jpg';
+
+        $file->move($dir, basename($fileName));
+
+        // Waktu pengambilan dicatat dari SERVER (bukan dari perangkat karyawan),
+        // supaya tidak bisa dimanipulasi lewat pengaturan jam di HP.
+        return [$fileName, now()];
+    }
+
+    /**
+     * Jalur CADANGAN: foto dikirim sebagai data URL base64 (field `photo_data`).
+     * Hanya dipakai kalau browser karyawan gagal membuat file upload asli.
+     *
+     * @return array{0:string,1:\Carbon\Carbon}|\Illuminate\Http\RedirectResponse
+     */
+    private function simpanFotoDariBase64(Request $request)
     {
         $dataUrl = $request->input('photo_data');
 

@@ -148,7 +148,10 @@
                 <div class="bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 rounded-[2rem] md:rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden relative">
                     <div class="absolute -right-20 -top-20 w-48 h-48 bg-blue-50/30 dark:bg-blue-900/10 rounded-full blur-3xl"></div>
                     <div class="p-6 md:p-10 relative z-10">
-                        <form action="{{ route('karyawan.leave-requests.store') }}" method="POST" class="space-y-6">
+                        {{-- PENTING: enctype="multipart/form-data" wajib ada. Foto bukti dikirim
+                             sebagai FILE UPLOAD asli (bukan teks base64 raksasa di field
+                             tersembunyi) — lihat catatan lengkap di bagian JS confirmSubmit(). --}}
+                        <form action="{{ route('karyawan.leave-requests.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                             @csrf
                             <div class="space-y-4">
                                 <label class="block font-black text-blue-950 dark:text-blue-100 text-[10px] uppercase tracking-[0.2em] ml-2">Pilih
@@ -271,6 +274,13 @@
                                                 Bisa memakai kamera depan maupun belakang. Foto otomatis diberi cap jam, tanggal, nama counter, dan nama Anda sehingga tidak bisa dimanipulasi.
                                             </p>
 
+                                            {{-- File asli yang benar-benar terkirim ke server (multipart).
+                                                 Diisi otomatis dari hasil jepretan kamera saat form dikirim
+                                                 — lihat confirmSubmit() di bagian JS. --}}
+                                            <input type="file" name="photo" x-ref="photoFileInput" accept="image/*" class="hidden">
+                                            {{-- Cadangan lama (base64) — tetap dikirim sebagai jaring pengaman
+                                                 kalau browser gagal membuat file asli, server tetap bisa
+                                                 memprosesnya lewat jalur lama. --}}
                                             <input type="hidden" name="photo_data" x-model="photoData">
 
                                             <div x-show="!photoData" class="flex flex-col gap-2">
@@ -877,6 +887,31 @@
                     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
                 },
 
+                /**
+                 * Ubah data URL hasil jepretan kamera (base64) menjadi objek File asli.
+                 *
+                 * PENTING soal kenapa ini perlu: sebelumnya foto dikirim lewat field
+                 * tersembunyi <input type="hidden"> berisi TEKS base64 raksasa (bisa
+                 * >1MB teks) di dalam form biasa (bukan multipart). Banyak server hosting
+                 * memasang proteksi keamanan (mod_security/WAF) yang mencurigai body
+                 * request non-file berukuran besar seperti itu sebagai serangan, dan
+                 * langsung MEMBLOKIR permintaannya dengan status 403 — sebelum request
+                 * itu sempat sampai ke aplikasi Laravel sama sekali (makanya tidak ada
+                 * jejaknya di log error).
+                 *
+                 * Solusinya: kirim foto sebagai FILE UPLOAD ASLI (multipart/form-data),
+                 * persis seperti upload foto profil atau upload Excel — jalur ini jauh
+                 * lebih dipercaya oleh proteksi keamanan hosting dan lebih hemat ukuran.
+                 */
+                dataUrlToFile(dataUrl, namaFile) {
+                    const bagian = dataUrl.split(',');
+                    const mime = (bagian[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+                    const biner = atob(bagian[1]);
+                    const bytes = new Uint8Array(biner.length);
+                    for (let i = 0; i < biner.length; i++) bytes[i] = biner.charCodeAt(i);
+                    return new File([bytes], namaFile, { type: mime });
+                },
+
                 // Konfirmasi sebelum kirim, supaya karyawan benar-benar paham berapa hari
                 // izin yang diajukan dan tidak salah pilih tanggal.
                 confirmSubmit(event) {
@@ -887,6 +922,21 @@
                         window.alert('Foto bukti di counter wajib diambil terlebih dahulu.\n\nTekan tombol "Ambil Foto Sekarang" pada bagian Lupa Absen.');
                         event.preventDefault();
                         return false;
+                    }
+
+                    // Pasang foto sebagai file upload ASLI ke input file (lihat catatan
+                    // lengkap di dataUrlToFile()) — inilah yang benar-benar mencegah 403.
+                    if (this.photoData && this.$refs.photoFileInput) {
+                        try {
+                            const file = this.dataUrlToFile(this.photoData, 'bukti-lupa-absen.jpg');
+                            const dt = new DataTransfer();
+                            dt.items.add(file);
+                            this.$refs.photoFileInput.files = dt.files;
+                        } catch (e) {
+                            // Kalau browser sangat lawas dan tidak mendukung DataTransfer,
+                            // biarkan saja — server masih punya jalur cadangan base64.
+                            console.warn('Gagal membuat file upload dari foto, memakai jalur cadangan base64.', e);
+                        }
                     }
 
                     const jenis = this.selectedType + (this.subType ? ' (' + this.subType + ')' : '');
