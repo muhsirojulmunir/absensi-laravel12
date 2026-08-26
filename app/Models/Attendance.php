@@ -27,6 +27,12 @@ class Attendance extends Model
         'photo',
         'lateness_minutes',
         'note',
+        'check_in_method',
+        'check_out_method',
+        'check_in_photo',
+        'check_out_photo',
+        'check_in_distance_meters',
+        'check_out_distance_meters',
     ];
 
     public function user()

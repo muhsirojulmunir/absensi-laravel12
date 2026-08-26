@@ -140,9 +140,23 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center">
                                 <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $attendance->check_in ?? '--:--' }}</span>
+                                @if($attendance->check_in)
+                                    @include('super-admin.attendance.partials.method-badge', [
+                                        'method' => $attendance->check_in_method ?? 'otomatis',
+                                        'distance' => $attendance->check_in_distance_meters ?? null,
+                                        'photo' => $attendance->check_in_photo ?? null,
+                                    ])
+                                @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center">
                                 <span class="text-xs font-bold text-slate-600 dark:text-slate-400">{{ $attendance->check_out ?? '--:--' }}</span>
+                                @if($attendance->check_out)
+                                    @include('super-admin.attendance.partials.method-badge', [
+                                        'method' => $attendance->check_out_method ?? 'otomatis',
+                                        'distance' => $attendance->check_out_distance_meters ?? null,
+                                        'photo' => $attendance->check_out_photo ?? null,
+                                    ])
+                                @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-xs">
                                 @php

@@ -333,6 +333,64 @@
                     <p class="text-[9px] text-slate-400 dark:text-slate-600 text-center font-medium tracking-wide">* Radius
                         jangkauan maksimal {{ $settings['office_radius'] ?? 50 }}m.</p>
                 @endif
+
+                @if(Auth::user()->role->slug == 'karyawan_ramayana')
+                    {{-- ── Absen Manual: alternatif bebas kapan saja, pakai foto + cap waktu ──
+                         Selalu tersedia (tidak menunggu di luar radius dulu). Cocok dipakai
+                         kalau GPS tidak akurat atau memang sedang di luar radius toko. Foto
+                         otomatis dicap tanggal/jam/nama sehingga tidak bisa dimanipulasi, dan
+                         absennya langsung tercatat SAH tanpa perlu approval. --}}
+                    <div class="max-w-[320px] mx-auto w-full mt-3"
+                         :class="modeHanyaPulang ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-4'">
+                        <button x-show="!modeHanyaPulang" type="button" @click="bukaKameraAbsenManual('in')"
+                            :disabled="isSubmitting || hasCheckedIn"
+                            :class="(hasCheckedIn || isSubmitting) ? 'opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800 text-slate-400' : 'border-blue-200 dark:border-blue-900 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 active:scale-95 cursor-pointer'"
+                            class="flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest py-2.5 rounded-xl border transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            Absen Manual
+                        </button>
+                        <button type="button" @click="bukaKameraAbsenManual('out')"
+                            :disabled="isSubmitting || !bisaAbsenKeluar"
+                            :class="(!bisaAbsenKeluar || isSubmitting) ? 'opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800 text-slate-400' : 'border-orange-200 dark:border-orange-900 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 active:scale-95 cursor-pointer'"
+                            class="flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest py-2.5 rounded-xl border transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            Absen Manual
+                        </button>
+                    </div>
+                    <p class="text-[9px] text-slate-400 dark:text-slate-600 text-center font-medium tracking-wide mt-2">
+                        Di luar jangkauan atau GPS tidak akurat? Pakai <span class="font-bold">Absen Manual</span> — foto Anda otomatis diberi cap waktu &amp; tetap tercatat sah.
+                    </p>
+
+                    {{-- Input kamera HP langsung (tersembunyi, dipicu tombol di atas) --}}
+                    <input type="file" accept="image/*" capture="environment" x-ref="absenManualCameraInput"
+                           @change="prosesFotoAbsenManual($event)" class="hidden">
+
+                    {{-- Modal konfirmasi foto sebelum dikirim --}}
+                    <div x-show="manualModalTerbuka" x-cloak
+                         class="fixed inset-0 z-[250] bg-black/80 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+                        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl">
+                            <div class="p-5">
+                                <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-1">Konfirmasi Foto Absen</h3>
+                                <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-3">Pastikan wajah Anda dan area counter terlihat jelas.</p>
+                                <img :src="manualFotoData" alt="Foto absen manual" class="w-full rounded-2xl border-2 border-emerald-400 dark:border-emerald-600 max-h-72 object-contain bg-slate-950">
+                            </div>
+                            <div class="px-5 pb-3 flex gap-3">
+                                <button type="button" @click="manualFotoData = ''; manualModalTerbuka = false; $refs.absenManualCameraInput.click()"
+                                    class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">
+                                    Ambil Ulang
+                                </button>
+                                <button type="button" @click="kirimAbsenManual()"
+                                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">
+                                    Kirim Absen
+                                </button>
+                            </div>
+                            <button type="button" @click="batalkanAbsenManual()"
+                                class="w-full text-center text-[10px] text-slate-400 pb-4 font-bold uppercase tracking-widest">
+                                Batal
+                            </button>
+                        </div>
+                    </div>
+                @endif
             </div>
 
             <!-- Right: Stats + History -->
@@ -710,6 +768,180 @@
                 isEarlyLeave: false,
                 timeLeftText: '',
                 estimatedOutText: '',
+
+                // ── Absen Manual (foto + cap waktu) ─────────────────────────────
+                manualTipe: null,        // 'in' atau 'out' yang sedang diproses
+                manualFotoData: '',      // data URL foto yang sudah dicap waktu
+                manualModalTerbuka: false,
+                namaCounterAbsen: @json(Auth::user()->location->name ?? (Auth::user()->division->name ?? '-')),
+                namaKaryawanAbsen: @json(Auth::user()->name),
+
+                bukaKameraAbsenManual(tipe) {
+                    if (this.isSubmitting) return;
+                    if (tipe === 'in' && (this.hasCheckedIn || this.modeHanyaPulang)) return;
+                    if (tipe === 'out' && !this.bisaAbsenKeluar) return;
+                    this.manualTipe = tipe;
+                    this.manualFotoData = '';
+                    this.$refs.absenManualCameraInput.click();
+                },
+
+                prosesFotoAbsenManual(event) {
+                    const file = event.target.files && event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            this.manualFotoData = this.capWatermarkAbsenManual(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
+                            this.manualModalTerbuka = true;
+                            event.target.value = ''; // reset agar bisa dipotret ulang
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                },
+
+                /**
+                 * Cap tanggal, jam, nama counter, dan nama karyawan LANGSUNG ke piksel
+                 * foto (bukan metadata) supaya tidak bisa dimanipulasi. Lebar dibatasi
+                 * 800px dan kualitas dikompres cukup agar ukuran file kecil (~100-200KB),
+                 * mengurangi risiko diblokir firewall keamanan hosting.
+                 */
+                capWatermarkAbsenManual(imageOrVideo, lebarAsli, tinggiAsli) {
+                    const LEBAR_MAKSIMAL = 800;
+                    const rasio = lebarAsli > LEBAR_MAKSIMAL ? LEBAR_MAKSIMAL / lebarAsli : 1;
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(lebarAsli * rasio);
+                    canvas.height = Math.round(tinggiAsli * rasio);
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(imageOrVideo, 0, 0, canvas.width, canvas.height);
+
+                    const now = new Date();
+                    const tanggal = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                    const jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                    const skala = canvas.width / 1000;
+                    const pad = Math.round(18 * skala);
+                    const fontBesar = Math.max(14, Math.round(30 * skala));
+                    const fontKecil = Math.max(11, Math.round(22 * skala));
+                    const tinggiBar = fontBesar + fontKecil * 3 + pad * 3.2;
+
+                    const grad = ctx.createLinearGradient(0, canvas.height - tinggiBar, 0, canvas.height);
+                    grad.addColorStop(0, 'rgba(0,0,0,0.30)');
+                    grad.addColorStop(1, 'rgba(0,0,0,0.82)');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, canvas.height - tinggiBar, canvas.width, tinggiBar);
+
+                    ctx.textBaseline = 'top';
+                    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+                    ctx.shadowBlur = Math.round(4 * skala);
+                    let y = canvas.height - tinggiBar + pad;
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '700 ' + fontBesar + 'px sans-serif';
+                    ctx.fillText(jam + ' WIB', pad, y);
+                    y += fontBesar + Math.round(pad / 2);
+
+                    ctx.fillStyle = '#e2e8f0';
+                    ctx.font = '600 ' + fontKecil + 'px sans-serif';
+                    ctx.fillText(tanggal, pad, y);
+                    y += fontKecil + Math.round(pad / 4);
+
+                    ctx.fillStyle = '#93c5fd';
+                    ctx.font = '700 ' + fontKecil + 'px sans-serif';
+                    ctx.fillText('📍 ' + this.namaCounterAbsen, pad, y);
+                    y += fontKecil + Math.round(pad / 4);
+
+                    ctx.fillStyle = '#fcd34d';
+                    ctx.font = '700 ' + fontKecil + 'px sans-serif';
+                    ctx.fillText(this.namaKaryawanAbsen, pad, y);
+
+                    ctx.shadowBlur = 0;
+
+                    return canvas.toDataURL('image/jpeg', 0.6);
+                },
+
+                batalkanAbsenManual() {
+                    this.manualModalTerbuka = false;
+                    this.manualFotoData = '';
+                    this.manualTipe = null;
+                },
+
+                kirimAbsenManual() {
+                    if (!this.manualFotoData || !this.manualTipe || this.isSubmitting) return;
+
+                    const tipe = this.manualTipe;
+                    this.isSubmitting = true;
+                    this.manualModalTerbuka = false;
+
+                    // Ubah data URL foto jadi FILE ASLI (multipart), bukan teks base64
+                    // raksasa — supaya tidak berisiko diblokir firewall keamanan hosting.
+                    const bagian = this.manualFotoData.split(',');
+                    const mime = (bagian[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+                    const biner = atob(bagian[1]);
+                    const bytes = new Uint8Array(biner.length);
+                    for (let i = 0; i < biner.length; i++) bytes[i] = biner.charCodeAt(i);
+                    const file = new File([bytes], 'absen-manual.jpg', { type: mime });
+
+                    const fd = new FormData();
+                    fd.append('method', 'manual');
+                    fd.append('photo', file);
+                    if (this.userLat !== null) fd.append('lat', this.userLat);
+                    if (this.userLong !== null) fd.append('long', this.userLong);
+
+                    const url = tipe === 'in'
+                        ? "{{ route(Auth::user()->role->slug . '.attendance.store') }}"
+                        : "{{ route(Auth::user()->role->slug . '.attendance.checkout') }}";
+
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: fd
+                    })
+                        .then(async response => {
+                            if (!response.ok) {
+                                const text = await response.text();
+                                throw new Error('HTTP ' + response.status + ' - ' + (text.substring(0, 100).replace(/(<([^>]+)>)/gi, "")));
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    title: 'Berhasil! ✨',
+                                    text: data.message,
+                                    icon: 'success',
+                                    background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff',
+                                    color: document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#1e293b',
+                                    confirmButtonColor: '#2563eb',
+                                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-lg px-6' }
+                                }).then(() => window.location.reload());
+                            } else {
+                                Swal.fire({
+                                    title: 'Gagal',
+                                    text: data.message || 'Gagal, coba lagi.',
+                                    icon: 'error',
+                                    background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff',
+                                    color: document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#1e293b',
+                                    confirmButtonColor: '#2563eb',
+                                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-lg px-6' }
+                                });
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Submit error:", err);
+                            Swal.fire('Error Detail', 'Gagal: ' + err.message, 'error');
+                        })
+                        .finally(() => {
+                            this.isSubmitting = false;
+                            this.manualFotoData = '';
+                            this.manualTipe = null;
+                        });
+                },
 
                 init() {
                     this.trackLocation();

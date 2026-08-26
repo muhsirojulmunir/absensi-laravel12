@@ -185,11 +185,16 @@ class LeaveRequestController extends Controller
 
     /**
      * Apakah user wajib melampirkan foto saat mengajukan "Lupa Absen"?
-     * Berlaku KHUSUS Karyawan Ramayana. Staff kantor & live streamer tidak wajib.
+     *
+     * Foto bukti sudah TIDAK diwajibkan lagi di sini — bukti kehadiran real-time
+     * sekarang ditangani oleh fitur "Absen Manual" langsung di halaman absensi
+     * (foto + cap waktu, tercatat sah seketika tanpa perlu approval). "Lupa Absen"
+     * murni untuk kejadian yang benar-benar terlewat di masa lalu, jadi cukup
+     * mengandalkan persetujuan PIC/Super Admin seperti alasan izin lainnya.
      */
     private function wajibFotoLupaAbsen(): bool
     {
-        return Auth::user()->role->slug === 'karyawan_ramayana';
+        return false;
     }
 
     /**
