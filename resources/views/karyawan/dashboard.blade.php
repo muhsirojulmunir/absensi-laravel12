@@ -347,18 +347,18 @@
                             :class="(hasCheckedIn || isSubmitting) ? 'opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800 text-slate-400' : 'border-blue-200 dark:border-blue-900 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 active:scale-95 cursor-pointer'"
                             class="flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest py-2.5 rounded-xl border transition-all">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            Absen Manual
+                            Absen Manual Masuk
                         </button>
                         <button type="button" @click="bukaKameraAbsenManual('out')"
                             :disabled="isSubmitting || !bisaAbsenKeluar"
                             :class="(!bisaAbsenKeluar || isSubmitting) ? 'opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800 text-slate-400' : 'border-orange-200 dark:border-orange-900 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 active:scale-95 cursor-pointer'"
                             class="flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest py-2.5 rounded-xl border transition-all">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            Absen Manual
+                            Absen Manual Pulang
                         </button>
                     </div>
                     <p class="text-[9px] text-slate-400 dark:text-slate-600 text-center font-medium tracking-wide mt-2">
-                        Di luar jangkauan atau GPS tidak akurat? Pakai <span class="font-bold">Absen Manual</span> — foto Anda otomatis diberi cap waktu &amp; tetap tercatat sah.
+                        Di luar jangkauan atau GPS tidak akurat? Pakai <span class="font-bold">Absen Manual Masuk/Pulang</span> — foto Anda otomatis diberi cap waktu &amp; tetap tercatat sah.
                     </p>
 
                     {{-- Input kamera HP langsung (tersembunyi, dipicu tombol di atas) --}}
@@ -370,7 +370,9 @@
                          class="fixed inset-0 z-[250] bg-black/80 flex items-center justify-center p-4" role="dialog" aria-modal="true">
                         <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl">
                             <div class="p-5">
-                                <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-1">Konfirmasi Foto Absen</h3>
+                                <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-1">
+                                    Konfirmasi Foto Absen <span x-text="manualTipe === 'in' ? 'Masuk' : 'Pulang'"></span>
+                                </h3>
                                 <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-3">Pastikan wajah Anda dan area counter terlihat jelas.</p>
                                 <img :src="manualFotoData" alt="Foto absen manual" class="w-full rounded-2xl border-2 border-emerald-400 dark:border-emerald-600 max-h-72 object-contain bg-slate-950">
                             </div>
