@@ -32,6 +32,8 @@ $filesToUpdate = [
     'routes/web.php',
     'config/filesystems.php',
     'public/storage_setup.php',
+    'public/webhook_deploy.php',
+    'public/auto_update.php',
 ];
 // ====== END KONFIGURASI ======
 
