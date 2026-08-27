@@ -823,11 +823,19 @@
                     const tanggal = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                     const jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+                    // Lokasi GPS pada saat foto diambil (koordinat asli perangkat karyawan,
+                    // BUKAN nama counter yang cuma teks tetap) — supaya bisa dicek titik
+                    // sebenarnya karyawan berada di mana saat itu, bukan sekadar diketik.
+                    const adaGps = this.userLat !== null && this.userLong !== null;
+                    const teksLokasi = adaGps
+                        ? this.userLat.toFixed(5) + ', ' + this.userLong.toFixed(5)
+                        : 'GPS tidak tersedia saat difoto';
+
                     const skala = canvas.width / 1000;
                     const pad = Math.round(18 * skala);
                     const fontBesar = Math.max(14, Math.round(30 * skala));
                     const fontKecil = Math.max(11, Math.round(22 * skala));
-                    const tinggiBar = fontBesar + fontKecil * 3 + pad * 3.2;
+                    const tinggiBar = fontBesar + fontKecil * 4 + pad * 3.4;
 
                     const grad = ctx.createLinearGradient(0, canvas.height - tinggiBar, 0, canvas.height);
                     grad.addColorStop(0, 'rgba(0,0,0,0.30)');
@@ -853,6 +861,11 @@
                     ctx.fillStyle = '#93c5fd';
                     ctx.font = '700 ' + fontKecil + 'px sans-serif';
                     ctx.fillText('📍 ' + this.namaCounterAbsen, pad, y);
+                    y += fontKecil + Math.round(pad / 4);
+
+                    ctx.fillStyle = adaGps ? '#86efac' : '#fca5a5';
+                    ctx.font = '700 ' + fontKecil + 'px sans-serif';
+                    ctx.fillText('🌐 ' + teksLokasi, pad, y);
                     y += fontKecil + Math.round(pad / 4);
 
                     ctx.fillStyle = '#fcd34d';
