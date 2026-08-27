@@ -322,9 +322,7 @@
                     <span class="text-xs text-blue-500 dark:text-blue-400 font-medium">
                     {{ $allReports->count() }} karyawan - {{ \Carbon\Carbon::parse($month . '-01')->locale('id')->translatedFormat('F Y') }}
                 </span>
-            </div>
-
-            <div class="overflow-x-auto">
+                     <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="bg-blue-50/70 dark:bg-slate-800/50">
@@ -337,73 +335,372 @@
                             <th class="text-left px-5 py-3 text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-blue-100/50 dark:divide-slate-800/50">
-                        @php
-                            $staffReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan');
-                            $ramayanaReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan_ramayana');
-                        @endphp
+                    @php
+                        $staffReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan');
+                        $ramayanaReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan_ramayana');
+                    @endphp
 
-                        @if($staffReports->count() > 0)
-                            <tr class="bg-blue-150/30 dark:bg-slate-800/40 font-bold">
+                    @if($staffReports->count() > 0)
+                        <tbody class="border-t-2 border-blue-100 dark:border-slate-800">
+                            <tr class="bg-blue-50/90 dark:bg-slate-800/60 font-bold">
                                 <td colspan="7" class="px-5 py-2.5 text-xs text-blue-800 dark:text-blue-300 uppercase tracking-widest">
                                     💼 Staff Kantor
                                 </td>
                             </tr>
-                            @foreach($staffReports as $row)
-                                <tr class="hover:bg-blue-50/40 dark:hover:bg-slate-800/30 transition-colors">
-                                    <td class="px-5 py-3 pl-8">
-                                        <p class="font-semibold text-blue-900 dark:text-white">{{ $row['employee']->name }}</p>
+                        </tbody>
+                        @foreach($staffReports as $row)
+                            <tbody x-data="{ expanded: false }" class="divide-y divide-blue-100/50 dark:divide-slate-800/50">
+                                <tr class="hover:bg-blue-50/60 dark:hover:bg-slate-800/50 transition-colors cursor-pointer" @click="expanded = !expanded">
+                                    <td class="px-5 py-3.5 pl-6">
+                                        <div class="flex items-center space-x-3">
+                                            <button type="button" @click.stop="expanded = !expanded" 
+                                                class="w-7 h-7 rounded-lg bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-slate-700 flex items-center justify-center transition-all flex-shrink-0"
+                                                title="Buka / Tutup Detail">
+                                                <svg class="w-4 h-4 transition-transform duration-300" :class="expanded ? 'rotate-180 text-blue-600' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                </svg>
+                                            </button>
+                                            <div>
+                                                <p class="font-bold text-blue-950 dark:text-white leading-tight">{{ $row['employee']->name }}</p>
+                                                <p class="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{{ $row['employee']->location->name ?? ($row['employee']->division->name ?? '-') }}</p>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td class="px-5 py-3 text-emerald-600 dark:text-emerald-400 font-bold">{{ $row['summary']['total_present'] }}</td>
-                                    <td class="px-5 py-3 text-amber-600 dark:text-amber-400 font-bold">{{ $row['summary']['total_late'] }}</td>
-                                    <td class="px-5 py-3 text-blue-600 dark:text-blue-400 font-bold">{{ $row['summary']['total_leave'] }}</td>
-                                    <td class="px-5 py-3 text-rose-600 dark:text-rose-400 font-bold">{{ $row['summary']['total_sick'] }}</td>
-                                    <td class="px-5 py-3 text-slate-700 dark:text-slate-300 font-bold">{{ $row['summary']['total_attendance_records'] }}</td>
-                                    <td class="px-5 py-3">
-                                        <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}"
-                                           class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all">
-                                            <span class="text-[10px] font-black uppercase tracking-widest">Detail</span>
-                                        </a>
+                                    <td class="px-5 py-3.5 text-emerald-600 dark:text-emerald-400 font-bold">{{ $row['summary']['total_present'] }}</td>
+                                    <td class="px-5 py-3.5 text-amber-600 dark:text-amber-400 font-bold">{{ $row['summary']['total_late'] }}</td>
+                                    <td class="px-5 py-3.5 text-blue-600 dark:text-blue-400 font-bold">{{ $row['summary']['total_leave'] }}</td>
+                                    <td class="px-5 py-3.5 text-rose-600 dark:text-rose-400 font-bold">{{ $row['summary']['total_sick'] }}</td>
+                                    <td class="px-5 py-3.5 text-slate-700 dark:text-slate-300 font-bold">{{ $row['summary']['total_attendance_records'] }}</td>
+                                    <td class="px-5 py-3.5" @click.stop>
+                                        <div class="flex items-center space-x-2">
+                                            <button type="button" @click="expanded = !expanded"
+                                               class="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 text-blue-700 dark:text-blue-300 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition-all">
+                                                <span x-text="expanded ? 'Tutup' : 'Lihat Log'"></span>
+                                                <svg class="w-3 h-3 transition-transform" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            </button>
+                                            <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}"
+                                               class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg uppercase tracking-wider transition-all"
+                                               title="Halaman Detail Lengkap">
+                                                <span>Detail</span>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
-                            @endforeach
-                        @endif
 
-                        @if($ramayanaReports->count() > 0)
-                            <tr class="bg-fuchsia-100/20 dark:bg-fuchsia-950/10 font-bold">
-                                <td colspan="7" class="px-5 py-2.5 text-xs text-fuchsia-800 dark:text-fuchsia-300 uppercase tracking-widest border-t border-blue-100/50 dark:border-slate-800/50">
+                                {{-- Expandable Drawer Row --}}
+                                <tr x-show="expanded" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-cloak class="bg-blue-50/40 dark:bg-slate-900/90">
+                                    <td colspan="7" class="px-6 py-5 border-y border-blue-200/60 dark:border-slate-800">
+                                        <div class="space-y-4">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                                    <h4 class="text-xs font-black text-blue-900 dark:text-white uppercase tracking-wider">
+                                                        Detail Absensi Harian: {{ $row['employee']->name }}
+                                                    </h4>
+                                                    <span class="text-[11px] text-blue-500/80 font-medium">({{ \Carbon\Carbon::parse($month . '-01')->locale('id')->translatedFormat('F Y') }})</span>
+                                                </div>
+                                            </div>
+
+                                            @if($row['attendances']->count() > 0)
+                                            <div class="bg-white dark:bg-slate-950 rounded-xl border border-blue-100 dark:border-slate-800 overflow-hidden shadow-sm">
+                                                <div class="overflow-x-auto max-h-72 overflow-y-auto">
+                                                    <table class="w-full text-xs">
+                                                        <thead class="bg-blue-50/80 dark:bg-slate-900 text-blue-800 dark:text-blue-300 font-bold sticky top-0 border-b border-blue-100 dark:border-slate-800">
+                                                            <tr>
+                                                                <th class="text-left px-4 py-2.5">Tanggal</th>
+                                                                <th class="text-left px-4 py-2.5">Jam Masuk</th>
+                                                                <th class="text-left px-4 py-2.5">Jam Pulang</th>
+                                                                <th class="text-left px-4 py-2.5">Estimasi Pulang</th>
+                                                                <th class="text-left px-4 py-2.5">Status</th>
+                                                                <th class="text-left px-4 py-2.5">Pulang Cepat</th>
+                                                                <th class="text-left px-4 py-2.5">Catatan</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="divide-y divide-blue-50 dark:divide-slate-900/60">
+                                                            @foreach($row['attendances'] as $att)
+                                                            <tr class="hover:bg-blue-50/30 dark:hover:bg-slate-900/40 transition-colors">
+                                                                <td class="px-4 py-2 font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                    {{ \Carbon\Carbon::parse($att->date)->locale('id')->translatedFormat('d M Y') }}
+                                                                    <span class="text-[10px] text-slate-400 block font-normal">{{ \Carbon\Carbon::parse($att->date)->locale('id')->translatedFormat('l') }}</span>
+                                                                </td>
+                                                                <td class="px-4 py-2">
+                                                                    @if($att->check_in)
+                                                                        <span class="inline-flex items-center space-x-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                                                                            <span>{{ \Carbon\Carbon::parse($att->check_in)->format('H:i') }}</span>
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="text-slate-400">-</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-4 py-2">
+                                                                    @if($att->check_out)
+                                                                        <span class="inline-flex items-center space-x-1 text-indigo-600 dark:text-indigo-400 font-bold">
+                                                                            <span>{{ \Carbon\Carbon::parse($att->check_out)->format('H:i') }}</span>
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="text-[11px] text-slate-400 italic">Belum Pulang</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-4 py-2 text-slate-500">
+                                                                    @if($att->check_in)
+                                                                        {{ \Carbon\Carbon::parse($att->check_in)->addHours(8)->format('H:i') }}
+                                                                    @else
+                                                                        -
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-4 py-2">
+                                                                    @if($att->status === 'Hadir')
+                                                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">Hadir</span>
+                                                                    @elseif($att->status === 'Terlambat')
+                                                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300">Telat</span>
+                                                                    @else
+                                                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">{{ $att->status }}</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-4 py-2">
+                                                                    @if($att->is_pulang_cepat)
+                                                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300">Ya</span>
+                                                                    @else
+                                                                        <span class="text-slate-400 text-[11px]">Tidak</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-4 py-2 text-slate-500">
+                                                                    {{ $att->note ?? '-' }}
+                                                                </td>
+                                                            </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            @else
+                                            <div class="bg-white dark:bg-slate-950 rounded-xl p-4 text-center border border-dashed border-slate-200 dark:border-slate-800">
+                                                <p class="text-xs text-slate-400 font-medium">Belum ada riwayat absensi pada bulan ini</p>
+                                            </div>
+                                            @endif
+
+                                            @if($row['leaves']->count() > 0)
+                                            <div class="mt-3">
+                                                <p class="text-[11px] font-bold text-blue-900 dark:text-white uppercase tracking-wider mb-2">Riwayat Izin / Cuti ({{ $row['leaves']->count() }})</p>
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                    @foreach($row['leaves'] as $leave)
+                                                    <div class="bg-white dark:bg-slate-950 rounded-xl p-3 border border-blue-100 dark:border-slate-800 shadow-sm flex items-start justify-between gap-2">
+                                                        <div>
+                                                            <p class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ $leave->type }}</p>
+                                                            <p class="text-[10px] text-slate-400 mt-0.5">
+                                                                {{ $leave->start_date->locale('id')->translatedFormat('d M') }} s/d {{ $leave->end_date->locale('id')->translatedFormat('d M Y') }}
+                                                            </p>
+                                                            @if($leave->reason)
+                                                            <p class="text-[10px] text-slate-500 italic mt-1 line-clamp-1">"{{ $leave->reason }}"</p>
+                                                            @endif
+                                                        </div>
+                                                        <div>
+                                                            @if($leave->status === 'approved')
+                                                                <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Disetujui</span>
+                                                            @elseif($leave->status === 'rejected')
+                                                                <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700">Ditolak</span>
+                                                            @else
+                                                                <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700">Menunggu</span>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        @endforeach
+                    @endif
+
+                    @if($ramayanaReports->count() > 0)
+                        <tbody class="border-t-2 border-fuchsia-100 dark:border-slate-800">
+                            <tr class="bg-fuchsia-50/90 dark:bg-fuchsia-950/20 font-bold">
+                                <td colspan="7" class="px-5 py-2.5 text-xs text-fuchsia-800 dark:text-fuchsia-300 uppercase tracking-widest">
                                     🛍️ Karyawan Ramayana
                                 </td>
                             </tr>
-                            @foreach($ramayanaReports as $row)
-                                <tr class="hover:bg-blue-50/40 dark:hover:bg-slate-800/30 transition-colors">
-                                    <td class="px-5 py-3 pl-8">
-                                        <p class="font-semibold text-blue-900 dark:text-white">{{ $row['employee']->name }}</p>
+                        </tbody>
+                        @foreach($ramayanaReports as $row)
+                            <tbody x-data="{ expanded: false }" class="divide-y divide-blue-100/50 dark:divide-slate-800/50">
+                                <tr class="hover:bg-blue-50/60 dark:hover:bg-slate-800/50 transition-colors cursor-pointer" @click="expanded = !expanded">
+                                    <td class="px-5 py-3.5 pl-6">
+                                        <div class="flex items-center space-x-3">
+                                            <button type="button" @click.stop="expanded = !expanded" 
+                                                class="w-7 h-7 rounded-lg bg-fuchsia-50 dark:bg-slate-800 text-fuchsia-600 dark:text-fuchsia-400 hover:bg-fuchsia-100 dark:hover:bg-slate-700 flex items-center justify-center transition-all flex-shrink-0"
+                                                title="Buka / Tutup Detail">
+                                                <svg class="w-4 h-4 transition-transform duration-300" :class="expanded ? 'rotate-180 text-fuchsia-600' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                </svg>
+                                            </button>
+                                            <div>
+                                                <p class="font-bold text-blue-950 dark:text-white leading-tight">{{ $row['employee']->name }}</p>
+                                                <p class="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{{ $row['employee']->location->name ?? ($row['employee']->division->name ?? '-') }}</p>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td class="px-5 py-3 text-emerald-600 dark:text-emerald-400 font-bold">{{ $row['summary']['total_present'] }}</td>
-                                    <td class="px-5 py-3 text-amber-600 dark:text-amber-400 font-bold">{{ $row['summary']['total_late'] }}</td>
-                                    <td class="px-5 py-3 text-blue-600 dark:text-blue-400 font-bold">{{ $row['summary']['total_leave'] }}</td>
-                                    <td class="px-5 py-3 text-rose-600 dark:text-rose-400 font-bold">{{ $row['summary']['total_sick'] }}</td>
-                                    <td class="px-5 py-3 text-slate-700 dark:text-slate-300 font-bold">{{ $row['summary']['total_attendance_records'] }}</td>
-                                    <td class="px-5 py-3">
-                                        <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}"
-                                           class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all">
-                                            <span class="text-[10px] font-black uppercase tracking-widest">Detail</span>
-                                        </a>
+                                    <td class="px-5 py-3.5 text-emerald-600 dark:text-emerald-400 font-bold">{{ $row['summary']['total_present'] }}</td>
+                                    <td class="px-5 py-3.5 text-amber-600 dark:text-amber-400 font-bold">{{ $row['summary']['total_late'] }}</td>
+                                    <td class="px-5 py-3.5 text-blue-600 dark:text-blue-400 font-bold">{{ $row['summary']['total_leave'] }}</td>
+                                    <td class="px-5 py-3.5 text-rose-600 dark:text-rose-400 font-bold">{{ $row['summary']['total_sick'] }}</td>
+                                    <td class="px-5 py-3.5 text-slate-700 dark:text-slate-300 font-bold">{{ $row['summary']['total_attendance_records'] }}</td>
+                                    <td class="px-5 py-3.5" @click.stop>
+                                        <div class="flex items-center space-x-2">
+                                            <button type="button" @click="expanded = !expanded"
+                                               class="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 text-blue-700 dark:text-blue-300 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition-all">
+                                                <span x-text="expanded ? 'Tutup' : 'Lihat Log'"></span>
+                                                <svg class="w-3 h-3 transition-transform" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            </button>
+                                            <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}"
+                                               class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg uppercase tracking-wider transition-all"
+                                               title="Halaman Detail Lengkap">
+                                                <span>Detail</span>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
-                            @endforeach
-                        @endif
 
-                        @if($staffReports->isEmpty() && $ramayanaReports->isEmpty())
+                                {{-- Expandable Drawer Row --}}
+                                <tr x-show="expanded" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-cloak class="bg-blue-50/40 dark:bg-slate-900/90">
+                                    <td colspan="7" class="px-6 py-5 border-y border-blue-200/60 dark:border-slate-800">
+                                        <div class="space-y-4">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="w-2 h-2 rounded-full bg-fuchsia-500"></span>
+                                                    <h4 class="text-xs font-black text-blue-900 dark:text-white uppercase tracking-wider">
+                                                        Detail Absensi Harian: {{ $row['employee']->name }}
+                                                    </h4>
+                                                    <span class="text-[11px] text-blue-500/80 font-medium">({{ \Carbon\Carbon::parse($month . '-01')->locale('id')->translatedFormat('F Y') }})</span>
+                                                </div>
+                                            </div>
+
+                                            @if($row['attendances']->count() > 0)
+                                            <div class="bg-white dark:bg-slate-950 rounded-xl border border-blue-100 dark:border-slate-800 overflow-hidden shadow-sm">
+                                                <div class="overflow-x-auto max-h-72 overflow-y-auto">
+                                                    <table class="w-full text-xs">
+                                                        <thead class="bg-fuchsia-50/80 dark:bg-slate-900 text-fuchsia-800 dark:text-fuchsia-300 font-bold sticky top-0 border-b border-blue-100 dark:border-slate-800">
+                                                            <tr>
+                                                                <th class="text-left px-4 py-2.5">Tanggal</th>
+                                                                <th class="text-left px-4 py-2.5">Jam Masuk</th>
+                                                                <th class="text-left px-4 py-2.5">Jam Pulang</th>
+                                                                <th class="text-left px-4 py-2.5">Estimasi Pulang</th>
+                                                                <th class="text-left px-4 py-2.5">Status</th>
+                                                                <th class="text-left px-4 py-2.5">Pulang Cepat</th>
+                                                                <th class="text-left px-4 py-2.5">Catatan</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="divide-y divide-blue-50 dark:divide-slate-900/60">
+                                                            @foreach($row['attendances'] as $att)
+                                                            <tr class="hover:bg-blue-50/30 dark:hover:bg-slate-900/40 transition-colors">
+                                                                <td class="px-4 py-2 font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                    {{ \Carbon\Carbon::parse($att->date)->locale('id')->translatedFormat('d M Y') }}
+                                                                    <span class="text-[10px] text-slate-400 block font-normal">{{ \Carbon\Carbon::parse($att->date)->locale('id')->translatedFormat('l') }}</span>
+                                                                </td>
+                                                                <td class="px-4 py-2">
+                                                                    @if($att->check_in)
+                                                                        <span class="inline-flex items-center space-x-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                                                                            <span>{{ \Carbon\Carbon::parse($att->check_in)->format('H:i') }}</span>
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="text-slate-400">-</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-4 py-2">
+                                                                    @if($att->check_out)
+                                                                        <span class="inline-flex items-center space-x-1 text-indigo-600 dark:text-indigo-400 font-bold">
+                                                                            <span>{{ \Carbon\Carbon::parse($att->check_out)->format('H:i') }}</span>
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="text-[11px] text-slate-400 italic">Belum Pulang</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-4 py-2 text-slate-500">
+                                                                    @if($att->check_in)
+                                                                        {{ \Carbon\Carbon::parse($att->check_in)->addHours(8)->format('H:i') }}
+                                                                    @else
+                                                                        -
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-4 py-2">
+                                                                    @if($att->status === 'Hadir')
+                                                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">Hadir</span>
+                                                                    @elseif($att->status === 'Terlambat')
+                                                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300">Telat</span>
+                                                                    @else
+                                                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">{{ $att->status }}</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-4 py-2">
+                                                                    @if($att->is_pulang_cepat)
+                                                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300">Ya</span>
+                                                                    @else
+                                                                        <span class="text-slate-400 text-[11px]">Tidak</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-4 py-2 text-slate-500">
+                                                                    {{ $att->note ?? '-' }}
+                                                                </td>
+                                                            </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            @else
+                                            <div class="bg-white dark:bg-slate-950 rounded-xl p-4 text-center border border-dashed border-slate-200 dark:border-slate-800">
+                                                <p class="text-xs text-slate-400 font-medium">Belum ada riwayat absensi pada bulan ini</p>
+                                            </div>
+                                            @endif
+
+                                            @if($row['leaves']->count() > 0)
+                                            <div class="mt-3">
+                                                <p class="text-[11px] font-bold text-blue-900 dark:text-white uppercase tracking-wider mb-2">Riwayat Izin / Cuti ({{ $row['leaves']->count() }})</p>
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                    @foreach($row['leaves'] as $leave)
+                                                    <div class="bg-white dark:bg-slate-950 rounded-xl p-3 border border-blue-100 dark:border-slate-800 shadow-sm flex items-start justify-between gap-2">
+                                                        <div>
+                                                            <p class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ $leave->type }}</p>
+                                                            <p class="text-[10px] text-slate-400 mt-0.5">
+                                                                {{ $leave->start_date->locale('id')->translatedFormat('d M') }} s/d {{ $leave->end_date->locale('id')->translatedFormat('d M Y') }}
+                                                            </p>
+                                                            @if($leave->reason)
+                                                            <p class="text-[10px] text-slate-500 italic mt-1 line-clamp-1">"{{ $leave->reason }}"</p>
+                                                            @endif
+                                                        </div>
+                                                        <div>
+                                                            @if($leave->status === 'approved')
+                                                                <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Disetujui</span>
+                                                            @elseif($leave->status === 'rejected')
+                                                                <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700">Ditolak</span>
+                                                            @else
+                                                                <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700">Menunggu</span>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        @endforeach
+                    @endif
+
+                    @if($staffReports->isEmpty() && $ramayanaReports->isEmpty())
+                        <tbody>
                             <tr>
                                 <td colspan="7" class="px-5 py-8 text-center text-slate-400 dark:text-slate-500 italic">
                                     Tidak ada data karyawan ditemukan.
                                 </td>
                             </tr>
-                        @endif
-                    </tbody>
+                        </tbody>
+                    @endif
                 </table>
+            </div>
             </div>
         </div>
     @elseif($employeeId)

@@ -79,16 +79,20 @@ class ReportController extends Controller
                     ->whereRaw('user_id = ?', [$employee->id], 'and')
                     ->whereDate('date', '>=', $start->toDateString())
                     ->whereDate('date', '<=', $end->toDateString())
+                    ->orderBy('date', 'asc')
                     ->get();
 
                 $leaves = LeaveRequest::query()
                     ->whereRaw('user_id = ?', [$employee->id], 'and')
                     ->whereDate('start_date', '>=', $start->toDateString())
                     ->whereDate('start_date', '<=', $end->toDateString())
+                    ->orderBy('start_date', 'asc')
                     ->get();
 
                 return [
                     'employee' => $employee,
+                    'attendances' => $attendances,
+                    'leaves' => $leaves,
                     'summary' => [
                         'total_present' => $attendances->where('status', 'Hadir')->count(),
                         'total_late' => $attendances->where('status', 'Terlambat')->count(),

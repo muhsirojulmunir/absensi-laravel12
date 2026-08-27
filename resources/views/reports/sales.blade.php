@@ -456,7 +456,7 @@ switchTab('detail');
 // ── Alpine.js Sales Report ────────────────────────────────────────────────────
 function salesReport() {
     return {
-        period: '{{ request('period', request('start_date') ? 'custom' : 'today') }}',
+        period: '{{ request('period', request('start_date') ? 'custom' : 'month') }}',
         startDate: '{{ request('start_date', '') }}',
         endDate: '{{ request('end_date', '') }}',
         locationId: '{{ request('location_id', $locationId ?? '') }}',

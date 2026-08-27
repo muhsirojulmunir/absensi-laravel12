@@ -16,7 +16,7 @@ class SalesReportController extends Controller
     {
         $user = Auth::user();
 
-        $period     = $request->query('period', 'today');
+        $period     = $request->query('period', 'month');
         $locationId = $request->query('location_id');
         $userId     = $request->query('user_id');
         $month      = $request->query('month', date('Y-m'));

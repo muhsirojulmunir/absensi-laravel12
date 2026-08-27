@@ -291,6 +291,12 @@
 
             {{-- ============ PIC & PIC RAMAYANA ============ --}}
             @if(in_array(Auth::user()->role->slug, ['pic', 'pic_ramayana']))
+                
+                {{-- Group: Kepegawaian & Presensi --}}
+                <div x-show="!collapsed" x-transition class="pt-3 pb-1 px-3">
+                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em]">Presensi & Tim</p>
+                </div>
+
                 <a href="{{ route(Auth::user()->role->slug . '.leave-approvals.index') }}"
                    class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs(Auth::user()->role->slug . '.leave-approvals.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
@@ -312,15 +318,18 @@
                     <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Laporan Absensi</span>
                 </a>
-                
-                <a href="{{ route('performance.index') }}"
-                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('performance.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
-                   :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
-                   title="Evaluasi Kinerja">
-                    <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                    <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Evaluasi Kinerja</span>
-                </a>
+
                 @if(Auth::user()->role->slug == 'pic_ramayana')
+                {{-- Group: Operasional & Penjualan Ramayana --}}
+                <div x-show="!collapsed" x-transition class="pt-4 pb-1 px-3">
+                    <div class="border-t border-slate-800 pt-3">
+                        <p class="text-[9px] font-bold text-fuchsia-500/80 uppercase tracking-[0.2em]">Penjualan & Stok</p>
+                    </div>
+                </div>
+                <div x-show="collapsed" x-transition class="pt-2 pb-1 px-2">
+                    <div class="border-t border-slate-800"></div>
+                </div>
+
                 <a href="{{ route('pic_ramayana.ramayana-stocks.index') }}"
                    class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('pic_ramayana.ramayana-stocks.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
