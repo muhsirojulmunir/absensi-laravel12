@@ -20,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         \Illuminate\Support\Facades\Schema::defaultStringLength(191);
+        // Auto-deploy verified: active
 
         // Otomatis pakai HTTPS jika bukan di localhost atau Herd (.test)
         $host = request()->getHost();
