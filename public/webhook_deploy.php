@@ -78,9 +78,8 @@ $commands = [
 
     // Jalankan artisan commands
     PHP_BIN . " " . APP_ROOT . "/artisan migrate --force 2>&1",
-    PHP_BIN . " " . APP_ROOT . "/artisan config:cache 2>&1",
-    PHP_BIN . " " . APP_ROOT . "/artisan route:cache 2>&1",
-    PHP_BIN . " " . APP_ROOT . "/artisan view:cache 2>&1",
+    PHP_BIN . " " . APP_ROOT . "/artisan optimize:clear 2>&1",
+    "rm -f " . APP_ROOT . "/bootstrap/cache/config.php " . APP_ROOT . "/bootstrap/cache/routes*.php 2>&1",
 
     // Bersihkan cache storage/framework
     "find " . APP_ROOT . "/storage/framework/views -name '*.php' -delete 2>&1",
