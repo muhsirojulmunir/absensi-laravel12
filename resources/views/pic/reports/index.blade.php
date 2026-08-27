@@ -277,7 +277,7 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200/70 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <tr class="sticky top-0 z-10 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                             <th class="py-3.5 pl-6 pr-4 min-w-[240px]">Nama Karyawan</th>
                             <th class="py-3.5 px-3 text-center w-[85px]">Hadir</th>
                             <th class="py-3.5 px-3 text-center w-[85px]">Telat</th>
@@ -295,23 +295,27 @@
 
                     {{-- Staff Section --}}
                     @if($staffReports->count() > 0)
-                        <tbody class="border-t border-slate-200/60 dark:border-slate-800">
-                            <tr class="bg-slate-100/50 dark:bg-slate-800/40">
-                                <td colspan="7" class="py-2 pl-6 pr-4 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    💼 Staff Kantor ({{ $staffReports->count() }})
+                        <tbody>
+                            <tr>
+                                <td colspan="7" class="pt-4 pb-1.5 pl-6 pr-4">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                        <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Staff Kantor</span>
+                                        <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-600">{{ $staffReports->count() }} orang</span>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
                         @foreach($staffReports as $row)
                             <tbody x-data="{ expanded: false }" class="divide-y divide-slate-100 dark:divide-slate-800/60">
-                                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors cursor-pointer" 
+                                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
                                     @click="expanded = !expanded"
                                     :class="expanded ? 'bg-blue-50/30 dark:bg-slate-800/40' : ''">
-                                    
+
                                     {{-- Name & Avatar --}}
                                     <td class="py-3 pl-6 pr-4">
                                         <div class="flex items-center space-x-3">
-                                            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-sm">
+                                            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-sm ring-2 ring-white dark:ring-slate-900">
                                                 {{ strtoupper(substr($row['employee']->name, 0, 1)) }}
                                             </div>
                                             <div class="min-w-0">
@@ -325,27 +329,19 @@
 
                                     {{-- Counts --}}
                                     <td class="py-3 px-3 text-center">
-                                        <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                            {{ $row['summary']['total_present'] }}
-                                        </span>
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_present'], 'activeClass' => 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'])
                                     </td>
                                     <td class="py-3 px-3 text-center">
-                                        <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                            {{ $row['summary']['total_late'] }}
-                                        </span>
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_late'], 'activeClass' => 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'])
                                     </td>
                                     <td class="py-3 px-3 text-center">
-                                        <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                                            {{ $row['summary']['total_leave'] }}
-                                        </span>
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_leave'], 'activeClass' => 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'])
                                     </td>
                                     <td class="py-3 px-3 text-center">
-                                        <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                                            {{ $row['summary']['total_sick'] }}
-                                        </span>
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_sick'], 'activeClass' => 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'])
                                     </td>
                                     <td class="py-3 px-3 text-center">
-                                        <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60">
+                                        <span class="inline-flex items-center justify-center min-w-[30px] h-7 px-2 text-xs font-bold rounded-lg tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60">
                                             {{ $row['summary']['total_attendance_records'] }}
                                         </span>
                                     </td>
@@ -354,8 +350,8 @@
                                     <td class="py-3 pl-3 pr-6 text-right" @click.stop>
                                         <button type="button" @click="expanded = !expanded"
                                                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all"
-                                                :class="expanded 
-                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/20' 
+                                                :class="expanded
+                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/20'
                                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-700'">
                                             <span x-text="expanded ? 'Tutup' : 'Log Absen'"></span>
                                             <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -450,10 +446,14 @@
 
                     {{-- Ramayana Section --}}
                     @if($ramayanaReports->count() > 0)
-                        <tbody class="border-t border-slate-200/60 dark:border-slate-800">
-                            <tr class="bg-fuchsia-50/50 dark:bg-fuchsia-950/20">
-                                <td colspan="7" class="py-2 pl-6 pr-4 text-[11px] font-bold text-fuchsia-700 dark:text-fuchsia-400 uppercase tracking-wider">
-                                    🛍️ Karyawan Ramayana ({{ $ramayanaReports->count() }})
+                        <tbody>
+                            <tr>
+                                <td colspan="7" class="pt-4 pb-1.5 pl-6 pr-4">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-fuchsia-500"></span>
+                                        <span class="text-[10px] font-bold text-fuchsia-600 dark:text-fuchsia-400 uppercase tracking-widest">Karyawan Ramayana</span>
+                                        <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-600">{{ $ramayanaReports->count() }} orang</span>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -466,7 +466,7 @@
                                     {{-- Name & Avatar --}}
                                     <td class="py-3 pl-6 pr-4">
                                         <div class="flex items-center space-x-3">
-                                            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-sm">
+                                            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-sm ring-2 ring-white dark:ring-slate-900">
                                                 {{ strtoupper(substr($row['employee']->name, 0, 1)) }}
                                             </div>
                                             <div class="min-w-0">
@@ -480,27 +480,19 @@
 
                                     {{-- Counts --}}
                                     <td class="py-3 px-3 text-center">
-                                        <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                            {{ $row['summary']['total_present'] }}
-                                        </span>
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_present'], 'activeClass' => 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'])
                                     </td>
                                     <td class="py-3 px-3 text-center">
-                                        <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                            {{ $row['summary']['total_late'] }}
-                                        </span>
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_late'], 'activeClass' => 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'])
                                     </td>
                                     <td class="py-3 px-3 text-center">
-                                        <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                                            {{ $row['summary']['total_leave'] }}
-                                        </span>
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_leave'], 'activeClass' => 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'])
                                     </td>
                                     <td class="py-3 px-3 text-center">
-                                        <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                                            {{ $row['summary']['total_sick'] }}
-                                        </span>
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_sick'], 'activeClass' => 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'])
                                     </td>
                                     <td class="py-3 px-3 text-center">
-                                        <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60">
+                                        <span class="inline-flex items-center justify-center min-w-[30px] h-7 px-2 text-xs font-bold rounded-lg tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60">
                                             {{ $row['summary']['total_attendance_records'] }}
                                         </span>
                                     </td>
