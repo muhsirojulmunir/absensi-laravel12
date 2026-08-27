@@ -365,6 +365,16 @@
                     <input type="file" accept="image/*" capture="environment" x-ref="absenManualCameraInput"
                            @change="prosesFotoAbsenManual($event)" class="hidden">
 
+                    {{-- Indikator singkat saat mencari nama lokasi dari GPS setelah foto diambil --}}
+                    <div x-show="sedangCariAlamat" x-cloak
+                         class="fixed inset-0 z-[250] bg-black/80 flex flex-col items-center justify-center gap-3 p-4">
+                        <svg class="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        <p class="text-[11px] font-bold text-white uppercase tracking-widest">Mencari Nama Lokasi...</p>
+                    </div>
+
                     {{-- Modal konfirmasi foto sebelum dikirim --}}
                     <div x-show="manualModalTerbuka" x-cloak
                          class="fixed inset-0 z-[250] bg-black/80 flex items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -787,14 +797,25 @@
                     this.$refs.absenManualCameraInput.click();
                 },
 
-                prosesFotoAbsenManual(event) {
+                sedangCariAlamat: false,
+
+                async prosesFotoAbsenManual(event) {
                     const file = event.target.files && event.target.files[0];
                     if (!file) return;
+
+                    // Cari nama alamat (jalan/kelurahan/kota) dari koordinat GPS SEBELUM
+                    // menggambar cap ke foto. Dilakukan di sini (bukan sebelum kamera
+                    // dibuka) supaya tidak mengganggu izin "user gesture" yang dibutuhkan
+                    // browser untuk membuka kamera.
+                    this.sedangCariAlamat = true;
+                    const alamat = await this.ambilAlamatDariGps();
+                    this.sedangCariAlamat = false;
+
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const img = new Image();
                         img.onload = () => {
-                            this.manualFotoData = this.capWatermarkAbsenManual(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
+                            this.manualFotoData = this.capWatermarkAbsenManual(img, img.naturalWidth || img.width, img.naturalHeight || img.height, alamat);
                             this.manualModalTerbuka = true;
                             event.target.value = ''; // reset agar bisa dipotret ulang
                         };
@@ -804,12 +825,52 @@
                 },
 
                 /**
-                 * Cap tanggal, jam, nama counter, dan nama karyawan LANGSUNG ke piksel
-                 * foto (bukan metadata) supaya tidak bisa dimanipulasi. Lebar dibatasi
-                 * 800px dan kualitas dikompres cukup agar ukuran file kecil (~100-200KB),
-                 * mengurangi risiko diblokir firewall keamanan hosting.
+                 * Ubah koordinat GPS jadi nama lokasi yang bisa dibaca (mis. "Jl. Raya
+                 * Gubeng, Surabaya"), memakai layanan reverse-geocoding gratis OpenStreetMap
+                 * Nominatim (tanpa perlu API key). Kalau gagal/timeout/GPS tidak tersedia,
+                 * kembalikan null — capWatermarkAbsenManual() akan otomatis memakai
+                 * koordinat angka sebagai cadangan supaya foto tetap bisa diproses.
                  */
-                capWatermarkAbsenManual(imageOrVideo, lebarAsli, tinggiAsli) {
+                async ambilAlamatDariGps() {
+                    if (this.userLat === null || this.userLong === null) {
+                        return null;
+                    }
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 6000);
+                        const resp = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${this.userLat}&lon=${this.userLong}&zoom=17&addressdetails=1`,
+                            { signal: controller.signal, headers: { 'Accept-Language': 'id' } }
+                        );
+                        clearTimeout(timeoutId);
+                        if (!resp.ok) return null;
+
+                        const data = await resp.json();
+                        const a = data.address || {};
+                        const jalan = a.road || a.pedestrian || a.footway || '';
+                        const area = a.suburb || a.village || a.city_district || '';
+                        const kota = a.city || a.town || a.regency || a.county || '';
+                        const bagian = [jalan, area, kota].filter(Boolean);
+
+                        if (bagian.length > 0) return bagian.join(', ');
+                        if (data.display_name) return data.display_name.split(',').slice(0, 3).join(',').trim();
+                        return null;
+                    } catch (e) {
+                        console.warn('Gagal mengambil nama lokasi dari GPS, memakai koordinat sebagai cadangan:', e);
+                        return null;
+                    }
+                },
+
+                /**
+                 * Cap tanggal, jam, nama counter, nama karyawan, dan LOKASI GPS langsung
+                 * ke piksel foto (bukan metadata) supaya tidak bisa dimanipulasi. Lebar
+                 * dibatasi 800px dan kualitas dikompres cukup agar ukuran file kecil
+                 * (~100-200KB), mengurangi risiko diblokir firewall keamanan hosting.
+                 *
+                 * @param {string|null} alamat Nama lokasi hasil reverse-geocoding, atau
+                 *                              null untuk memakai koordinat sebagai cadangan.
+                 */
+                capWatermarkAbsenManual(imageOrVideo, lebarAsli, tinggiAsli, alamat = null) {
                     const LEBAR_MAKSIMAL = 800;
                     const rasio = lebarAsli > LEBAR_MAKSIMAL ? LEBAR_MAKSIMAL / lebarAsli : 1;
 
@@ -823,13 +884,15 @@
                     const tanggal = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                     const jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-                    // Lokasi GPS pada saat foto diambil (koordinat asli perangkat karyawan,
-                    // BUKAN nama counter yang cuma teks tetap) — supaya bisa dicek titik
-                    // sebenarnya karyawan berada di mana saat itu, bukan sekadar diketik.
+                    // Lokasi GPS pada saat foto diambil — memakai NAMA jalan/area hasil
+                    // reverse-geocoding kalau berhasil didapat (mis. "Jl. Raya Gubeng,
+                    // Surabaya"), kalau tidak berhasil dicari, koordinat mentah dipakai
+                    // sebagai cadangan. Ini selalu berdasarkan GPS asli perangkat
+                    // karyawan saat itu, BUKAN nama counter yang cuma teks tetap.
                     const adaGps = this.userLat !== null && this.userLong !== null;
-                    const teksLokasi = adaGps
-                        ? this.userLat.toFixed(5) + ', ' + this.userLong.toFixed(5)
-                        : 'GPS tidak tersedia saat difoto';
+                    const teksLokasi = alamat
+                        ? alamat
+                        : (adaGps ? this.userLat.toFixed(5) + ', ' + this.userLong.toFixed(5) : 'GPS tidak tersedia saat difoto');
 
                     const skala = canvas.width / 1000;
                     const pad = Math.round(18 * skala);
@@ -863,9 +926,16 @@
                     ctx.fillText('📍 ' + this.namaCounterAbsen, pad, y);
                     y += fontKecil + Math.round(pad / 4);
 
+                    // Nama alamat hasil pencarian bisa panjang — potong dengan "..." kalau
+                    // lebarnya melebihi kanvas, supaya tidak terpotong tanggung di tepi foto.
                     ctx.fillStyle = adaGps ? '#86efac' : '#fca5a5';
                     ctx.font = '700 ' + fontKecil + 'px sans-serif';
-                    ctx.fillText('🌐 ' + teksLokasi, pad, y);
+                    let teksLokasiTampil = '🌐 ' + teksLokasi;
+                    const lebarMaksTeks = canvas.width - pad * 2;
+                    while (ctx.measureText(teksLokasiTampil).width > lebarMaksTeks && teksLokasiTampil.length > 10) {
+                        teksLokasiTampil = teksLokasiTampil.slice(0, -4) + '...';
+                    }
+                    ctx.fillText(teksLokasiTampil, pad, y);
                     y += fontKecil + Math.round(pad / 4);
 
                     ctx.fillStyle = '#fcd34d';
