@@ -307,7 +307,7 @@
                             </tr>
                         </tbody>
                         @foreach($staffReports as $row)
-                            <tbody x-data="{ expanded: false }" class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                            <tbody x-data="{ expanded: false, logFull: false }" class="divide-y divide-slate-100 dark:divide-slate-800/60">
                                 <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
                                     @click="expanded = !expanded"
                                     :class="expanded ? 'bg-blue-50/30 dark:bg-slate-800/40' : ''">
@@ -382,7 +382,7 @@
                                             {{-- Mini Daily Table --}}
                                             @if($row['attendances']->count() > 0)
                                                 <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-xs">
-                                                    <div class="max-h-64 overflow-y-auto">
+                                                    <div :class="logFull ? '' : 'max-h-64 overflow-y-auto'">
                                                         <table class="w-full text-xs">
                                                             <thead class="bg-slate-100/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold sticky top-0 border-b border-slate-200 dark:border-slate-800">
                                                                 <tr>
@@ -431,6 +431,17 @@
                                                             </tbody>
                                                         </table>
                                                     </div>
+                                                    {{-- Tombol perluas/ringkas — hanya tampil kalau baris cukup banyak
+                                                         sampai perlu di-scroll (>5 baris terlihat sekaligus). --}}
+                                                    @if($row['attendances']->count() > 5)
+                                                        <button type="button" @click="logFull = !logFull"
+                                                            class="w-full flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50/80 dark:bg-slate-800/40 border-t border-slate-200/80 dark:border-slate-800 transition-colors">
+                                                            <span x-text="logFull ? 'Ringkas' : 'Lihat Semua ({{ $row['attendances']->count() }} Baris)'"></span>
+                                                            <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="logFull ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                            </svg>
+                                                        </button>
+                                                    @endif
                                                 </div>
                                             @else
                                                 <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center text-xs text-slate-400">
@@ -458,7 +469,7 @@
                             </tr>
                         </tbody>
                         @foreach($ramayanaReports as $row)
-                            <tbody x-data="{ expanded: false }" class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                            <tbody x-data="{ expanded: false, logFull: false }" class="divide-y divide-slate-100 dark:divide-slate-800/60">
                                 <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors cursor-pointer" 
                                     @click="expanded = !expanded"
                                     :class="expanded ? 'bg-fuchsia-50/30 dark:bg-slate-800/40' : ''">
@@ -533,7 +544,7 @@
                                             {{-- Mini Daily Table --}}
                                             @if($row['attendances']->count() > 0)
                                                 <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-xs">
-                                                    <div class="max-h-64 overflow-y-auto">
+                                                    <div :class="logFull ? '' : 'max-h-64 overflow-y-auto'">
                                                         <table class="w-full text-xs">
                                                             <thead class="bg-slate-100/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold sticky top-0 border-b border-slate-200 dark:border-slate-800">
                                                                 <tr>
@@ -582,6 +593,17 @@
                                                             </tbody>
                                                         </table>
                                                     </div>
+                                                    {{-- Tombol perluas/ringkas — hanya tampil kalau baris cukup banyak
+                                                         sampai perlu di-scroll (>5 baris terlihat sekaligus). --}}
+                                                    @if($row['attendances']->count() > 5)
+                                                        <button type="button" @click="logFull = !logFull"
+                                                            class="w-full flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50/80 dark:bg-slate-800/40 border-t border-slate-200/80 dark:border-slate-800 transition-colors">
+                                                            <span x-text="logFull ? 'Ringkas' : 'Lihat Semua ({{ $row['attendances']->count() }} Baris)'"></span>
+                                                            <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="logFull ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                            </svg>
+                                                        </button>
+                                                    @endif
                                                 </div>
                                             @else
                                                 <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center text-xs text-slate-400">
