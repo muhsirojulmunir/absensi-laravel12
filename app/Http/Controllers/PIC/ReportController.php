@@ -101,7 +101,12 @@ class ReportController extends Controller
                         'total_attendance_records' => $attendances->count(),
                     ],
                 ];
-            });
+            })->sortByDesc(function ($item) {
+                return [
+                    $item['summary']['total_attendance_records'],
+                    $item['summary']['total_present'],
+                ];
+            })->values();
         }
 
         return view('pic.reports.index', compact('employees', 'report', 'allReports', 'employeeId', 'month'));

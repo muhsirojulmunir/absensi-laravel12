@@ -289,8 +289,8 @@
                     </thead>
 
                     @php
-                        $staffReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan');
-                        $ramayanaReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan_ramayana');
+                        $staffReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan')->sortByDesc(fn($row) => [$row['summary']['total_attendance_records'], $row['summary']['total_present']]);
+                        $ramayanaReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan_ramayana')->sortByDesc(fn($row) => [$row['summary']['total_attendance_records'], $row['summary']['total_present']]);
                     @endphp
 
                     {{-- Staff Section --}}
