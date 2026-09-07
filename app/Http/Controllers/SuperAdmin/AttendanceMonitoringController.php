@@ -395,6 +395,123 @@ class AttendanceMonitoringController extends Controller
     }
 
     /**
+     * Helper parser tanggal untuk import absensi (Mendukung DD/MM/YYYY, YYYY-MM-DD, Excel Serial)
+     */
+    private function parseImportDate($raw): ?string
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        $raw = trim((string) $raw);
+
+        // 1. Excel serial number (antara tahun 1970 - 2060: ~25569 sampai ~60000)
+        if (is_numeric($raw) && (float) $raw > 25569 && (float) $raw < 60000) {
+            try {
+                return Carbon::instance(
+                    \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $raw)
+                )->toDateString();
+            } catch (\Throwable $e) {}
+        }
+
+        // 2. Format YYYY-MM-DD atau YYYY/MM/DD atau YYYY.MM.DD
+        if (preg_match('/^(\d{4})[-\/\.](\d{1,2})[-\/\.](\d{1,2})$/', $raw, $m)) {
+            return sprintf('%04d-%02d-%02d', (int) $m[1], (int) $m[2], (int) $m[3]);
+        }
+
+        // 3. Format DD-MM-YYYY atau DD/MM/YYYY atau DD.MM.YYYY (Standar Indonesia)
+        if (preg_match('/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{4})$/', $raw, $m)) {
+            return sprintf('%04d-%02d-%02d', (int) $m[3], (int) $m[2], (int) $m[1]);
+        }
+
+        // 4. Format DD-MM-YY atau DD/MM/YY atau DD.MM.YY
+        if (preg_match('/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2})$/', $raw, $m)) {
+            return sprintf('%04d-%02d-%02d', 2000 + (int) $m[3], (int) $m[2], (int) $m[1]);
+        }
+
+        // 5. Fallback via Carbon
+        try {
+            return Carbon::parse($raw)->toDateString();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Helper parser jam untuk import absensi (Mendukung HH:MM, HH,MM koma Indonesia, HH.MM, Excel Serial/Fraction)
+     */
+    private function parseImportTime($raw): ?string
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        // Jika numeric
+        if (is_numeric($raw)) {
+            $floatVal = (float) $raw;
+
+            // A. Excel native time fraction (0.0 sampai < 1.0) misal 0.5486 -> 13:10:00
+            if ($floatVal > 0.0 && $floatVal < 1.0) {
+                try {
+                    return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($floatVal)->format('H:i:00');
+                } catch (\Throwable $e) {}
+            }
+
+            // B. Excel DateTime serial (> 25569)
+            if ($floatVal >= 25569) {
+                try {
+                    return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($floatVal)->format('H:i:00');
+                } catch (\Throwable $e) {}
+            }
+        }
+
+        $str = trim((string) $raw);
+
+        // Format HH:MM:SS atau HH:MM
+        if (preg_match('/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/', $str, $m)) {
+            $hour = (int) $m[1];
+            $min  = (int) $m[2];
+            $sec  = isset($m[3]) ? (int) $m[3] : 0;
+            if ($min >= 60) {
+                $hour += intdiv($min, 60);
+                $min   = $min % 60;
+            }
+            $hour = $hour % 24;
+            return sprintf('%02d:%02d:%02d', $hour, $min, $sec);
+        }
+
+        // Format HH,MM atau HH.MM (Standar input Indonesia, misal: 13,10 atau 7,49 atau 13.1 atau 21,42)
+        if (preg_match('/^(\d{1,2})[,\.](\d{1,2})$/', $str, $m)) {
+            $hour = (int) $m[1];
+            // Jika 1 digit di belakang desimal (misal 13.1 dari 13.10), pad jadi 2 digit: 10
+            $minStr = strlen($m[2]) === 1 ? $m[2] . '0' : $m[2];
+            $min    = (int) $minStr;
+            if ($min >= 60) {
+                $hour += intdiv($min, 60);
+                $min   = $min % 60;
+            }
+            $hour = $hour % 24;
+            return sprintf('%02d:%02d:00', $hour, $min);
+        }
+
+        // Format cuma jam bulat, misal '13' atau '8'
+        if (preg_match('/^(\d{1,2})$/', $str, $m)) {
+            $hour = (int) $m[1];
+            if ($hour >= 0 && $hour <= 24) {
+                return sprintf('%02d:00:00', $hour % 24);
+            }
+        }
+
+        // Fallback strtotime
+        $ts = strtotime($str);
+        if ($ts !== false) {
+            return date('H:i:00', $ts);
+        }
+
+        return null;
+    }
+
+    /**
      * Download template Excel/CSV import absensi massal
      */
     public function downloadTemplate(Request $request)
@@ -407,7 +524,7 @@ class AttendanceMonitoringController extends Controller
 
         // ── Baris 1: Judul panduan
         $sheet->mergeCells('A1:F1');
-        $sheet->setCellValue('A1', '📋 TEMPLATE IMPORT ABSENSI MASSAL — Hanya isi kolom yang tersedia. Kolom Status boleh dikosongkan (otomatis = Hadir).');
+        $sheet->setCellValue('A1', '📋 TEMPLATE IMPORT ABSENSI MASSAL — Format jam bebas: 13:10 atau 13,10 atau 13.10. Status boleh kosong (otomatis = Hadir). Nama cukup di baris pertama.');
         $sheet->getStyle('A1')->applyFromArray([
             'font'      => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '92400E']],
             'fill'      => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
@@ -436,12 +553,12 @@ class AttendanceMonitoringController extends Controller
 
         // ── Baris 3: Panduan format kolom (warna abu)
         $guides = [
-            'A3' => 'Nama lengkap sesuai sistem',
-            'B3' => 'Format: YYYY-MM-DD  (contoh: ' . date('Y-m-d') . ')',
-            'C3' => 'Format: HH:MM  (contoh: 08:00)',
-            'D3' => 'Format: HH:MM  (contoh: 17:00)',
-            'E3' => 'Hadir / Terlambat / Izin / Sakit  (boleh kosong)',
-            'F3' => 'Keterangan tambahan  (boleh kosong)',
+            'A3' => 'Nama lengkap (cukup di baris pertama jika karyawan sama)',
+            'B3' => 'DD/MM/YYYY atau YYYY-MM-DD (contoh: ' . date('d/m/Y') . ')',
+            'C3' => 'HH:MM atau HH,MM (contoh: 08:00 atau 13,10)',
+            'D3' => 'HH:MM atau HH,MM (contoh: 17:00 atau 21,42)',
+            'E3' => 'Hadir / Terlambat / Izin / Sakit (boleh kosong)',
+            'F3' => 'Keterangan tambahan (boleh kosong)',
         ];
         foreach ($guides as $cell => $value) {
             $sheet->setCellValue($cell, $value);
@@ -452,16 +569,18 @@ class AttendanceMonitoringController extends Controller
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT],
         ]);
 
+        // Format kolom sebagai TEXT agar Excel tidak mengubah teks jam/tanggal secara aneh
+        $sheet->getStyle('A:F')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+
         // ── Baris 4–6: Contoh data
-        $today      = date('Y-m-d');
+        $today      = date('d/m/Y');
         $sampleData = [
             4 => ['Budi Santoso',  $today, '08:00', '17:00', 'Hadir',  'Import massal'],
-            5 => ['Siti Aminah',   $today, '08:30', '17:00', '',       ''],
-            6 => ['Ahmad Fauzi',   $today, '10:15', '17:00', '',       ''],
+            5 => ['',              date('d/m/Y', strtotime('+1 day')), '08:15', '17:00', '',       ''],
+            6 => ['Siti Aminah',   $today, '08:30', '17:00', '',       ''],
         ];
         foreach ($sampleData as $rowNum => $rowData) {
             $sheet->fromArray($rowData, null, 'A' . $rowNum);
-            // Gaya baris data
             $fillColor = ($rowNum % 2 === 0) ? 'F8FAFC' : 'FFFFFF';
             $sheet->getStyle('A' . $rowNum . ':F' . $rowNum)->applyFromArray([
                 'fill'    => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => $fillColor]],
@@ -471,7 +590,7 @@ class AttendanceMonitoringController extends Controller
         }
 
         // ── Lebar kolom yang optimal
-        $columnWidths = ['A' => 28, 'B' => 20, 'C' => 16, 'D' => 16, 'E' => 30, 'F' => 30];
+        $columnWidths = ['A' => 32, 'B' => 20, 'C' => 18, 'D' => 18, 'E' => 28, 'F' => 28];
         foreach ($columnWidths as $col => $width) {
             $sheet->getColumnDimension($col)->setWidth($width);
         }
@@ -508,9 +627,10 @@ class AttendanceMonitoringController extends Controller
 
         $file = $request->file('file');
         $path = $file->getRealPath();
+        $ext  = $file->getClientOriginalExtension();
 
         try {
-            $rows = \App\Services\ExcelImportReader::readRows($path);
+            $rows = \App\Services\ExcelImportReader::readRows($path, $ext);
         } catch (\Throwable $e) {
             return back()->with('error', 'Gagal membaca file Excel/CSV: ' . $e->getMessage());
         }
@@ -530,6 +650,11 @@ class AttendanceMonitoringController extends Controller
 
         foreach ($rows as $index => $row) {
             $rowStr = implode(' ', array_map('strtolower', array_map('strval', $row)));
+            // Lewati jika ini baris judul banner
+            if (str_contains($rowStr, 'template import')) {
+                continue;
+            }
+
             if (str_contains($rowStr, 'nama') || str_contains($rowStr, 'karyawan') || str_contains($rowStr, 'tanggal') || str_contains($rowStr, 'masuk')) {
                 $headerRowIndex = $index;
                 foreach ($row as $colIdx => $val) {
@@ -553,8 +678,8 @@ class AttendanceMonitoringController extends Controller
         if ($colStatus === null) $colStatus = 4;
         if ($colCatatan === null) $colCatatan = 5;
 
-        // Ambil seluruh karyawan aktif untuk pencocokan nama/username/email
-        $users   = User::all();
+        // Ambil seluruh karyawan untuk pencocokan nama/username/email
+        $users   = User::with(['role', 'division'])->get();
         $userMap = [];
         foreach ($users as $u) {
             $userMap[strtolower(trim((string) $u->name))] = $u;
@@ -566,72 +691,120 @@ class AttendanceMonitoringController extends Controller
             }
         }
 
-        $importedCount  = 0;
-        $skippedCount   = 0;
-        $skippedDetails = [];
+        // Fungsi pencocokan user yang toleran terhadap spasi / awalan nama
+        $findUser = function (string $nameQuery) use ($userMap, $users) {
+            $clean = strtolower(preg_replace('/\s+/', ' ', trim($nameQuery)));
+            if (empty($clean)) {
+                return null;
+            }
+
+            // Exact match
+            if (isset($userMap[$clean])) {
+                return $userMap[$clean];
+            }
+
+            // Loose match (awalan nama atau kecocokan tanpa spasi ganda)
+            foreach ($users as $u) {
+                $uName = strtolower(trim((string) $u->name));
+                if ($uName === $clean || str_starts_with($uName, $clean . ' ') || str_contains($uName, $clean)) {
+                    return $u;
+                }
+            }
+
+            return null;
+        };
+
+        $currentEmployee = null;
+        $importedCount   = 0;
+        $skippedCount    = 0;
+        $skippedDetails  = [];
 
         for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
             $row = $rows[$i];
 
-            $namaRaw = isset($row[$colNama]) ? trim((string) $row[$colNama]) : '';
-            if (empty($namaRaw)) continue;
+            // 1. Cek apakah seluruh baris kosong
+            $isRowEmpty = true;
+            foreach ($row as $cell) {
+                if ($cell !== null && trim((string) $cell) !== '') {
+                    $isRowEmpty = false;
+                    break;
+                }
+            }
+            if ($isRowEmpty) {
+                continue;
+            }
 
-            $namaKey = strtolower($namaRaw);
+            // 2. Abaikan baris panduan/contoh di template
+            $rowAllText = strtolower(implode(' ', array_map('strval', $row)));
+            if (
+                str_contains($rowAllText, 'nama lengkap') ||
+                str_contains($rowAllText, 'sesuai sistem') ||
+                str_contains($rowAllText, 'cukup di baris pertama') ||
+                str_contains($rowAllText, 'format:') ||
+                str_contains($rowAllText, 'format :') ||
+                str_contains($rowAllText, 'template import') ||
+                str_contains($rowAllText, 'dd/mm/yyyy') ||
+                str_contains($rowAllText, 'yyyy-mm-dd') ||
+                str_contains($rowAllText, 'hh:mm')
+            ) {
+                continue;
+            }
 
-            // LOGIKA UTAMA: Jika nama karyawan TIDAK ADA di sistem -> LEWATI (SKIP)
-            if (!isset($userMap[$namaKey])) {
-                $skippedCount++;
-                if (count($skippedDetails) < 5) {
-                    $skippedDetails[] = "Baris " . ($i + 1) . " ('$namaRaw')";
+            // 3. Cek Nama Karyawan di baris ini
+            $cellNama = isset($row[$colNama]) ? trim((string) $row[$colNama]) : '';
+
+            if (!empty($cellNama)) {
+                $matched = $findUser($cellNama);
+                if ($matched instanceof User) {
+                    $currentEmployee = $matched;
+                } else {
+                    $currentEmployee = false; // Tandai nama tidak ditemukan
+                    $skippedCount++;
+                    if (count($skippedDetails) < 5) {
+                        $skippedDetails[] = "Baris " . ($i + 1) . " ('$cellNama' tidak terdaftar)";
+                    }
+                }
+            }
+
+            // Jika belum ada nama karyawan yang valid, lewati baris ini
+            if (!$currentEmployee instanceof User) {
+                if ($currentEmployee === false && empty($cellNama)) {
+                    $skippedCount++;
                 }
                 continue;
             }
 
-            $employee = $userMap[$namaKey];
+            $employee = $currentEmployee;
 
-            // Parsing Tanggal
+            // 4. Parsing Tanggal (Mendukung DD/MM/YYYY, YYYY-MM-DD, Excel Date Serial)
             $tanggalRaw = isset($row[$colTanggal]) ? trim((string) $row[$colTanggal]) : '';
-            $targetDate = null;
-            if (!empty($tanggalRaw)) {
-                try {
-                    if (is_numeric($tanggalRaw)) {
-                        $targetDate = Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($tanggalRaw))->toDateString();
-                    } else {
-                        $targetDate = Carbon::parse($tanggalRaw)->toDateString();
-                    }
-                } catch (\Throwable $e) {
-                    $targetDate = now()->toDateString();
+            $targetDate = $this->parseImportDate($tanggalRaw);
+
+            if (empty($targetDate)) {
+                $skippedCount++;
+                if (count($skippedDetails) < 5) {
+                    $skippedDetails[] = "Baris " . ($i + 1) . " (Tanggal '$tanggalRaw' tidak valid)";
                 }
-            } else {
-                $targetDate = now()->toDateString();
+                continue;
             }
 
-            // Parsing Jam Masuk
+            // 5. Parsing Jam Masuk (Mendukung HH:MM, HH,MM koma, HH.MM titik, Serial Excel)
             $checkInRaw       = isset($row[$colCheckIn]) ? trim((string) $row[$colCheckIn]) : '';
-            $checkInFormatted = null;
-            if (!empty($checkInRaw)) {
-                if (is_numeric($checkInRaw)) {
-                    $checkInFormatted = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($checkInRaw)->format('H:i:00');
-                } else {
-                    $checkInFormatted = date('H:i:00', strtotime($checkInRaw));
-                }
-            }
+            $checkInFormatted = $this->parseImportTime($checkInRaw);
 
-            // Parsing Jam Pulang
+            // 6. Parsing Jam Pulang
             $checkOutRaw       = isset($row[$colCheckOut]) ? trim((string) $row[$colCheckOut]) : '';
-            $checkOutFormatted = null;
-            if (!empty($checkOutRaw)) {
-                if (is_numeric($checkOutRaw)) {
-                    $checkOutFormatted = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($checkOutRaw)->format('H:i:00');
-                } else {
-                    $checkOutFormatted = date('H:i:00', strtotime($checkOutRaw));
-                }
+            $checkOutFormatted = $this->parseImportTime($checkOutRaw);
+
+            // Jika jam masuk dan jam pulang keduanya kosong, lewati
+            if (empty($checkInFormatted) && empty($checkOutFormatted)) {
+                continue;
             }
 
-            // Status — Jika kolom Status kosong, otomatis = 'Hadir'
+            // 7. Status — Jika kolom Status kosong, otomatis = 'Hadir'
             $statusRaw     = isset($row[$colStatus]) ? trim((string) $row[$colStatus]) : '';
             $validStatuses = ['Hadir', 'Terlambat', 'Izin', 'Sakit'];
-            $status        = 'Hadir'; // Default: Hadir jika kosong
+            $status        = 'Hadir'; // Default: Hadir
             if (!empty($statusRaw)) {
                 foreach ($validStatuses as $vs) {
                     if (strcasecmp($statusRaw, $vs) === 0) {
@@ -641,12 +814,12 @@ class AttendanceMonitoringController extends Controller
                 }
             }
 
-            // Catatan
+            // 8. Catatan
             $noteRaw = isset($row[$colCatatan]) && !empty(trim((string) $row[$colCatatan])) 
                 ? trim((string) $row[$colCatatan]) 
                 : 'Import Massal Absensi';
 
-            // Hitung Keterlambatan
+            // 9. Hitung Keterlambatan
             $latenessMinutes = 0;
             if ($checkInFormatted && !in_array($status, ['Izin', 'Sakit'])) {
                 $userDivision     = $employee->division ? strtolower(trim((string) $employee->division->name)) : '';
@@ -663,7 +836,7 @@ class AttendanceMonitoringController extends Controller
                 }
             }
 
-            // Hitung Is Pulang Cepat
+            // 10. Hitung Is Pulang Cepat
             $isPulangCepat = false;
             if ($checkOutFormatted && $checkInFormatted) {
                 $userDivision  = $employee->division ? strtolower(trim((string) $employee->division->name)) : '';
@@ -671,7 +844,7 @@ class AttendanceMonitoringController extends Controller
                 $checkOutTime  = Carbon::parse($targetDate . ' ' . $checkOutFormatted);
                 $minutesWorked = (int) $checkInTime->diffInMinutes($checkOutTime);
 
-                if ($employee->role->slug === 'karyawan_ramayana') {
+                if ($employee->role && $employee->role->slug === 'karyawan_ramayana') {
                     $isPulangCepat = $minutesWorked < (7 * 60);
                 } elseif (str_contains($userDivision, 'gudang')) {
                     $isPulangCepat = $checkOutFormatted < '18:00:00';
@@ -694,6 +867,8 @@ class AttendanceMonitoringController extends Controller
                     'note'             => $noteRaw,
                     'lat'              => 0,
                     'long'             => 0,
+                    'check_in_method'  => 'manual',
+                    'check_out_method' => 'manual',
                 ]
             );
 
@@ -702,7 +877,7 @@ class AttendanceMonitoringController extends Controller
 
         $msg = "✅ Berhasil meng-import {$importedCount} data absensi.";
         if ($skippedCount > 0) {
-            $msg .= " ({$skippedCount} baris dilewati karena karyawan tidak terdaftar di sistem: " . implode(', ', $skippedDetails) . ")";
+            $msg .= " ({$skippedCount} baris dilewati karena karyawan tidak terdaftar atau format tanggal tidak valid: " . implode(', ', $skippedDetails) . ")";
         }
 
         return back()->with('success', $msg);
