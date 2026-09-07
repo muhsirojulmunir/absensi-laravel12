@@ -158,6 +158,14 @@
                     </a>
                 @endif
 
+                <a href="{{ route('super-admin.attendance.rekap-bulanan') }}"
+                   class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.attendance.rekap-bulanan') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
+                   :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
+                   title="Rekap Absensi Bulanan">
+                    <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span class="text-[13px] font-medium" x-show="!collapsed" x-transition>Rekap Absensi</span>
+                </a>
+
                 <a href="{{ route('super-admin.attendance.payment-history') }}"
                    class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.attendance.payment-history') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                    :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"

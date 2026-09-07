@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\DeletedAttendance;
+use App\Models\Holiday;
 use App\Models\LeaveRequest;
 use App\Models\Setting;
 use App\Models\User;
@@ -392,6 +393,133 @@ class AttendanceMonitoringController extends Controller
         return redirect()
             ->route('super-admin.attendance.deleted-backups')
             ->with('success', 'Absensi berhasil dipulihkan dari cadangan.');
+    }
+
+    /**
+     * Rekap Absensi Bulanan — Akumulasi kehadiran semua karyawan
+     * Menampilkan: masuk, tidak hadir (beserta tanggal), lupa absen (beserta tanggal)
+     */
+    public function rekapBulanan(Request $request): View
+    {
+        $month = $request->query('month', Carbon::now()->format('Y-m'));
+        $start = Carbon::parse($month . '-01')->startOfDay();
+        $end   = $start->copy()->endOfMonth()->endOfDay();
+        $today = Carbon::today();
+
+        // Hari-hari efektif yang dihitung (dari awal bulan s.d hari ini atau akhir bulan)
+        $effectiveEnd = $end->lt($today) ? $end : $today->copy()->endOfDay();
+
+        // Ambil semua karyawan aktif (semua role karyawan)
+        $employees = User::with(['role', 'division'])
+            ->whereHas('role', fn($q) => $q->whereIn('slug', ['karyawan', 'karyawan_ramayana']))
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        // Ambil semua absensi bulan ini dalam 1 query
+        $allAttendances = Attendance::whereIn('user_id', $employees->pluck('id'))
+            ->whereDate('date', '>=', $start->toDateString())
+            ->whereDate('date', '<=', $effectiveEnd->toDateString())
+            ->get()
+            ->groupBy('user_id');
+
+        // Ambil hari libur di bulan ini
+        $holidays = Holiday::whereDate('date', '>=', $start->toDateString())
+            ->whereDate('date', '<=', $end->toDateString())
+            ->pluck('description', 'date')
+            ->mapWithKeys(fn($desc, $date) => [Carbon::parse($date)->toDateString() => $desc]);
+
+        $rekap = [];
+
+        foreach ($employees as $emp) {
+            $attendances    = $allAttendances->get($emp->id, collect());
+            $divisionName   = strtolower(trim($emp->division?->name ?? ''));
+            $isStaffKantor  = str_contains($divisionName, 'staff kantor');
+            $isRamayana     = $emp->role?->slug === 'karyawan_ramayana';
+
+            // Buat lookup attendance berdasarkan tanggal
+            $attByDate = $attendances->keyBy(fn($a) => Carbon::parse($a->date)->toDateString());
+
+            $totalMasuk        = 0;
+            $tidakHadirDates   = [];  // Tanggal tidak ada absen sama sekali
+            $lupaAbsenMasuk    = [];  // Tanggal ada record tapi check_in null
+            $lupaAbsenPulang   = [];  // Tanggal ada record, check_in ada, tapi check_out null
+
+            // Iterasi setiap hari dalam periode
+            $cursor = $start->copy();
+            while ($cursor->lte($effectiveEnd)) {
+                $dateStr     = $cursor->toDateString();
+                $dayName     = $cursor->locale('id')->translatedFormat('l');
+                $formattedDate = $cursor->locale('id')->translatedFormat('d M Y');
+                $label       = "{$dayName}, {$formattedDate}";
+                $isHoliday   = isset($holidays[$dateStr]);
+                $isWeekend   = $cursor->isWeekend();
+
+                /** @var Attendance|null $att */
+                $att = $attByDate->get($dateStr);
+
+                if ($att) {
+                    // Ada record absensi
+                    if (in_array($att->status, ['Hadir', 'Terlambat'])) {
+                        $totalMasuk++;
+                    }
+
+                    // Lupa absen masuk (tidak ada check_in)
+                    if (empty($att->check_in)) {
+                        $lupaAbsenMasuk[] = [
+                            'label'  => $label,
+                            'detail' => '(Tidak ada jam masuk)',
+                        ];
+                    }
+
+                    // Lupa absen pulang (ada check_in, tapi tidak ada check_out)
+                    // Kecuali hari ini (mungkin belum pulang)
+                    if (!empty($att->check_in) && empty($att->check_out) && !$cursor->isToday()) {
+                        $lupaAbsenPulang[] = [
+                            'label'  => $label,
+                            'detail' => '(Masuk ' . Carbon::parse($att->check_in)->format('H:i') . ', tidak ada jam pulang)',
+                        ];
+                    }
+                } else {
+                    // Tidak ada record sama sekali
+                    // Kecuali: hari libur nasional yang sudah diset, atau akhir pekan untuk Staff Kantor
+                    if ($isHoliday) {
+                        // Hari libur nasional — tidak dihitung tidak hadir
+                    } elseif ($isStaffKantor && $isWeekend) {
+                        // Staff Kantor: Sabtu & Minggu adalah libur — skip
+                    } elseif ($isRamayana && $cursor->isSunday()) {
+                        // Ramayana: Minggu umumnya libur — skip
+                    } else {
+                        $tidakHadirDates[] = [
+                            'label'  => $label,
+                            'is_holiday' => false,
+                        ];
+                    }
+                }
+
+                $cursor->addDay();
+            }
+
+            // Hitung total hari tidak hadir
+            $totalTidakHadir = count($tidakHadirDates);
+            $lupaAbsenTotal  = count($lupaAbsenMasuk) + count($lupaAbsenPulang);
+
+            $rekap[] = [
+                'employee'          => $emp,
+                'total_masuk'       => $totalMasuk,
+                'total_tidak_hadir' => $totalTidakHadir,
+                'lupa_absen_masuk'  => $lupaAbsenMasuk,
+                'lupa_absen_pulang' => $lupaAbsenPulang,
+                'lupa_absen_total'  => $lupaAbsenTotal,
+                'tidak_hadir_dates' => $tidakHadirDates,
+                'total_records'     => $attendances->count(),
+            ];
+        }
+
+        // Sort: yang paling banyak masuk di atas
+        usort($rekap, fn($a, $b) => $b['total_masuk'] <=> $a['total_masuk']);
+
+        return view('super-admin.attendance.rekap-bulanan', compact('rekap', 'month', 'employees'));
     }
 
     /**
