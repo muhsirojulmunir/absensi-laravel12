@@ -126,9 +126,9 @@
 
                 {{-- Panel Rincian Libur & Lupa Absen --}}
                 @include('pic.reports.partials.accumulation-panels', [
-                    'liburDetails' => $report['libur_details'],
-                    'lupaMasuk' => $report['lupa_absen_masuk'],
-                    'lupaPulang' => $report['lupa_absen_pulang'],
+                    'masukList'       => $report['masuk_list'],
+                    'lupaAbsenList'   => $report['lupa_absen_list'],
+                    'tidakHadirList'  => $report['tidak_hadir_list'],
                 ])
             </div>
 
@@ -390,11 +390,11 @@
                                                 </a>
                                             </div>
 
-                                            {{-- 3 Panel Akumulasi Libur & Lupa Absen --}}
+                                            {{-- 3 Panel Akumulasi Masuk, Lupa Absen, dan Tidak Hadir --}}
                                             @include('pic.reports.partials.accumulation-panels', [
-                                                'liburDetails' => $row['libur_details'],
-                                                'lupaMasuk' => $row['lupa_absen_masuk'],
-                                                'lupaPulang' => $row['lupa_absen_pulang'],
+                                                'masukList'       => $row['masuk_list'],
+                                                'lupaAbsenList'   => $row['lupa_absen_list'],
+                                                'tidakHadirList'  => $row['tidak_hadir_list'],
                                             ])
 
                                             {{-- Mini Daily Table --}}
@@ -562,11 +562,11 @@
                                                 </a>
                                             </div>
 
-                                            {{-- 3 Panel Akumulasi Libur & Lupa Absen --}}
+                                            {{-- 3 Panel Akumulasi Masuk, Lupa Absen, dan Tidak Hadir --}}
                                             @include('pic.reports.partials.accumulation-panels', [
-                                                'liburDetails' => $row['libur_details'],
-                                                'lupaMasuk' => $row['lupa_absen_masuk'],
-                                                'lupaPulang' => $row['lupa_absen_pulang'],
+                                                'masukList'       => $row['masuk_list'],
+                                                'lupaAbsenList'   => $row['lupa_absen_list'],
+                                                'tidakHadirList'  => $row['tidak_hadir_list'],
                                             ])
 
                                             {{-- Mini Daily Table --}}

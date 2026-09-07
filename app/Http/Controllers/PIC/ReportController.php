@@ -72,14 +72,14 @@ class ReportController extends Controller
             $metrics = $this->calculateMetrics($empObj, $attendances, $leaves, $start, $effectiveEnd, $holidays);
 
             $report = [
-                'attendances' => $attendances,
-                'leaves' => $leaves,
-                'summary' => $metrics['summary'],
-                'libur_details' => $metrics['libur_details'],
-                'lupa_absen_masuk' => $metrics['lupa_absen_masuk'],
-                'lupa_absen_pulang' => $metrics['lupa_absen_pulang'],
-                'employee' => $empObj,
-                'month' => $month,
+                'attendances'       => $attendances,
+                'leaves'            => $leaves,
+                'summary'           => $metrics['summary'],
+                'masuk_list'        => $metrics['masuk_list'],
+                'lupa_absen_list'   => $metrics['lupa_absen_list'],
+                'tidak_hadir_list'  => $metrics['tidak_hadir_list'],
+                'employee'          => $empObj,
+                'month'             => $month,
             ];
         } else {
             // Pre-load attendances and leaves untuk efisiensi
@@ -105,13 +105,13 @@ class ReportController extends Controller
                 $metrics = $this->calculateMetrics($employee, $attendances, $leaves, $start, $effectiveEnd, $holidays);
 
                 return [
-                    'employee' => $employee,
-                    'attendances' => $attendances,
-                    'leaves' => $leaves,
-                    'summary' => $metrics['summary'],
-                    'libur_details' => $metrics['libur_details'],
-                    'lupa_absen_masuk' => $metrics['lupa_absen_masuk'],
-                    'lupa_absen_pulang' => $metrics['lupa_absen_pulang'],
+                    'employee'          => $employee,
+                    'attendances'       => $attendances,
+                    'leaves'            => $leaves,
+                    'summary'           => $metrics['summary'],
+                    'masuk_list'        => $metrics['masuk_list'],
+                    'lupa_absen_list'   => $metrics['lupa_absen_list'],
+                    'tidak_hadir_list'  => $metrics['tidak_hadir_list'],
                 ];
             })->sortByDesc(function ($item) {
                 return [
@@ -129,9 +129,9 @@ class ReportController extends Controller
      */
     private function calculateMetrics(User $employee, $attendances, $leaves, Carbon $start, Carbon $effectiveEnd, $holidays): array
     {
-        $divisionName = strtolower(trim($employee->division?->name ?? ''));
+        $divisionName  = strtolower(trim($employee->division?->name ?? ''));
         $isStaffKantor = str_contains($divisionName, 'staff kantor');
-        $isRamayana = $employee->role?->slug === 'karyawan_ramayana';
+        $isRamayana    = $employee->role?->slug === 'karyawan_ramayana';
 
         $attByDate = $attendances->keyBy(fn($a) => Carbon::parse($a->date)->toDateString());
 
@@ -148,24 +148,24 @@ class ReportController extends Controller
         $holidayByDate = $holidays->keyBy(fn($h) => Carbon::parse($h->date)->toDateString());
 
         $totalHadir = 0;
-        $totalLate = 0;
+        $totalLate  = 0;
         $totalLeave = 0;
-        $totalSick = 0;
+        $totalSick  = 0;
 
-        $liburDetails = [];
-        $lupaAbsenMasuk = [];
-        $lupaAbsenPulang = [];
+        $masukList      = [];
+        $lupaAbsenList  = [];
+        $tidakHadirList = [];
 
         $cursor = $start->copy();
         while ($cursor->lte($effectiveEnd)) {
-            $dateStr = $cursor->toDateString();
-            $dayName = $cursor->locale('id')->translatedFormat('l');
+            $dateStr       = $cursor->toDateString();
+            $dayName       = $cursor->locale('id')->translatedFormat('l');
             $formattedDate = $cursor->locale('id')->translatedFormat('d M Y');
-            $label = "{$dayName}, {$formattedDate}";
+            $label         = "{$dayName}, {$formattedDate}";
 
-            $att = $attByDate->get($dateStr);
-            $leave = $leaveDates[$dateStr] ?? null;
-            $holiday = $holidayByDate->get($dateStr);
+            $att       = $attByDate->get($dateStr);
+            $leave     = $leaveDates[$dateStr] ?? null;
+            $holiday   = $holidayByDate->get($dateStr);
             $isWeekend = $cursor->isWeekend();
 
             if ($att) {
@@ -177,87 +177,121 @@ class ReportController extends Controller
                     $totalSick++;
                 } elseif (in_array($att->status, ['Izin', 'Cuti'])) {
                     $totalLeave++;
-                } elseif (str_starts_with((string)$att->status, 'Libur')) {
-                    $liburDetails[] = [
-                        'label' => $label,
-                        'reason' => $att->status,
+                }
+
+                $checkInRaw  = $att->check_in;
+                $checkOutRaw = $att->check_out;
+                $checkIn     = $checkInRaw ? Carbon::parse($checkInRaw)->format('H.i') : null;
+                $checkOut    = $checkOutRaw ? Carbon::parse($checkOutRaw)->format('H.i') : null;
+
+                $isLupaMasuk  = empty($checkInRaw);
+                $isLupaPulang = (!empty($checkInRaw) && empty($checkOutRaw) && !$cursor->isToday());
+
+                // 1. Kolom TENGAH: Lupa Absen (Gabungan masuk dan pulang)
+                if ($isLupaMasuk) {
+                    $lupaAbsenList[] = [
+                        'label'  => $label,
+                        'detail' => $checkOut ? "Pulang {$checkOut}, tidak absen masuk" : "Tidak absen masuk",
+                        'type'   => 'masuk',
+                    ];
+                } elseif ($isLupaPulang) {
+                    $lupaAbsenList[] = [
+                        'label'  => $label,
+                        'detail' => "Masuk {$checkIn}, tidak absen pulang",
+                        'type'   => 'pulang',
                     ];
                 }
 
-                // Lupa Absen Masuk: ada absensi berstatus Hadir/Terlambat tetapi tidak ada jam check_in
-                if (in_array($att->status, ['Hadir', 'Terlambat']) && empty($att->check_in)) {
-                    $lupaAbsenMasuk[] = [
-                        'label' => $label,
-                        'detail' => $att->check_out ? 'Tidak ada jam masuk (Pulang: ' . Carbon::parse($att->check_out)->format('H:i') . ')' : 'Tidak ada jam masuk',
-                    ];
+                // 2. Kolom KIRI: Masuk (Tetap dihitung masuk, tapi ditulis catatan lupa absen)
+                $lupaTag = null;
+                if ($isLupaMasuk) {
+                    $lupaTag = 'Lupa Absen Masuk';
+                } elseif ($isLupaPulang) {
+                    $lupaTag = 'Lupa Absen Pulang';
                 }
 
-                // Lupa Absen Pulang: ada jam check_in tetapi check_out kosong (kecuali hari ini)
-                if (in_array($att->status, ['Hadir', 'Terlambat']) && !empty($att->check_in) && empty($att->check_out)) {
-                    if (!$cursor->isToday()) {
-                        $lupaAbsenPulang[] = [
-                            'label' => $label,
-                            'detail' => 'Masuk jam ' . Carbon::parse($att->check_in)->format('H:i') . ', tidak ada jam pulang',
-                        ];
-                    }
+                $jamDetail = '';
+                if ($checkIn && $checkOut) {
+                    $jamDetail = "Masuk {$checkIn} &bull; Pulang {$checkOut}";
+                } elseif ($checkIn) {
+                    $jamDetail = "Masuk {$checkIn} &bull; Pulang &mdash;";
+                } elseif ($checkOut) {
+                    $jamDetail = "Masuk &mdash; &bull; Pulang {$checkOut}";
+                } else {
+                    $jamDetail = "Tercatat hadir (tanpa jam)";
                 }
+
+                $masukList[] = [
+                    'label'      => $label,
+                    'jam_detail' => $jamDetail,
+                    'status'     => $att->status ?? 'Hadir',
+                    'lupa_tag'   => $lupaTag,
+                    'is_lupa'    => ($isLupaMasuk || $isLupaPulang),
+                    'note'       => $att->note,
+                ];
             } elseif ($leave) {
                 $type = $leave->type;
                 if ($type === 'Sakit') {
                     $totalSick++;
+                    $tidakHadirList[] = [
+                        'label'      => $label,
+                        'keterangan' => 'Sakit' . ($leave->reason ? ': ' . $leave->reason : ''),
+                        'is_holiday' => false,
+                    ];
                 } elseif (in_array($type, ['Libur', 'Libur (Day Off)'])) {
-                    $liburDetails[] = [
-                        'label' => $label,
-                        'reason' => 'Libur (Day Off)',
+                    $tidakHadirList[] = [
+                        'label'      => $label,
+                        'keterangan' => 'Libur (Day Off)',
+                        'is_holiday' => true,
                     ];
                 } else {
                     $totalLeave++;
+                    $tidakHadirList[] = [
+                        'label'      => $label,
+                        'keterangan' => 'Izin: ' . ($leave->reason ?? $type),
+                        'is_holiday' => false,
+                    ];
                 }
             } else {
                 // Tidak ada absensi dan tidak ada izin
+                $keterangan   = 'Tidak Absen';
+                $isHolidayDay = false;
+
                 if ($holiday) {
-                    $liburDetails[] = [
-                        'label' => $label,
-                        'reason' => 'Libur Nasional: ' . ($holiday->description ?? 'Hari Libur'),
-                    ];
+                    $keterangan   = 'Libur: ' . ($holiday->description ?? 'Hari Libur Nasional');
+                    $isHolidayDay = true;
                 } elseif ($isStaffKantor && $isWeekend) {
-                    $liburDetails[] = [
-                        'label' => $label,
-                        'reason' => 'Libur Akhir Pekan',
-                    ];
+                    $keterangan   = 'Libur Akhir Pekan';
+                    $isHolidayDay = true;
                 } elseif ($isRamayana && $cursor->isSunday()) {
-                    $liburDetails[] = [
-                        'label' => $label,
-                        'reason' => 'Libur Hari Minggu',
-                    ];
-                } else {
-                    $liburDetails[] = [
-                        'label' => $label,
-                        'reason' => 'Tidak Hadir / Tanpa Keterangan',
-                    ];
+                    $keterangan   = 'Libur Hari Minggu';
+                    $isHolidayDay = true;
                 }
+
+                $tidakHadirList[] = [
+                    'label'      => $label,
+                    'keterangan' => $keterangan,
+                    'is_holiday' => $isHolidayDay,
+                ];
             }
 
             $cursor->addDay();
         }
 
-        $totalMasuk = $totalHadir + $totalLate;
-        $totalLupaAbsen = count($lupaAbsenMasuk) + count($lupaAbsenPulang);
-
         return [
             'summary' => [
-                'total_present' => $totalHadir,
-                'total_late' => $totalLate,
-                'total_masuk' => $totalMasuk,
-                'total_off_days' => count($liburDetails),
-                'total_lupa_absen' => $totalLupaAbsen,
-                'total_leave' => $totalLeave,
-                'total_sick' => $totalSick,
+                'total_present'            => $totalHadir,
+                'total_late'               => $totalLate,
+                'total_masuk'              => count($masukList),
+                'total_off_days'           => count($tidakHadirList),
+                'total_lupa_absen'         => count($lupaAbsenList),
+                'total_leave'              => $totalLeave,
+                'total_sick'               => $totalSick,
                 'total_attendance_records' => $attendances->count(),
             ],
-            'libur_details' => $liburDetails,
-            'lupa_absen_masuk' => $lupaAbsenMasuk,
-            'lupa_absen_pulang' => $lupaAbsenPulang,
+            'masuk_list'       => $masukList,
+            'lupa_absen_list'  => $lupaAbsenList,
+            'tidak_hadir_list' => $tidakHadirList,
         ];
     }
 }

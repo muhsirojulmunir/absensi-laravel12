@@ -1,115 +1,110 @@
 ﻿{{--
-    Panel Rincian Akumulasi:
-    1. Libur / Tidak Hadir (Tanggal & Hari apa saja)
-    2. Lupa Absen Masuk (Tanggal & Hari apa saja)
-    3. Lupa Absen Pulang (Tanggal & Hari apa saja)
+    Panel Rincian 3 Kolom:
+    1. KIRI: Masuk (Hari, Tanggal, Jam Masuk & Pulang, Status / Lupa Absen)
+    2. TENGAH: Lupa Absen (Hari, Tanggal, Masuk 07.00 tidak absen pulang / sebaliknya)
+    3. KANAN: Tidak Hadir / Libur (Hari, Tanggal, Keterangan)
 --}}
-<div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 my-3.5">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-3.5 my-3.5">
 
-    {{-- 1. Panel Libur & Tidak Hadir --}}
-    <div class="bg-white dark:bg-slate-900 rounded-xl border border-rose-200/90 dark:border-rose-900/40 shadow-xs overflow-hidden">
-        <div class="px-3.5 py-2.5 bg-rose-50/80 dark:bg-rose-950/40 border-b border-rose-100 dark:border-rose-900/50 flex items-center justify-between">
+    {{-- ==================== KOLOM 1 (KIRI): MASUK ==================== --}}
+    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden flex flex-col">
+        <div class="px-3.5 py-2.5 bg-emerald-50/80 dark:bg-emerald-950/30 border-b border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between">
             <div class="flex items-center space-x-2">
-                <span class="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0"></span>
-                <span class="text-xs font-bold text-rose-800 dark:text-rose-300 uppercase tracking-wide">
-                    Libur & Tidak Hadir
+                <span class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                <span class="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide">
+                    Masuk &mdash; {{ count($masukList ?? []) }} Hari
                 </span>
             </div>
-            <span class="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-extrabold rounded-md {{ count($liburDetails) > 0 ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-400' }}">
-                {{ count($liburDetails) }}
+            <span class="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-extrabold rounded-md bg-emerald-600 text-white shadow-xs">
+                {{ count($masukList ?? []) }}
             </span>
         </div>
-        <div class="p-3 max-h-52 overflow-y-auto">
-            @if(count($liburDetails) === 0)
-                <div class="py-5 text-center text-xs text-slate-400 dark:text-slate-500 font-medium">
-                    Tidak ada hari libur / tidak hadir
-                </div>
+        <div class="p-3 max-h-64 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/70">
+            @if(count($masukList ?? []) === 0)
+                <p class="text-xs text-slate-400 dark:text-slate-500 text-center py-5 italic">Belum ada catatan masuk</p>
             @else
-                <ul class="space-y-2">
-                    @foreach($liburDetails as $item)
-                        <li class="flex items-start justify-between gap-2 text-xs pb-1.5 border-b border-slate-100 dark:border-slate-800/80 last:border-b-0 last:pb-0">
-                            <div class="flex items-start space-x-2 min-w-0">
-                                <span class="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 flex-shrink-0"></span>
-                                <div>
-                                    <p class="font-semibold text-slate-800 dark:text-slate-200 leading-tight">{{ $item['label'] }}</p>
-                                    <p class="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-0.5">{{ $item['reason'] }}</p>
-                                </div>
-                            </div>
-                        </li>
-                    @endforeach
-                </ul>
+                @foreach($masukList as $item)
+                    <div class="py-2 first:pt-0 last:pb-0 flex items-start justify-between gap-2 text-xs">
+                        <div class="min-w-0">
+                            <p class="font-semibold text-slate-900 dark:text-slate-100 leading-tight">{{ $item['label'] }}</p>
+                            <p class="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 font-medium">{!! $item['jam_detail'] !!}</p>
+                            @if(!empty($item['note']))
+                                <p class="text-slate-400 dark:text-slate-500 text-[10px] italic mt-0.5">Catatan: {{ $item['note'] }}</p>
+                            @endif
+                        </div>
+                        <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                            @if(!empty($item['lupa_tag']))
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                    {{ $item['lupa_tag'] }}
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold {{ ($item['status'] ?? '') === 'Terlambat' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' }}">
+                                    {{ $item['status'] ?? 'Hadir' }}
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
             @endif
         </div>
     </div>
 
-    {{-- 2. Panel Lupa Absen Masuk --}}
-    <div class="bg-white dark:bg-slate-900 rounded-xl border border-amber-200/90 dark:border-amber-900/40 shadow-xs overflow-hidden">
-        <div class="px-3.5 py-2.5 bg-amber-50/80 dark:bg-amber-950/40 border-b border-amber-100 dark:border-amber-900/50 flex items-center justify-between">
+    {{-- ==================== KOLOM 2 (TENGAH): LUPA ABSEN ==================== --}}
+    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden flex flex-col">
+        <div class="px-3.5 py-2.5 bg-amber-50/80 dark:bg-amber-950/30 border-b border-amber-100 dark:border-amber-900/40 flex items-center justify-between">
             <div class="flex items-center space-x-2">
                 <span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"></span>
                 <span class="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide">
-                    Lupa Absen Masuk
+                    Lupa Absen &mdash; {{ count($lupaAbsenList ?? []) }} Hari
                 </span>
             </div>
-            <span class="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-extrabold rounded-md {{ count($lupaMasuk) > 0 ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400' }}">
-                {{ count($lupaMasuk) }}
+            <span class="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-extrabold rounded-md {{ count($lupaAbsenList ?? []) > 0 ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400' }}">
+                {{ count($lupaAbsenList ?? []) }}
             </span>
         </div>
-        <div class="p-3 max-h-52 overflow-y-auto">
-            @if(count($lupaMasuk) === 0)
-                <div class="py-5 text-center text-xs text-slate-400 dark:text-slate-500 font-medium">
-                    Tidak ada lupa absen masuk ✓
-                </div>
+        <div class="p-3 max-h-64 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/70">
+            @if(count($lupaAbsenList ?? []) === 0)
+                <p class="text-xs text-slate-400 dark:text-slate-500 text-center py-5 italic">Tidak ada lupa absen ✓</p>
             @else
-                <ul class="space-y-2">
-                    @foreach($lupaMasuk as $item)
-                        <li class="flex items-start justify-between gap-2 text-xs pb-1.5 border-b border-slate-100 dark:border-slate-800/80 last:border-b-0 last:pb-0">
-                            <div class="flex items-start space-x-2 min-w-0">
-                                <span class="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0"></span>
-                                <div>
-                                    <p class="font-semibold text-slate-800 dark:text-slate-200 leading-tight">{{ $item['label'] }}</p>
-                                    <p class="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">{{ $item['detail'] }}</p>
-                                </div>
-                            </div>
-                        </li>
-                    @endforeach
-                </ul>
+                @foreach($lupaAbsenList as $item)
+                    <div class="py-2 first:pt-0 last:pb-0 flex items-start gap-2.5 text-xs">
+                        <span class="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
+                        <div class="min-w-0">
+                            <p class="font-semibold text-slate-900 dark:text-slate-100 leading-tight">{{ $item['label'] }}</p>
+                            <p class="text-amber-700 dark:text-amber-400 text-[11px] font-medium mt-0.5">{{ $item['detail'] }}</p>
+                        </div>
+                    </div>
+                @endforeach
             @endif
         </div>
     </div>
 
-    {{-- 3. Panel Lupa Absen Pulang --}}
-    <div class="bg-white dark:bg-slate-900 rounded-xl border border-orange-200/90 dark:border-orange-900/40 shadow-xs overflow-hidden">
-        <div class="px-3.5 py-2.5 bg-orange-50/80 dark:bg-orange-950/40 border-b border-orange-100 dark:border-orange-900/50 flex items-center justify-between">
+    {{-- ==================== KOLOM 3 (KANAN): TIDAK HADIR / LIBUR ==================== --}}
+    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden flex flex-col">
+        <div class="px-3.5 py-2.5 bg-rose-50/80 dark:bg-rose-950/30 border-b border-rose-100 dark:border-rose-900/40 flex items-center justify-between">
             <div class="flex items-center space-x-2">
-                <span class="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0"></span>
-                <span class="text-xs font-bold text-orange-800 dark:text-orange-300 uppercase tracking-wide">
-                    Lupa Absen Pulang
+                <span class="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0"></span>
+                <span class="text-xs font-bold text-rose-800 dark:text-rose-300 uppercase tracking-wide">
+                    Tidak Hadir / Libur &mdash; {{ count($tidakHadirList ?? []) }} Hari
                 </span>
             </div>
-            <span class="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-extrabold rounded-md {{ count($lupaPulang) > 0 ? 'bg-orange-600 text-white shadow-xs' : 'bg-orange-100 dark:bg-orange-900/60 text-orange-600 dark:text-orange-400' }}">
-                {{ count($lupaPulang) }}
+            <span class="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-extrabold rounded-md {{ count($tidakHadirList ?? []) > 0 ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400' }}">
+                {{ count($tidakHadirList ?? []) }}
             </span>
         </div>
-        <div class="p-3 max-h-52 overflow-y-auto">
-            @if(count($lupaPulang) === 0)
-                <div class="py-5 text-center text-xs text-slate-400 dark:text-slate-500 font-medium">
-                    Tidak ada lupa absen pulang ✓
-                </div>
+        <div class="p-3 max-h-64 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/70">
+            @if(count($tidakHadirList ?? []) === 0)
+                <p class="text-xs text-slate-400 dark:text-slate-500 text-center py-5 italic">Tidak ada hari libur / tidak hadir</p>
             @else
-                <ul class="space-y-2">
-                    @foreach($lupaPulang as $item)
-                        <li class="flex items-start justify-between gap-2 text-xs pb-1.5 border-b border-slate-100 dark:border-slate-800/80 last:border-b-0 last:pb-0">
-                            <div class="flex items-start space-x-2 min-w-0">
-                                <span class="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5 flex-shrink-0"></span>
-                                <div>
-                                    <p class="font-semibold text-slate-800 dark:text-slate-200 leading-tight">{{ $item['label'] }}</p>
-                                    <p class="text-[11px] text-orange-600 dark:text-orange-400 font-medium mt-0.5">{{ $item['detail'] }}</p>
-                                </div>
-                            </div>
-                        </li>
-                    @endforeach
-                </ul>
+                @foreach($tidakHadirList as $item)
+                    <div class="py-2 first:pt-0 last:pb-0 flex items-start gap-2.5 text-xs">
+                        <span class="mt-1 w-1.5 h-1.5 rounded-full {{ !empty($item['is_holiday']) ? 'bg-slate-400 dark:text-slate-500' : 'bg-rose-500' }} flex-shrink-0"></span>
+                        <div class="min-w-0">
+                            <p class="font-semibold text-slate-900 dark:text-slate-100 leading-tight">{{ $item['label'] }}</p>
+                            <p class="{{ !empty($item['is_holiday']) ? 'text-slate-500 dark:text-slate-400' : 'text-rose-600 dark:text-rose-400 font-medium' }} text-[11px] mt-0.5">{{ $item['keterangan'] }}</p>
+                        </div>
+                    </div>
+                @endforeach
             @endif
         </div>
     </div>
