@@ -106,23 +106,30 @@
 
                 {{-- Metric Cards --}}
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div class="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl p-3.5 text-center">
-                        <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ $report['summary']['total_present'] }}</p>
-                        <p class="text-[10px] font-bold text-emerald-600/80 dark:text-emerald-400/70 uppercase tracking-wider mt-0.5">Hadir</p>
+                    <div class="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/40 rounded-xl p-3.5 text-center">
+                        <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ $report['summary']['total_masuk'] }}</p>
+                        <p class="text-[10px] font-bold text-emerald-700/80 dark:text-emerald-400/80 uppercase tracking-wider mt-0.5">Total Masuk ({{ $report['summary']['total_present'] }} Hadir, {{ $report['summary']['total_late'] }} Telat)</p>
                     </div>
-                    <div class="bg-amber-50/60 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-xl p-3.5 text-center">
-                        <p class="text-2xl font-extrabold text-amber-600 dark:text-amber-400">{{ $report['summary']['total_late'] }}</p>
-                        <p class="text-[10px] font-bold text-amber-600/80 dark:text-amber-400/70 uppercase tracking-wider mt-0.5">Terlambat</p>
+                    <div class="bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-800/40 rounded-xl p-3.5 text-center">
+                        <p class="text-2xl font-extrabold text-rose-600 dark:text-rose-400">{{ $report['summary']['total_off_days'] }}</p>
+                        <p class="text-[10px] font-bold text-rose-700/80 dark:text-rose-400/80 uppercase tracking-wider mt-0.5">Libur / Tdk Hadir</p>
                     </div>
-                    <div class="bg-sky-50/60 dark:bg-sky-950/20 border border-sky-100 dark:border-sky-900/30 rounded-xl p-3.5 text-center">
-                        <p class="text-2xl font-extrabold text-sky-600 dark:text-sky-400">{{ $report['summary']['total_leave'] }}</p>
-                        <p class="text-[10px] font-bold text-sky-600/80 dark:text-sky-400/70 uppercase tracking-wider mt-0.5">Izin / Cuti</p>
+                    <div class="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 rounded-xl p-3.5 text-center">
+                        <p class="text-2xl font-extrabold text-amber-600 dark:text-amber-400">{{ $report['summary']['total_lupa_absen'] }}</p>
+                        <p class="text-[10px] font-bold text-amber-700/80 dark:text-amber-400/80 uppercase tracking-wider mt-0.5">Lupa Absen</p>
                     </div>
-                    <div class="bg-rose-50/60 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl p-3.5 text-center">
-                        <p class="text-2xl font-extrabold text-rose-600 dark:text-rose-400">{{ $report['summary']['total_sick'] }}</p>
-                        <p class="text-[10px] font-bold text-rose-600/80 dark:text-rose-400/70 uppercase tracking-wider mt-0.5">Sakit</p>
+                    <div class="bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-800/40 rounded-xl p-3.5 text-center">
+                        <p class="text-2xl font-extrabold text-sky-600 dark:text-sky-400">{{ $report['summary']['total_leave'] + $report['summary']['total_sick'] }}</p>
+                        <p class="text-[10px] font-bold text-sky-700/80 dark:text-sky-400/80 uppercase tracking-wider mt-0.5">Izin & Sakit</p>
                     </div>
                 </div>
+
+                {{-- Panel Rincian Libur & Lupa Absen --}}
+                @include('pic.reports.partials.accumulation-panels', [
+                    'liburDetails' => $report['libur_details'],
+                    'lupaMasuk' => $report['lupa_absen_masuk'],
+                    'lupaPulang' => $report['lupa_absen_pulang'],
+                ])
             </div>
 
             {{-- Daily Attendance Table --}}
@@ -278,26 +285,27 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="sticky top-0 z-10 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                            <th class="py-3.5 pl-6 pr-4 min-w-[240px]">Nama Karyawan</th>
-                            <th class="py-3.5 px-3 text-center w-[85px]">Hadir</th>
-                            <th class="py-3.5 px-3 text-center w-[85px]">Telat</th>
-                            <th class="py-3.5 px-3 text-center w-[85px]">Izin</th>
-                            <th class="py-3.5 px-3 text-center w-[85px]">Sakit</th>
-                            <th class="py-3.5 px-3 text-center w-[90px]">Total</th>
-                            <th class="py-3.5 pl-3 pr-6 text-right w-[140px]">Aksi</th>
+                            <th class="py-3.5 pl-6 pr-4 min-w-[220px]">Nama Karyawan</th>
+                            <th class="py-3.5 px-2.5 text-center w-[85px] text-emerald-600 dark:text-emerald-400">Masuk</th>
+                            <th class="py-3.5 px-2.5 text-center w-[95px] text-rose-600 dark:text-rose-400">Libur / Tdk</th>
+                            <th class="py-3.5 px-2.5 text-center w-[95px] text-amber-600 dark:text-amber-400">Lupa Absen</th>
+                            <th class="py-3.5 px-2.5 text-center w-[70px]">Izin</th>
+                            <th class="py-3.5 px-2.5 text-center w-[70px]">Sakit</th>
+                            <th class="py-3.5 px-2.5 text-center w-[75px]">Total Log</th>
+                            <th class="py-3.5 pl-3 pr-6 text-right w-[130px]">Detail</th>
                         </tr>
                     </thead>
 
                     @php
-                        $staffReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan')->sortByDesc(fn($row) => [$row['summary']['total_attendance_records'], $row['summary']['total_present']]);
-                        $ramayanaReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan_ramayana')->sortByDesc(fn($row) => [$row['summary']['total_attendance_records'], $row['summary']['total_present']]);
+                        $staffReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan')->sortByDesc(fn($row) => [$row['summary']['total_masuk'], $row['summary']['total_present']]);
+                        $ramayanaReports = $allReports->filter(fn($row) => $row['employee']->role->slug === 'karyawan_ramayana')->sortByDesc(fn($row) => [$row['summary']['total_masuk'], $row['summary']['total_present']]);
                     @endphp
 
                     {{-- Staff Section --}}
                     @if($staffReports->count() > 0)
                         <tbody>
                             <tr>
-                                <td colspan="7" class="pt-4 pb-1.5 pl-6 pr-4">
+                                <td colspan="8" class="pt-4 pb-1.5 pl-6 pr-4">
                                     <div class="flex items-center gap-2">
                                         <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                         <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Staff Kantor</span>
@@ -328,19 +336,22 @@
                                     </td>
 
                                     {{-- Counts --}}
-                                    <td class="py-3 px-3 text-center">
-                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_present'], 'activeClass' => 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'])
+                                    <td class="py-3 px-2.5 text-center">
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_masuk'], 'activeClass' => 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-500/30'])
                                     </td>
-                                    <td class="py-3 px-3 text-center">
-                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_late'], 'activeClass' => 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'])
+                                    <td class="py-3 px-2.5 text-center">
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_off_days'], 'activeClass' => 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'])
                                     </td>
-                                    <td class="py-3 px-3 text-center">
+                                    <td class="py-3 px-2.5 text-center">
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_lupa_absen'], 'activeClass' => 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'])
+                                    </td>
+                                    <td class="py-3 px-2.5 text-center">
                                         @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_leave'], 'activeClass' => 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'])
                                     </td>
-                                    <td class="py-3 px-3 text-center">
+                                    <td class="py-3 px-2.5 text-center">
                                         @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_sick'], 'activeClass' => 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'])
                                     </td>
-                                    <td class="py-3 px-3 text-center">
+                                    <td class="py-3 px-2.5 text-center">
                                         <span class="inline-flex items-center justify-center min-w-[30px] h-7 px-2 text-xs font-bold rounded-lg tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60">
                                             {{ $row['summary']['total_attendance_records'] }}
                                         </span>
@@ -353,7 +364,7 @@
                                                 :class="expanded
                                                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/20'
                                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-700'">
-                                            <span x-text="expanded ? 'Tutup' : 'Log Absen'"></span>
+                                            <span x-text="expanded ? 'Tutup' : 'Detail & Log'"></span>
                                             <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
@@ -363,13 +374,13 @@
 
                                 {{-- Nested Detail Accordion Tray --}}
                                 <tr x-show="expanded" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-cloak class="bg-slate-50/70 dark:bg-[#070b13]">
-                                    <td colspan="7" class="p-4 sm:p-5 border-y border-slate-200/80 dark:border-slate-800">
+                                    <td colspan="8" class="p-4 sm:p-5 border-y border-slate-200/80 dark:border-slate-800">
                                         <div class="space-y-3.5 max-w-5xl mx-auto">
                                             <div class="flex items-center justify-between">
                                                 <div class="flex items-center space-x-2">
                                                     <span class="w-2 h-2 rounded-full bg-blue-500"></span>
                                                     <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                                                        Log Harian: {{ $row['employee']->name }}
+                                                        Rincian Presensi: {{ $row['employee']->name }}
                                                     </h4>
                                                 </div>
                                                 <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}" 
@@ -378,6 +389,13 @@
                                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                                                 </a>
                                             </div>
+
+                                            {{-- 3 Panel Akumulasi Libur & Lupa Absen --}}
+                                            @include('pic.reports.partials.accumulation-panels', [
+                                                'liburDetails' => $row['libur_details'],
+                                                'lupaMasuk' => $row['lupa_absen_masuk'],
+                                                'lupaPulang' => $row['lupa_absen_pulang'],
+                                            ])
 
                                             {{-- Mini Daily Table --}}
                                             @if($row['attendances']->count() > 0)
@@ -459,7 +477,7 @@
                     @if($ramayanaReports->count() > 0)
                         <tbody>
                             <tr>
-                                <td colspan="7" class="pt-4 pb-1.5 pl-6 pr-4">
+                                <td colspan="8" class="pt-4 pb-1.5 pl-6 pr-4">
                                     <div class="flex items-center gap-2">
                                         <span class="w-1.5 h-1.5 rounded-full bg-fuchsia-500"></span>
                                         <span class="text-[10px] font-bold text-fuchsia-600 dark:text-fuchsia-400 uppercase tracking-widest">Karyawan Ramayana</span>
@@ -490,19 +508,22 @@
                                     </td>
 
                                     {{-- Counts --}}
-                                    <td class="py-3 px-3 text-center">
-                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_present'], 'activeClass' => 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'])
+                                    <td class="py-3 px-2.5 text-center">
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_masuk'], 'activeClass' => 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-500/30'])
                                     </td>
-                                    <td class="py-3 px-3 text-center">
-                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_late'], 'activeClass' => 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'])
+                                    <td class="py-3 px-2.5 text-center">
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_off_days'], 'activeClass' => 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'])
                                     </td>
-                                    <td class="py-3 px-3 text-center">
+                                    <td class="py-3 px-2.5 text-center">
+                                        @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_lupa_absen'], 'activeClass' => 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'])
+                                    </td>
+                                    <td class="py-3 px-2.5 text-center">
                                         @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_leave'], 'activeClass' => 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'])
                                     </td>
-                                    <td class="py-3 px-3 text-center">
+                                    <td class="py-3 px-2.5 text-center">
                                         @include('pic.reports.partials.count-badge', ['value' => $row['summary']['total_sick'], 'activeClass' => 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'])
                                     </td>
-                                    <td class="py-3 px-3 text-center">
+                                    <td class="py-3 px-2.5 text-center">
                                         <span class="inline-flex items-center justify-center min-w-[30px] h-7 px-2 text-xs font-bold rounded-lg tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60">
                                             {{ $row['summary']['total_attendance_records'] }}
                                         </span>
@@ -515,7 +536,7 @@
                                                 :class="expanded 
                                                     ? 'bg-fuchsia-600 text-white border-fuchsia-600 shadow-sm shadow-fuchsia-500/20' 
                                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-700'">
-                                            <span x-text="expanded ? 'Tutup' : 'Log Absen'"></span>
+                                            <span x-text="expanded ? 'Tutup' : 'Detail & Log'"></span>
                                             <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
@@ -525,13 +546,13 @@
 
                                 {{-- Nested Detail Accordion Tray --}}
                                 <tr x-show="expanded" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-cloak class="bg-slate-50/70 dark:bg-[#070b13]">
-                                    <td colspan="7" class="p-4 sm:p-5 border-y border-slate-200/80 dark:border-slate-800">
+                                    <td colspan="8" class="p-4 sm:p-5 border-y border-slate-200/80 dark:border-slate-800">
                                         <div class="space-y-3.5 max-w-5xl mx-auto">
                                             <div class="flex items-center justify-between">
                                                 <div class="flex items-center space-x-2">
                                                     <span class="w-2 h-2 rounded-full bg-fuchsia-500"></span>
                                                     <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                                                        Log Harian: {{ $row['employee']->name }}
+                                                        Rincian Presensi: {{ $row['employee']->name }}
                                                     </h4>
                                                 </div>
                                                 <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}" 
@@ -540,6 +561,13 @@
                                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                                                 </a>
                                             </div>
+
+                                            {{-- 3 Panel Akumulasi Libur & Lupa Absen --}}
+                                            @include('pic.reports.partials.accumulation-panels', [
+                                                'liburDetails' => $row['libur_details'],
+                                                'lupaMasuk' => $row['lupa_absen_masuk'],
+                                                'lupaPulang' => $row['lupa_absen_pulang'],
+                                            ])
 
                                             {{-- Mini Daily Table --}}
                                             @if($row['attendances']->count() > 0)
