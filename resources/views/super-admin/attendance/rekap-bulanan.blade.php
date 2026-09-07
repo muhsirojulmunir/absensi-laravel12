@@ -25,6 +25,7 @@
                         onchange="document.getElementById('monthForm').submit()"
                         class="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all outline-none"
                     >
+                    <button type="submit" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all shadow-sm">Tampilkan</button>
                 </div>
             </form>
         </div>
@@ -143,7 +144,7 @@
                             class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 cursor-pointer transition-colors duration-150"
                             :class="{{ $i }} === openRow ? 'bg-blue-50/40 dark:bg-slate-800/60' : ''"
                             @click="toggleRow({{ $i }})"
-                            x-show="shouldShow('{{ addslashes(strtolower($emp->name)) }}', '{{ addslashes(strtolower($emp->division?->name ?? '')) }}', {{ $row['total_lupa_absen'] }}, {{ $row['total_tidak_hadir'] }})"
+                            x-show="shouldShow('{{ addslashes(strtolower($emp->name)) }}', '{{ addslashes(strtolower($emp->division?->name ?? '')) }}', {{ $row['total_lupa_absen'] }}, {{ $row['total_tidak_hadir'] }}, '{{ addslashes(strtolower($emp->location?->name ?? '')) }}')"
                         >
                             <td class="px-4 py-3.5 text-slate-400 dark:text-slate-500 font-mono text-xs text-center">{{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}</td>
                             <td class="px-4 py-3.5">
@@ -153,7 +154,9 @@
                                     </div>
                                     <div class="min-w-0">
                                         <p class="font-semibold text-slate-900 dark:text-slate-100 truncate text-sm leading-tight">{{ $emp->name }}</p>
-                                        <p class="text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">{{ $emp->division?->name ?? '—' }}</p>
+                                        <p class="text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+                                            {{ $emp->location?->name ?? $emp->division?->name ?? '—' }}
+                                        </p>
                                     </div>
                                 </div>
                             </td>
@@ -233,9 +236,9 @@ function rekapBulanan() {
         toggleRow(index) {
             this.openRow = this.openRow === index ? null : index;
         },
-        shouldShow(name, division, lupaTotal, tidakHadir) {
+        shouldShow(name, division, lupaTotal, tidakHadir, location = '') {
             const q = this.search.toLowerCase().trim();
-            if (q && !name.includes(q) && !division.includes(q)) return false;
+            if (q && !name.includes(q) && !division.includes(q) && !location.includes(q)) return false;
             if (this.filter === 'lupa' && lupaTotal === 0) return false;
             if (this.filter === 'tidak_hadir' && tidakHadir === 0) return false;
             return true;

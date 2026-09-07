@@ -401,7 +401,8 @@ class AttendanceMonitoringController extends Controller
      */
     public function rekapBulanan(Request $request): View
     {
-        $month = $request->query('month', Carbon::now()->format('Y-m'));
+        // Default ke bulan yang baru di-import jika ada, atau bulan ini
+        $month = $request->query('month', session('imported_month', Carbon::now()->format('Y-m')));
         $start = Carbon::parse($month . '-01')->startOfDay();
         $end   = $start->copy()->endOfMonth()->endOfDay();
         $today = Carbon::today();
@@ -1113,6 +1114,17 @@ class AttendanceMonitoringController extends Controller
         $msg = "✅ Berhasil meng-import {$importedCount} data absensi.";
         if ($skippedCount > 0) {
             $msg .= " ({$skippedCount} baris dilewati karena karyawan tidak terdaftar atau format tanggal tidak valid: " . implode(', ', $skippedDetails) . ")";
+        }
+
+        // Simpan bulan import terakhir ke session agar halaman rekap otomatis menampilkan bulan yang baru di-import
+        if ($importedCount > 0) {
+            $allImported = \App\Models\Attendance::whereIn('user_id', $users->pluck('id'))
+                ->where('note', 'like', '%Import%')
+                ->orderByDesc('date')
+                ->value('date');
+            if ($allImported) {
+                session(['imported_month' => \Carbon\Carbon::parse($allImported)->format('Y-m')]);
+            }
         }
 
         return back()->with('success', $msg);

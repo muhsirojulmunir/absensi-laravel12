@@ -18,10 +18,19 @@ class ReportController extends Controller
      */
     public function index(Request $request)
     {
+        $currentRouteName = $request->route() ? $request->route()->getName() : null;
+        if ($currentRouteName && in_array($currentRouteName, ['pic_ramayana.reports.index', 'pic.reports.index', 'super-admin.attendance.index'])) {
+            $reportRouteName = $currentRouteName;
+        } elseif (Auth::user()?->role?->slug === 'pic_ramayana') {
+            $reportRouteName = 'pic_ramayana.reports.index';
+        } else {
+            $reportRouteName = 'pic.reports.index';
+        }
+
         $targetRoles = ['karyawan'];
-        if (Auth::user()->role->slug === 'pic_ramayana') {
+        if ($reportRouteName === 'pic_ramayana.reports.index' || Auth::user()?->role?->slug === 'pic_ramayana') {
             $targetRoles = ['karyawan_ramayana'];
-        } elseif (Auth::user()->role->slug === 'super-admin' || strtolower(Auth::user()->username) === 'superadmin1') {
+        } elseif (Auth::user()?->role?->slug === 'super-admin' || strtolower(Auth::user()?->username ?? '') === 'superadmin1') {
             $targetRoles = ['karyawan', 'karyawan_ramayana'];
         }
 
@@ -36,9 +45,9 @@ class ReportController extends Controller
             return $roleOrder . '_' . strtolower($user->name);
         });
 
-        // Determine selected employee and month (default current month)
+        // Determine selected employee and month (default current month or recently imported month)
         $employeeId = $request->query('employee_id');
-        $month = $request->query('month', Carbon::now()->format('Y-m'));
+        $month = $request->query('month', session('imported_month', Carbon::now()->format('Y-m')));
         $start = Carbon::parse($month . '-01')->startOfDay();
         $end = $start->copy()->endOfMonth()->endOfDay();
         $today = Carbon::today();
@@ -121,7 +130,7 @@ class ReportController extends Controller
             })->values();
         }
 
-        return view('pic.reports.index', compact('employees', 'report', 'allReports', 'employeeId', 'month'));
+        return view('pic.reports.index', compact('employees', 'report', 'allReports', 'employeeId', 'month', 'reportRouteName'));
     }
 
     /**
