@@ -432,10 +432,9 @@ class AttendanceMonitoringController extends Controller
             ->groupBy('user_id');
 
         // Ambil hari libur di bulan ini
-        $holidays = Holiday::whereDate('date', '>=', $start->toDateString())
+        $allHolidays = Holiday::whereDate('date', '>=', $start->toDateString())
             ->whereDate('date', '<=', $end->toDateString())
-            ->pluck('description', 'date')
-            ->mapWithKeys(fn($desc, $date) => [Carbon::parse($date)->toDateString() => $desc]);
+            ->get();
 
         $rekap = [];
 
@@ -445,6 +444,11 @@ class AttendanceMonitoringController extends Controller
             $divisionName  = strtolower(trim($emp->division?->name ?? ''));
             $isStaffKantor = str_contains($divisionName, 'staff kantor');
             $isRamayana    = $emp->role?->slug === 'karyawan_ramayana';
+
+            // Filter hari libur yang berlaku untuk divisi karyawan ini (atau libur nasional/semua divisi)
+            $empHolidays = $allHolidays->filter(function ($h) use ($emp) {
+                return is_null($h->division_id) || $h->division_id == $emp->division_id;
+            })->keyBy(fn($h) => Carbon::parse($h->date)->toDateString());
 
             // Lookup attendance & leaves
             $attByDate = $attendances->keyBy(fn($a) => Carbon::parse($a->date)->toDateString());
@@ -469,7 +473,8 @@ class AttendanceMonitoringController extends Controller
                 $dayName       = $cursor->locale('id')->translatedFormat('l');
                 $formattedDate = $cursor->locale('id')->translatedFormat('d M Y');
                 $label         = "{$dayName}, {$formattedDate}";
-                $isHoliday     = isset($holidays[$dateStr]);
+                $holiday       = $empHolidays->get($dateStr);
+                $isHoliday     = $holiday !== null;
                 $isWeekend     = $cursor->isWeekend();
 
                 /** @var Attendance|null $att */
@@ -477,57 +482,87 @@ class AttendanceMonitoringController extends Controller
                 $leave = $leaveDates[$dateStr] ?? null;
 
                 if ($att) {
-                    $checkInRaw  = $att->check_in;
-                    $checkOutRaw = $att->check_out;
-                    $checkIn     = $checkInRaw ? Carbon::parse($checkInRaw)->format('H.i') : null;
-                    $checkOut    = $checkOutRaw ? Carbon::parse($checkOutRaw)->format('H.i') : null;
+                    $attStatus = trim((string)$att->status);
 
-                    $isLupaMasuk  = empty($checkInRaw);
-                    $isLupaPulang = (!empty($checkInRaw) && empty($checkOutRaw) && !$cursor->isToday());
-
-                    // 1. Kolom TENGAH: Lupa Absen (Gabungan masuk dan pulang dijadikan 1 kolom)
-                    if ($isLupaMasuk) {
-                        $lupaAbsenList[] = [
-                            'label'  => $label,
-                            'detail' => $checkOut ? "Pulang {$checkOut}, tidak absen masuk" : "Tidak absen masuk",
-                            'type'   => 'masuk',
+                    // 1. Cek apakah record absensi ini adalah libur (disetup super admin atau placeholder libur)
+                    if (str_starts_with($attStatus, 'Libur') || in_array($attStatus, ['Libur', 'Libur (Day Off)'])) {
+                        $tidakHadirList[] = [
+                            'label'      => $label,
+                            'keterangan' => $attStatus,
+                            'is_holiday' => true,
                         ];
-                    } elseif ($isLupaPulang) {
-                        $lupaAbsenList[] = [
-                            'label'  => $label,
-                            'detail' => "Masuk {$checkIn}, tidak absen pulang",
-                            'type'   => 'pulang',
+                    } elseif ($attStatus === 'Sakit') {
+                        $tidakHadirList[] = [
+                            'label'      => $label,
+                            'keterangan' => 'Sakit' . ($att->note ? ': ' . $att->note : ''),
+                            'is_holiday' => false,
                         ];
-                    }
-
-                    // 2. Kolom KIRI: Masuk (Tetap diikutkan masuk meski lupa absen, tapi ditulis keterangan lupa absen)
-                    $lupaTag = null;
-                    if ($isLupaMasuk) {
-                        $lupaTag = 'Lupa Absen Masuk';
-                    } elseif ($isLupaPulang) {
-                        $lupaTag = 'Lupa Absen Pulang';
-                    }
-
-                    // Format jam masuk & pulang
-                    $jamDetail = '';
-                    if ($checkIn && $checkOut) {
-                        $jamDetail = "Masuk {$checkIn} &bull; Pulang {$checkOut}";
-                    } elseif ($checkIn) {
-                        $jamDetail = "Masuk {$checkIn} &bull; Pulang &mdash;";
-                    } elseif ($checkOut) {
-                        $jamDetail = "Masuk &mdash; &bull; Pulang {$checkOut}";
+                    } elseif (in_array($attStatus, ['Izin', 'Cuti'])) {
+                        $tidakHadirList[] = [
+                            'label'      => $label,
+                            'keterangan' => ($attStatus === 'Cuti' ? 'Cuti' : 'Izin') . ($att->note ? ': ' . $att->note : ''),
+                            'is_holiday' => false,
+                        ];
+                    } elseif (in_array($attStatus, ['Alpa', 'Tidak Hadir'])) {
+                        $tidakHadirList[] = [
+                            'label'      => $label,
+                            'keterangan' => 'Tidak Hadir' . ($att->note ? ': ' . $att->note : ''),
+                            'is_holiday' => false,
+                        ];
                     } else {
-                        $jamDetail = "Tercatat hadir (tanpa jam)";
-                    }
+                        // Absensi masuk / terlambat / hadir riil
+                        $checkInRaw  = $att->check_in;
+                        $checkOutRaw = $att->check_out;
+                        $checkIn     = $checkInRaw ? Carbon::parse($checkInRaw)->format('H.i') : null;
+                        $checkOut    = $checkOutRaw ? Carbon::parse($checkOutRaw)->format('H.i') : null;
 
-                    $masukList[] = [
-                        'label'      => $label,
-                        'jam_detail' => $jamDetail,
-                        'status'     => $att->status ?? 'Hadir',
-                        'lupa_tag'   => $lupaTag,
-                        'is_lupa'    => ($isLupaMasuk || $isLupaPulang),
-                        'note'       => $att->note,
-                    ];
+                        $isLupaMasuk  = empty($checkInRaw) && !empty($checkOutRaw);
+                        $isLupaPulang = (!empty($checkInRaw) && empty($checkOutRaw) && !$cursor->isToday());
+
+                        // 1. Kolom TENGAH: Lupa Absen (Gabungan masuk dan pulang dijadikan 1 kolom)
+                        if ($isLupaMasuk) {
+                            $lupaAbsenList[] = [
+                                'label'  => $label,
+                                'detail' => "Pulang {$checkOut}, tidak absen masuk",
+                                'type'   => 'masuk',
+                            ];
+                        } elseif ($isLupaPulang) {
+                            $lupaAbsenList[] = [
+                                'label'  => $label,
+                                'detail' => "Masuk {$checkIn}, tidak absen pulang",
+                                'type'   => 'pulang',
+                            ];
+                        }
+
+                        // 2. Kolom KIRI: Masuk (Tetap diikutkan masuk meski lupa absen, tapi ditulis keterangan lupa absen)
+                        $lupaTag = null;
+                        if ($isLupaMasuk) {
+                            $lupaTag = 'Lupa Absen Masuk';
+                        } elseif ($isLupaPulang) {
+                            $lupaTag = 'Lupa Absen Pulang';
+                        }
+
+                        // Format jam masuk & pulang
+                        $jamDetail = '';
+                        if ($checkIn && $checkOut) {
+                            $jamDetail = "Masuk {$checkIn} &bull; Pulang {$checkOut}";
+                        } elseif ($checkIn) {
+                            $jamDetail = "Masuk {$checkIn} &bull; Pulang &mdash;";
+                        } elseif ($checkOut) {
+                            $jamDetail = "Masuk &mdash; &bull; Pulang {$checkOut}";
+                        } else {
+                            $jamDetail = "Tercatat hadir (tanpa jam)";
+                        }
+
+                        $masukList[] = [
+                            'label'      => $label,
+                            'jam_detail' => $jamDetail,
+                            'status'     => $att->status ?? 'Hadir',
+                            'lupa_tag'   => $lupaTag,
+                            'is_lupa'    => ($isLupaMasuk || $isLupaPulang),
+                            'note'       => $att->note,
+                        ];
+                    }
                 } elseif ($leave) {
                     // Pengajuan Izin / Libur / Sakit
                     $type = $leave->type;
@@ -556,7 +591,7 @@ class AttendanceMonitoringController extends Controller
                     $isHolidayDay = false;
 
                     if ($isHoliday) {
-                        $keterangan   = 'Libur: ' . $holidays[$dateStr];
+                        $keterangan   = 'Libur: ' . $holiday->description;
                         $isHolidayDay = true;
                     } elseif ($isStaffKantor && $isWeekend) {
                         $keterangan   = 'Libur Akhir Pekan';

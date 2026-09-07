@@ -145,7 +145,9 @@ class ReportController extends Controller
             }
         }
 
-        $holidayByDate = $holidays->keyBy(fn($h) => Carbon::parse($h->date)->toDateString());
+        $holidayByDate = $holidays->filter(function ($h) use ($employee) {
+            return is_null($h->division_id) || $h->division_id == $employee->division_id;
+        })->keyBy(fn($h) => Carbon::parse($h->date)->toDateString());
 
         $totalHadir = 0;
         $totalLate  = 0;
@@ -169,66 +171,94 @@ class ReportController extends Controller
             $isWeekend = $cursor->isWeekend();
 
             if ($att) {
-                if ($att->status === 'Hadir') {
-                    $totalHadir++;
-                } elseif ($att->status === 'Terlambat') {
-                    $totalLate++;
-                } elseif ($att->status === 'Sakit') {
+                $attStatus = trim((string)$att->status);
+
+                // 1. Cek apakah record absensi ini adalah libur (disetup super admin atau placeholder libur)
+                if (str_starts_with($attStatus, 'Libur') || in_array($attStatus, ['Libur', 'Libur (Day Off)'])) {
+                    $tidakHadirList[] = [
+                        'label'      => $label,
+                        'keterangan' => $attStatus,
+                        'is_holiday' => true,
+                    ];
+                } elseif ($attStatus === 'Sakit') {
                     $totalSick++;
-                } elseif (in_array($att->status, ['Izin', 'Cuti'])) {
+                    $tidakHadirList[] = [
+                        'label'      => $label,
+                        'keterangan' => 'Sakit' . ($att->note ? ': ' . $att->note : ''),
+                        'is_holiday' => false,
+                    ];
+                } elseif (in_array($attStatus, ['Izin', 'Cuti'])) {
                     $totalLeave++;
-                }
-
-                $checkInRaw  = $att->check_in;
-                $checkOutRaw = $att->check_out;
-                $checkIn     = $checkInRaw ? Carbon::parse($checkInRaw)->format('H.i') : null;
-                $checkOut    = $checkOutRaw ? Carbon::parse($checkOutRaw)->format('H.i') : null;
-
-                $isLupaMasuk  = empty($checkInRaw);
-                $isLupaPulang = (!empty($checkInRaw) && empty($checkOutRaw) && !$cursor->isToday());
-
-                // 1. Kolom TENGAH: Lupa Absen (Gabungan masuk dan pulang)
-                if ($isLupaMasuk) {
-                    $lupaAbsenList[] = [
-                        'label'  => $label,
-                        'detail' => $checkOut ? "Pulang {$checkOut}, tidak absen masuk" : "Tidak absen masuk",
-                        'type'   => 'masuk',
+                    $tidakHadirList[] = [
+                        'label'      => $label,
+                        'keterangan' => ($attStatus === 'Cuti' ? 'Cuti' : 'Izin') . ($att->note ? ': ' . $att->note : ''),
+                        'is_holiday' => false,
                     ];
-                } elseif ($isLupaPulang) {
-                    $lupaAbsenList[] = [
-                        'label'  => $label,
-                        'detail' => "Masuk {$checkIn}, tidak absen pulang",
-                        'type'   => 'pulang',
+                } elseif (in_array($attStatus, ['Alpa', 'Tidak Hadir'])) {
+                    $tidakHadirList[] = [
+                        'label'      => $label,
+                        'keterangan' => 'Tidak Hadir' . ($att->note ? ': ' . $att->note : ''),
+                        'is_holiday' => false,
                     ];
-                }
-
-                // 2. Kolom KIRI: Masuk (Tetap dihitung masuk, tapi ditulis catatan lupa absen)
-                $lupaTag = null;
-                if ($isLupaMasuk) {
-                    $lupaTag = 'Lupa Absen Masuk';
-                } elseif ($isLupaPulang) {
-                    $lupaTag = 'Lupa Absen Pulang';
-                }
-
-                $jamDetail = '';
-                if ($checkIn && $checkOut) {
-                    $jamDetail = "Masuk {$checkIn} &bull; Pulang {$checkOut}";
-                } elseif ($checkIn) {
-                    $jamDetail = "Masuk {$checkIn} &bull; Pulang &mdash;";
-                } elseif ($checkOut) {
-                    $jamDetail = "Masuk &mdash; &bull; Pulang {$checkOut}";
                 } else {
-                    $jamDetail = "Tercatat hadir (tanpa jam)";
-                }
+                    // Absensi masuk / hadir / terlambat riil
+                    if ($att->status === 'Hadir') {
+                        $totalHadir++;
+                    } elseif ($att->status === 'Terlambat') {
+                        $totalLate++;
+                    }
 
-                $masukList[] = [
-                    'label'      => $label,
-                    'jam_detail' => $jamDetail,
-                    'status'     => $att->status ?? 'Hadir',
-                    'lupa_tag'   => $lupaTag,
-                    'is_lupa'    => ($isLupaMasuk || $isLupaPulang),
-                    'note'       => $att->note,
-                ];
+                    $checkInRaw  = $att->check_in;
+                    $checkOutRaw = $att->check_out;
+                    $checkIn     = $checkInRaw ? Carbon::parse($checkInRaw)->format('H.i') : null;
+                    $checkOut    = $checkOutRaw ? Carbon::parse($checkOutRaw)->format('H.i') : null;
+
+                    $isLupaMasuk  = empty($checkInRaw) && !empty($checkOutRaw);
+                    $isLupaPulang = (!empty($checkInRaw) && empty($checkOutRaw) && !$cursor->isToday());
+
+                    // 1. Kolom TENGAH: Lupa Absen (Gabungan masuk dan pulang)
+                    if ($isLupaMasuk) {
+                        $lupaAbsenList[] = [
+                            'label'  => $label,
+                            'detail' => "Pulang {$checkOut}, tidak absen masuk",
+                            'type'   => 'masuk',
+                        ];
+                    } elseif ($isLupaPulang) {
+                        $lupaAbsenList[] = [
+                            'label'  => $label,
+                            'detail' => "Masuk {$checkIn}, tidak absen pulang",
+                            'type'   => 'pulang',
+                        ];
+                    }
+
+                    // 2. Kolom KIRI: Masuk (Tetap dihitung masuk, tapi ditulis catatan lupa absen)
+                    $lupaTag = null;
+                    if ($isLupaMasuk) {
+                        $lupaTag = 'Lupa Absen Masuk';
+                    } elseif ($isLupaPulang) {
+                        $lupaTag = 'Lupa Absen Pulang';
+                    }
+
+                    $jamDetail = '';
+                    if ($checkIn && $checkOut) {
+                        $jamDetail = "Masuk {$checkIn} &bull; Pulang {$checkOut}";
+                    } elseif ($checkIn) {
+                        $jamDetail = "Masuk {$checkIn} &bull; Pulang &mdash;";
+                    } elseif ($checkOut) {
+                        $jamDetail = "Masuk &mdash; &bull; Pulang {$checkOut}";
+                    } else {
+                        $jamDetail = "Tercatat hadir (tanpa jam)";
+                    }
+
+                    $masukList[] = [
+                        'label'      => $label,
+                        'jam_detail' => $jamDetail,
+                        'status'     => $att->status ?? 'Hadir',
+                        'lupa_tag'   => $lupaTag,
+                        'is_lupa'    => ($isLupaMasuk || $isLupaPulang),
+                        'note'       => $att->note,
+                    ];
+                }
             } elseif ($leave) {
                 $type = $leave->type;
                 if ($type === 'Sakit') {

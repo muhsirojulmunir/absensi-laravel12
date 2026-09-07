@@ -373,7 +373,7 @@
                                 </tr>
 
                                 {{-- Nested Detail Accordion Tray --}}
-                                <tr x-show="expanded" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-cloak class="bg-slate-50/70 dark:bg-[#070b13]">
+                                <tr x-show="expanded" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-cloak class="bg-slate-50 dark:bg-slate-900">
                                     <td colspan="8" class="p-4 sm:p-5 border-y border-slate-200/80 dark:border-slate-800">
                                         <div class="space-y-3.5 max-w-5xl mx-auto">
                                             <div class="flex items-center justify-between">
@@ -545,7 +545,7 @@
                                 </tr>
 
                                 {{-- Nested Detail Accordion Tray --}}
-                                <tr x-show="expanded" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-cloak class="bg-slate-50/70 dark:bg-[#070b13]">
+                                <tr x-show="expanded" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-cloak class="bg-slate-50 dark:bg-slate-900">
                                     <td colspan="8" class="p-4 sm:p-5 border-y border-slate-200/80 dark:border-slate-800">
                                         <div class="space-y-3.5 max-w-5xl mx-auto">
                                             <div class="flex items-center justify-between">
