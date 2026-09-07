@@ -80,13 +80,13 @@
         </div>
 
         {{-- Total Tidak Hadir / Libur --}}
-        <div class="rounded-2xl p-4 bg-gradient-to-br from-rose-600 to-rose-800 text-white shadow-sm border border-rose-500/30">
+        <div class="rounded-2xl p-4 bg-gradient-to-br from-red-600 to-red-800 text-white shadow-sm border border-red-500/30">
             <div class="flex items-center gap-3">
                 <div class="p-2.5 bg-white/15 rounded-xl flex-shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
                 <div>
-                    <p class="text-[11px] font-semibold text-rose-200 uppercase tracking-wider">Total Libur / Tdk Hadir</p>
+                    <p class="text-[11px] font-semibold text-red-200 uppercase tracking-wider">Total Libur / Tdk Hadir</p>
                     <p class="text-2xl font-black">{{ $totalTidakHadir }}</p>
                 </div>
             </div>
@@ -104,7 +104,7 @@
                 <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Filter:</span>
                 <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">Semua</button>
                 <button @click="filter = 'lupa'" :class="filter === 'lupa' ? 'bg-amber-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">Ada Lupa Absen</button>
-                <button @click="filter = 'tidak_hadir'" :class="filter === 'tidak_hadir' ? 'bg-rose-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">Ada Tidak Hadir</button>
+                <button @click="filter = 'tidak_hadir'" :class="filter === 'tidak_hadir' ? 'bg-red-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">Ada Tidak Hadir</button>
             </div>
         </div>
         <p class="text-xs text-slate-400 dark:text-slate-500 mt-2.5 font-medium">
@@ -131,7 +131,7 @@
                             <th class="px-4 py-3.5 text-slate-600 dark:text-slate-300 min-w-[220px]">Nama Karyawan</th>
                             <th class="px-4 py-3.5 text-center text-emerald-600 dark:text-emerald-400 w-32">✓ Masuk</th>
                             <th class="px-4 py-3.5 text-center text-amber-600 dark:text-amber-400 w-32">⏰ Lupa Absen</th>
-                            <th class="px-4 py-3.5 text-center text-rose-600 dark:text-rose-400 w-36">✗ Tidak Hadir / Libur</th>
+                            <th class="px-4 py-3.5 text-center text-red-600 dark:text-red-400 w-36">✗ Tidak Hadir / Libur</th>
                             <th class="px-4 py-3.5 text-center text-slate-500 dark:text-slate-400 w-24">Detail</th>
                         </tr>
                     </thead>
@@ -177,7 +177,7 @@
                             {{-- 3. Tidak Hadir / Libur --}}
                             <td class="px-4 py-3.5 text-center">
                                 @if($row['total_tidak_hadir'] > 0)
-                                    <span class="inline-flex items-center justify-center min-w-[2.25rem] h-8 px-2.5 rounded-lg bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/25 font-bold text-sm tabular-nums">
+                                    <span class="inline-flex items-center justify-center min-w-[2.25rem] h-8 px-2.5 rounded-lg bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/25 font-bold text-sm tabular-nums">
                                         {{ $row['total_tidak_hadir'] }}
                                     </span>
                                 @else
@@ -207,139 +207,11 @@
                             style="display:none"
                         >
                             <td colspan="6" class="px-4 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
-                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-
-                                    {{-- ==================== KOLOM 1 (KIRI): MASUK ==================== --}}
-                                    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col" x-data="{ showAllMasuk{{ $i }}: false }">
-                                        <div class="px-3.5 py-2.5 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-800/50 flex items-center justify-between">
-                                            <div class="flex items-center space-x-2">
-                                                <span class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
-                                                <span class="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide">
-                                                    Masuk &mdash; {{ count($row['masuk_list']) }} Hari
-                                                </span>
-                                            </div>
-                                            <span class="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-extrabold rounded-md bg-emerald-600 text-white shadow-xs">
-                                                {{ count($row['masuk_list']) }}
-                                            </span>
-                                        </div>
-                                        @if(count($row['masuk_list']) === 0)
-                                            <p class="text-xs text-slate-400 dark:text-slate-500 text-center py-5 italic px-3">Belum ada catatan masuk</p>
-                                        @else
-                                            <div class="divide-y divide-slate-100 dark:divide-slate-700/60" :class="showAllMasuk{{ $i }} ? 'max-h-none' : 'max-h-64 overflow-y-hidden'" style="transition: max-height 0.3s ease;">
-                                                <div class="p-3 divide-y divide-slate-100 dark:divide-slate-700/60">
-                                                @foreach($row['masuk_list'] as $item)
-                                                    <div class="py-2 first:pt-0 last:pb-0 flex items-start justify-between gap-2 text-xs">
-                                                        <div class="min-w-0">
-                                                            <p class="font-semibold text-slate-900 dark:text-slate-100 leading-tight">{{ $item['label'] }}</p>
-                                                            <p class="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 font-medium">{!! $item['jam_detail'] !!}</p>
-                                                            @if($item['note'])
-                                                                <p class="text-slate-400 dark:text-slate-500 text-[10px] italic mt-0.5">Catatan: {{ $item['note'] }}</p>
-                                                            @endif
-                                                        </div>
-                                                        <div class="flex flex-col items-end gap-1 flex-shrink-0">
-                                                            @if($item['lupa_tag'])
-                                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                                                                    {{ $item['lupa_tag'] }}
-                                                                </span>
-                                                            @else
-                                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold {{ $item['status'] === 'Terlambat' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' }}">
-                                                                    {{ $item['status'] }}
-                                                                </span>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                                </div>
-                                            </div>
-                                            @if(count($row['masuk_list']) > 5)
-                                                <div class="px-3 py-2 border-t border-slate-100 dark:border-slate-700/60">
-                                                    <button type="button" @click="showAllMasuk{{ $i }} = !showAllMasuk{{ $i }}" class="w-full flex items-center justify-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-200 transition-colors">
-                                                        <span x-text="showAllMasuk{{ $i }} ? 'Ringkas Tampilan ↑' : 'Lihat Semua ({{ count($row["masuk_list"]) }} Hari) ↓'"></span>
-                                                    </button>
-                                                </div>
-                                            @endif
-                                        @endif
-                                    </div>
-
-                                    {{-- ==================== KOLOM 2 (TENGAH): LUPA ABSEN ==================== --}}
-                                    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col" x-data="{ showAllLupa{{ $i }}: false }">
-                                        <div class="px-3.5 py-2.5 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-100 dark:border-amber-800/50 flex items-center justify-between">
-                                            <div class="flex items-center space-x-2">
-                                                <span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"></span>
-                                                <span class="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide">
-                                                    Lupa Absen &mdash; {{ count($row['lupa_absen_list']) }} Hari
-                                                </span>
-                                            </div>
-                                            <span class="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-extrabold rounded-md {{ count($row['lupa_absen_list']) > 0 ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400' }}">
-                                                {{ count($row['lupa_absen_list']) }}
-                                            </span>
-                                        </div>
-                                        @if(count($row['lupa_absen_list']) === 0)
-                                            <p class="text-xs text-slate-400 dark:text-slate-500 text-center py-5 italic px-3">Tidak ada lupa absen ✓</p>
-                                        @else
-                                            <div :class="showAllLupa{{ $i }} ? 'max-h-none' : 'max-h-64 overflow-y-hidden'" style="transition: max-height 0.3s ease;">
-                                                <div class="p-3 divide-y divide-slate-100 dark:divide-slate-700/60">
-                                                @foreach($row['lupa_absen_list'] as $item)
-                                                    <div class="py-2 first:pt-0 last:pb-0 flex items-start gap-2.5 text-xs">
-                                                        <span class="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
-                                                        <div class="min-w-0">
-                                                            <p class="font-semibold text-slate-900 dark:text-slate-100 leading-tight">{{ $item['label'] }}</p>
-                                                            <p class="text-amber-700 dark:text-amber-400 text-[11px] font-medium mt-0.5">{{ $item['detail'] }}</p>
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                                </div>
-                                            </div>
-                                            @if(count($row['lupa_absen_list']) > 5)
-                                                <div class="px-3 py-2 border-t border-slate-100 dark:border-slate-700/60">
-                                                    <button type="button" @click="showAllLupa{{ $i }} = !showAllLupa{{ $i }}" class="w-full flex items-center justify-center gap-1.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 transition-colors">
-                                                        <span x-text="showAllLupa{{ $i }} ? 'Ringkas Tampilan ↑' : 'Lihat Semua ({{ count($row["lupa_absen_list"]) }} Hari) ↓'"></span>
-                                                    </button>
-                                                </div>
-                                            @endif
-                                        @endif
-                                    </div>
-
-                                    {{-- ==================== KOLOM 3 (KANAN): TIDAK HADIR / LIBUR ==================== --}}
-                                    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col" x-data="{ showAllTidak{{ $i }}: false }">
-                                        <div class="px-3.5 py-2.5 bg-rose-50 dark:bg-rose-950/40 border-b border-rose-100 dark:border-rose-800/50 flex items-center justify-between">
-                                            <div class="flex items-center space-x-2">
-                                                <span class="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0"></span>
-                                                <span class="text-xs font-bold text-rose-800 dark:text-rose-300 uppercase tracking-wide">
-                                                    Tidak Hadir / Libur &mdash; {{ count($row['tidak_hadir_list']) }} Hari
-                                                </span>
-                                            </div>
-                                            <span class="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-extrabold rounded-md {{ count($row['tidak_hadir_list']) > 0 ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400' }}">
-                                                {{ count($row['tidak_hadir_list']) }}
-                                            </span>
-                                        </div>
-                                        @if(count($row['tidak_hadir_list']) === 0)
-                                            <p class="text-xs text-slate-400 dark:text-slate-500 text-center py-5 italic px-3">Tidak ada hari libur / tidak hadir</p>
-                                        @else
-                                            <div :class="showAllTidak{{ $i }} ? 'max-h-none' : 'max-h-64 overflow-y-hidden'" style="transition: max-height 0.3s ease;">
-                                                <div class="p-3 divide-y divide-slate-100 dark:divide-slate-700/60">
-                                                @foreach($row['tidak_hadir_list'] as $item)
-                                                    <div class="py-2 first:pt-0 last:pb-0 flex items-start gap-2.5 text-xs">
-                                                        <span class="mt-1 w-1.5 h-1.5 rounded-full {{ $item['is_holiday'] ? 'bg-slate-400' : 'bg-rose-500' }} flex-shrink-0"></span>
-                                                        <div class="min-w-0">
-                                                            <p class="font-semibold text-slate-900 dark:text-slate-100 leading-tight">{{ $item['label'] }}</p>
-                                                            <p class="{{ $item['is_holiday'] ? 'text-slate-500 dark:text-slate-400' : 'text-rose-600 dark:text-rose-400 font-medium' }} text-[11px] mt-0.5">{{ $item['keterangan'] }}</p>
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                                </div>
-                                            </div>
-                                            @if(count($row['tidak_hadir_list']) > 5)
-                                                <div class="px-3 py-2 border-t border-slate-100 dark:border-slate-700/60">
-                                                    <button type="button" @click="showAllTidak{{ $i }} = !showAllTidak{{ $i }}" class="w-full flex items-center justify-center gap-1.5 text-[11px] font-semibold text-rose-700 dark:text-rose-400 hover:text-rose-900 dark:hover:text-rose-200 transition-colors">
-                                                        <span x-text="showAllTidak{{ $i }} ? 'Ringkas Tampilan ↑' : 'Lihat Semua ({{ count($row["tidak_hadir_list"]) }} Hari) ↓'"></span>
-                                                    </button>
-                                                </div>
-                                            @endif
-                                        @endif
-                                    </div>
-
-                                </div>
+                                @include('pic.reports.partials.accumulation-panels', [
+                                    'masukList'      => $row['masuk_list'],
+                                    'lupaAbsenList'  => $row['lupa_absen_list'],
+                                    'tidakHadirList' => $row['tidak_hadir_list'],
+                                ])
                             </td>
                         </tr>
                         @endforeach

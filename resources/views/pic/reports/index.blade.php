@@ -79,10 +79,10 @@
 
     {{-- Single Employee Full View --}}
     @if($report)
-        <div class="space-y-6">
+        <div class="space-y-8">
             {{-- Employee Card & Summary --}}
-            <div class="bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
+            <div class="bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-7 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-7">
                     <div class="flex items-center space-x-3.5">
                         <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-base shadow-sm flex-shrink-0">
                             {{ strtoupper(substr($report['employee']->name, 0, 1)) }}
@@ -105,31 +105,39 @@
                 </div>
 
                 {{-- Metric Cards --}}
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div class="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/40 rounded-xl p-3.5 text-center">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-4.5">
+                    <div class="bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/20 dark:border-emerald-800/40 rounded-xl p-4 text-center">
                         <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ $report['summary']['total_masuk'] }}</p>
                         <p class="text-[10px] font-bold text-emerald-700/80 dark:text-emerald-400/80 uppercase tracking-wider mt-0.5">Total Masuk ({{ $report['summary']['total_present'] }} Hadir, {{ $report['summary']['total_late'] }} Telat)</p>
                     </div>
-                    <div class="bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-800/40 rounded-xl p-3.5 text-center">
-                        <p class="text-2xl font-extrabold text-rose-600 dark:text-rose-400">{{ $report['summary']['total_off_days'] }}</p>
-                        <p class="text-[10px] font-bold text-rose-700/80 dark:text-rose-400/80 uppercase tracking-wider mt-0.5">Libur / Tdk Hadir</p>
+                    <div class="bg-red-500/10 dark:bg-red-950/30 border border-red-500/20 dark:border-red-900/40 rounded-xl p-4 text-center">
+                        <p class="text-2xl font-extrabold text-red-600 dark:text-red-400">{{ $report['summary']['total_off_days'] }}</p>
+                        <p class="text-[10px] font-bold text-red-700/80 dark:text-red-400/80 uppercase tracking-wider mt-0.5">Libur / Tdk Hadir</p>
                     </div>
-                    <div class="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 rounded-xl p-3.5 text-center">
+                    <div class="bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/20 dark:border-amber-800/40 rounded-xl p-4 text-center">
                         <p class="text-2xl font-extrabold text-amber-600 dark:text-amber-400">{{ $report['summary']['total_lupa_absen'] }}</p>
                         <p class="text-[10px] font-bold text-amber-700/80 dark:text-amber-400/80 uppercase tracking-wider mt-0.5">Lupa Absen</p>
                     </div>
-                    <div class="bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-800/40 rounded-xl p-3.5 text-center">
+                    <div class="bg-sky-500/10 dark:bg-sky-950/30 border border-sky-500/20 dark:border-sky-800/40 rounded-xl p-4 text-center">
                         <p class="text-2xl font-extrabold text-sky-600 dark:text-sky-400">{{ $report['summary']['total_leave'] + $report['summary']['total_sick'] }}</p>
                         <p class="text-[10px] font-bold text-sky-700/80 dark:text-sky-400/80 uppercase tracking-wider mt-0.5">Izin & Sakit</p>
                     </div>
                 </div>
 
-                {{-- Panel Rincian Libur & Lupa Absen --}}
-                @include('pic.reports.partials.accumulation-panels', [
-                    'masukList'       => $report['masuk_list'],
-                    'lupaAbsenList'   => $report['lupa_absen_list'],
-                    'tidakHadirList'  => $report['tidak_hadir_list'],
-                ])
+                {{-- Panel Rincian Presensi 3 Kolom --}}
+                <div class="mt-8 pt-7 border-t border-slate-200/70 dark:border-slate-800">
+                    <div class="flex items-center space-x-2.5 mb-5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0"></span>
+                        <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                            Rincian Akumulasi Presensi: {{ $report['employee']->name }}
+                        </h3>
+                    </div>
+                    @include('pic.reports.partials.accumulation-panels', [
+                        'masukList'       => $report['masuk_list'],
+                        'lupaAbsenList'   => $report['lupa_absen_list'],
+                        'tidakHadirList'  => $report['tidak_hadir_list'],
+                    ])
+                </div>
             </div>
 
             {{-- Daily Attendance Table --}}
