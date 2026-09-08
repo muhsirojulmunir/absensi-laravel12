@@ -95,7 +95,21 @@
                             </p>
                         </div>
                     </div>
-                    <div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" 
+                                onclick="printRekapKecil(
+                                    {{ json_encode($report['employee']->name) }},
+                                    {{ json_encode($report['employee']->location->name ?? ($report['employee']->division->name ?? 'Karyawan')) }},
+                                    {{ json_encode(\Carbon\Carbon::parse($report['month'] . '-01')->locale('id')->translatedFormat('F Y')) }},
+                                    {{ json_encode((string)$report['summary']['total_masuk']) }},
+                                    {{ json_encode((string)$report['summary']['total_off_days']) }}
+                                )"
+                                class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 transition-colors shadow-xs active:scale-95">
+                            <svg class="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                            </svg>
+                            <span>Print Rekap</span>
+                        </button>
                         <a href="{{ route($reportRouteName, ['month' => $month]) }}" 
                            class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
@@ -300,7 +314,7 @@
                             <th class="py-3.5 px-2.5 text-center w-[70px]">Izin</th>
                             <th class="py-3.5 px-2.5 text-center w-[70px]">Sakit</th>
                             <th class="py-3.5 px-2.5 text-center w-[75px]">Total Log</th>
-                            <th class="py-3.5 pl-3 pr-6 text-right w-[130px]">Detail</th>
+                            <th class="py-3.5 pl-3 pr-6 text-right w-[175px]">Aksi</th>
                         </tr>
                     </thead>
 
@@ -367,16 +381,33 @@
 
                                     {{-- Actions --}}
                                     <td class="py-3 pl-3 pr-6 text-right" @click.stop>
-                                        <button type="button" @click="expanded = !expanded"
-                                                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all"
-                                                :class="expanded
-                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/20'
-                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-700'">
-                                            <span x-text="expanded ? 'Tutup' : 'Detail & Log'"></span>
-                                            <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </button>
+                                        <div class="inline-flex items-center justify-end gap-1.5">
+                                            <button type="button" 
+                                                    onclick="printRekapKecil(
+                                                        {{ json_encode($row['employee']->name) }},
+                                                        {{ json_encode($row['employee']->location->name ?? ($row['employee']->division->name ?? 'Staff')) }},
+                                                        {{ json_encode(\Carbon\Carbon::parse($month . '-01')->locale('id')->translatedFormat('F Y')) }},
+                                                        {{ json_encode((string)$row['summary']['total_masuk']) }},
+                                                        {{ json_encode((string)$row['summary']['total_off_days']) }}
+                                                    )"
+                                                    title="Print Rekap Ringkas"
+                                                    class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-all shadow-xs active:scale-95">
+                                                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                                </svg>
+                                                <span class="hidden sm:inline">Print</span>
+                                            </button>
+                                            <button type="button" @click="expanded = !expanded"
+                                                    class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all"
+                                                    :class="expanded
+                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/20'
+                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-700'">
+                                                <span x-text="expanded ? 'Tutup' : 'Detail & Log'"></span>
+                                                <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
 
@@ -391,11 +422,26 @@
                                                         Rincian Presensi: {{ $row['employee']->name }}
                                                     </h4>
                                                 </div>
-                                                <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}" 
-                                                   class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-                                                    <span>Buka Halaman Penuh</span>
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                                </a>
+                                                <div class="flex items-center gap-3">
+                                                    <button type="button" 
+                                                            onclick="printRekapKecil(
+                                                                {{ json_encode($row['employee']->name) }},
+                                                                {{ json_encode($row['employee']->location->name ?? ($row['employee']->division->name ?? 'Staff')) }},
+                                                                {{ json_encode(\Carbon\Carbon::parse($month . '-01')->locale('id')->translatedFormat('F Y')) }},
+                                                                {{ json_encode((string)$row['summary']['total_masuk']) }},
+                                                                {{ json_encode((string)$row['summary']['total_off_days']) }}
+                                                            )"
+                                                            class="text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 transition-colors">
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                                                        <span>Print Rekap</span>
+                                                    </button>
+                                                    <span class="text-slate-300 dark:text-slate-700">•</span>
+                                                    <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}" 
+                                                       class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                                                        <span>Buka Halaman Penuh</span>
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                                    </a>
+                                                </div>
                                             </div>
 
                                             {{-- 3 Panel Akumulasi Masuk, Lupa Absen, dan Tidak Hadir --}}
@@ -471,16 +517,33 @@
 
                                     {{-- Actions --}}
                                     <td class="py-3 pl-3 pr-6 text-right" @click.stop>
-                                        <button type="button" @click="expanded = !expanded"
-                                                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all"
-                                                :class="expanded 
-                                                    ? 'bg-fuchsia-600 text-white border-fuchsia-600 shadow-sm shadow-fuchsia-500/20' 
-                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-700'">
-                                            <span x-text="expanded ? 'Tutup' : 'Detail & Log'"></span>
-                                            <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </button>
+                                        <div class="inline-flex items-center justify-end gap-1.5">
+                                            <button type="button" 
+                                                    onclick="printRekapKecil(
+                                                        {{ json_encode($row['employee']->name) }},
+                                                        {{ json_encode($row['employee']->location->name ?? ($row['employee']->division->name ?? 'Ramayana')) }},
+                                                        {{ json_encode(\Carbon\Carbon::parse($month . '-01')->locale('id')->translatedFormat('F Y')) }},
+                                                        {{ json_encode((string)$row['summary']['total_masuk']) }},
+                                                        {{ json_encode((string)$row['summary']['total_off_days']) }}
+                                                    )"
+                                                    title="Print Rekap Ringkas"
+                                                    class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-fuchsia-600 dark:hover:text-fuchsia-400 transition-all shadow-xs active:scale-95">
+                                                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                                </svg>
+                                                <span class="hidden sm:inline">Print</span>
+                                            </button>
+                                            <button type="button" @click="expanded = !expanded"
+                                                    class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all"
+                                                    :class="expanded 
+                                                        ? 'bg-fuchsia-600 text-white border-fuchsia-600 shadow-sm shadow-fuchsia-500/20' 
+                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-700'">
+                                                <span x-text="expanded ? 'Tutup' : 'Detail & Log'"></span>
+                                                <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
 
@@ -495,11 +558,26 @@
                                                         Rincian Presensi: {{ $row['employee']->name }}
                                                     </h4>
                                                 </div>
-                                                <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}" 
-                                                   class="text-[11px] font-semibold text-fuchsia-600 dark:text-fuchsia-400 hover:underline flex items-center gap-1">
-                                                    <span>Buka Halaman Penuh</span>
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                                </a>
+                                                <div class="flex items-center gap-3">
+                                                    <button type="button" 
+                                                            onclick="printRekapKecil(
+                                                                {{ json_encode($row['employee']->name) }},
+                                                                {{ json_encode($row['employee']->location->name ?? ($row['employee']->division->name ?? 'Ramayana')) }},
+                                                                {{ json_encode(\Carbon\Carbon::parse($month . '-01')->locale('id')->translatedFormat('F Y')) }},
+                                                                {{ json_encode((string)$row['summary']['total_masuk']) }},
+                                                                {{ json_encode((string)$row['summary']['total_off_days']) }}
+                                                            )"
+                                                            class="text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-fuchsia-600 dark:hover:text-fuchsia-400 flex items-center gap-1 transition-colors">
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                                                        <span>Print Rekap</span>
+                                                    </button>
+                                                    <span class="text-slate-300 dark:text-slate-700">•</span>
+                                                    <a href="{{ route($reportRouteName, ['employee_id' => $row['employee']->id, 'month' => $month]) }}" 
+                                                       class="text-[11px] font-semibold text-fuchsia-600 dark:text-fuchsia-400 hover:underline flex items-center gap-1">
+                                                        <span>Buka Halaman Penuh</span>
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                                    </a>
+                                                </div>
                                             </div>
 
                                             {{-- 3 Panel Akumulasi Masuk, Lupa Absen, dan Tidak Hadir --}}
@@ -538,4 +616,275 @@
     @endif
 
 </div>
+
+@push('scripts')
+<script>
+function printRekapKecil(name, location, period, masuk, tidakMasuk) {
+    let printIframe = document.getElementById('print-slip-iframe');
+    if (!printIframe) {
+        printIframe = document.createElement('iframe');
+        printIframe.id = 'print-slip-iframe';
+        printIframe.style.position = 'fixed';
+        printIframe.style.right = '0';
+        printIframe.style.bottom = '0';
+        printIframe.style.width = '0';
+        printIframe.style.height = '0';
+        printIframe.style.border = '0';
+        printIframe.style.visibility = 'hidden';
+        document.body.appendChild(printIframe);
+    }
+
+    let nowFormatted = '';
+    try {
+        nowFormatted = new Intl.DateTimeFormat('id-ID', {
+            dateStyle: 'medium',
+            timeStyle: 'short'
+        }).format(new Date());
+    } catch(e) {
+        nowFormatted = new Date().toLocaleString();
+    }
+
+    const slipHtml = `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <title>Rekap Presensi - ${name}</title>
+    <style>
+        @page {
+            size: 80mm auto;
+            margin: 4mm;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+            padding: 6px;
+            display: flex;
+            justify-content: center;
+        }
+        .slip-card {
+            width: 100%;
+            max-width: 290px;
+            border: 1px dashed #64748b;
+            border-radius: 8px;
+            padding: 12px 14px;
+            background: #ffffff;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 1px dashed #94a3b8;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+        .brand {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #475569;
+        }
+        .title {
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            color: #0f172a;
+            margin-top: 1px;
+        }
+        .period {
+            font-size: 11px;
+            font-weight: 700;
+            color: #2563eb;
+            margin-top: 2px;
+        }
+        .info-table {
+            width: 100%;
+            font-size: 11px;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+            border-bottom: 1px dashed #94a3b8;
+            padding-bottom: 8px;
+        }
+        .info-table td {
+            padding: 2.5px 0;
+            vertical-align: top;
+        }
+        .info-label {
+            width: 52px;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .info-sep {
+            width: 8px;
+            color: #64748b;
+            text-align: center;
+        }
+        .info-value {
+            color: #0f172a;
+            font-weight: 700;
+        }
+        .recap-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+        }
+        .recap-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+        }
+        .recap-row:not(:last-child) {
+            border-bottom: 1px dashed #cbd5e1;
+        }
+        .recap-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #334155;
+        }
+        .recap-badge {
+            font-size: 12px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .badge-masuk {
+            color: #047857;
+            background: #d1fae5;
+        }
+        .badge-tidak {
+            color: #b91c1c;
+            background: #fee2e2;
+        }
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            margin-bottom: 6px;
+        }
+        .sig-col {
+            width: 46%;
+            text-align: center;
+        }
+        .sig-title {
+            font-size: 9px;
+            font-weight: 600;
+            color: #475569;
+        }
+        .sig-space {
+            height: 32px;
+        }
+        .sig-line {
+            border-top: 1px solid #94a3b8;
+            padding-top: 2px;
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .footer {
+            text-align: center;
+            font-size: 8.5px;
+            color: #94a3b8;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 6px;
+            margin-top: 4px;
+        }
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            .slip-card {
+                border: 1px solid #000;
+                max-width: 100%;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slip-card">
+        <div class="header">
+            <div class="brand">RECORD SYSTEM</div>
+            <div class="title">REKAP PRESENSI</div>
+            <div class="period">${period}</div>
+        </div>
+
+        <table class="info-table">
+            <tr>
+                <td class="info-label">Nama</td>
+                <td class="info-sep">:</td>
+                <td class="info-value">${name}</td>
+            </tr>
+            <tr>
+                <td class="info-label">Lokasi</td>
+                <td class="info-sep">:</td>
+                <td class="info-value">${location}</td>
+            </tr>
+        </table>
+
+        <div class="recap-box">
+            <div class="recap-row">
+                <span class="recap-label">Jumlah Masuk</span>
+                <span class="recap-badge badge-masuk">${masuk} Hari</span>
+            </div>
+            <div class="recap-row">
+                <span class="recap-label">Jumlah Tidak Masuk</span>
+                <span class="recap-badge badge-tidak">${tidakMasuk} Hari</span>
+            </div>
+        </div>
+
+        <div class="signatures">
+            <div class="sig-col">
+                <div class="sig-title">Karyawan</div>
+                <div class="sig-space"></div>
+                <div class="sig-line">${name}</div>
+            </div>
+            <div class="sig-col">
+                <div class="sig-title">PIC / Penanggung Jawab</div>
+                <div class="sig-space"></div>
+                <div class="sig-line">( ................................... )</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Dicetak pada: ${nowFormatted}
+        </div>
+    </div>
+</body>
+</html>`;
+
+    const iframeDoc = printIframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(slipHtml);
+    iframeDoc.close();
+
+    setTimeout(() => {
+        try {
+            printIframe.contentWindow.focus();
+            printIframe.contentWindow.print();
+        } catch (err) {
+            const printWin = window.open('', '_blank', 'width=360,height=520');
+            if (printWin) {
+                printWin.document.write(slipHtml);
+                printWin.document.close();
+                printWin.focus();
+                printWin.print();
+            }
+        }
+    }, 250);
+}
+</script>
+@endpush
 @endsection
