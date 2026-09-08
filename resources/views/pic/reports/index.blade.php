@@ -648,12 +648,13 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            color: #000000 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            color: #0f172a;
+            color: #000000;
             background: #ffffff;
             padding: 4px;
             margin: 0;
@@ -663,14 +664,14 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
         .slip-card {
             width: 78mm;
             max-width: 100%;
-            border: 1px dashed #64748b;
-            border-radius: 6px;
+            border: 1px dashed #000000;
+            border-radius: 4px;
             padding: 10px 12px;
             background: #ffffff;
         }
         .header {
             text-align: center;
-            border-bottom: 1px dashed #94a3b8;
+            border-bottom: 1px dashed #000000;
             padding-bottom: 6px;
             margin-bottom: 8px;
         }
@@ -678,12 +679,12 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
             font-size: 12px;
             font-weight: 800;
             letter-spacing: 0.5px;
-            color: #0f172a;
+            color: #000000;
         }
         .period {
             font-size: 10.5px;
             font-weight: 700;
-            color: #2563eb;
+            color: #000000;
             margin-top: 1px;
         }
         .info-table {
@@ -691,31 +692,32 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
             font-size: 10.5px;
             border-collapse: collapse;
             margin-bottom: 8px;
-            border-bottom: 1px dashed #94a3b8;
+            border-bottom: 1px dashed #000000;
             padding-bottom: 6px;
         }
         .info-table td {
             padding: 2px 0;
             vertical-align: top;
+            color: #000000;
         }
         .info-label {
             width: 54px;
-            color: #64748b;
+            color: #000000;
             font-weight: 600;
         }
         .info-sep {
             width: 8px;
-            color: #64748b;
+            color: #000000;
             text-align: center;
         }
         .info-value {
-            color: #0f172a;
+            color: #000000;
             font-weight: 700;
         }
         .recap-box {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
+            background: #ffffff;
+            border: 1px solid #000000;
+            border-radius: 4px;
             padding: 6px 8px;
         }
         .recap-row {
@@ -725,26 +727,17 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
             padding: 3.5px 0;
         }
         .recap-row:not(:last-child) {
-            border-bottom: 1px dashed #cbd5e1;
+            border-bottom: 1px dashed #000000;
         }
         .recap-label {
             font-size: 10.5px;
             font-weight: 600;
-            color: #334155;
+            color: #000000;
         }
         .recap-badge {
             font-size: 11px;
             font-weight: 800;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-        .badge-masuk {
-            color: #047857;
-            background: #d1fae5;
-        }
-        .badge-tidak {
-            color: #b91c1c;
-            background: #fee2e2;
+            color: #000000;
         }
         @media print {
             body {
@@ -755,8 +748,8 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
             .slip-card {
                 width: 78mm !important;
                 max-width: 78mm !important;
-                border: 1px dashed #334155 !important;
-                border-radius: 4px !important;
+                border: 1px dashed #000000 !important;
+                border-radius: 0 !important;
                 padding: 8px 10px !important;
                 page-break-inside: avoid;
                 margin: 0;
@@ -787,11 +780,11 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
         <div class="recap-box">
             <div class="recap-row">
                 <span class="recap-label">Jumlah Masuk</span>
-                <span class="recap-badge badge-masuk">${masuk} Hari</span>
+                <span class="recap-badge">${masuk} Hari</span>
             </div>
             <div class="recap-row">
                 <span class="recap-label">Jumlah Tidak Masuk</span>
-                <span class="recap-badge badge-tidak">${tidakMasuk} Hari</span>
+                <span class="recap-badge">${tidakMasuk} Hari</span>
             </div>
         </div>
     </div>
