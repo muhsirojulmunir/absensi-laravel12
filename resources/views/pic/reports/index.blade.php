@@ -634,16 +634,6 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
         document.body.appendChild(printIframe);
     }
 
-    let nowFormatted = '';
-    try {
-        nowFormatted = new Intl.DateTimeFormat('id-ID', {
-            dateStyle: 'medium',
-            timeStyle: 'short'
-        }).format(new Date());
-    } catch(e) {
-        nowFormatted = new Date().toLocaleString();
-    }
-
     const slipHtml = `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -651,8 +641,8 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
     <title>Rekap Presensi - ${name}</title>
     <style>
         @page {
-            size: 80mm auto;
-            margin: 4mm;
+            size: auto;
+            margin: 6mm;
         }
         * {
             box-sizing: border-box;
@@ -665,60 +655,53 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
             color: #0f172a;
             background: #ffffff;
-            padding: 6px;
+            padding: 4px;
+            margin: 0;
             display: flex;
             justify-content: center;
         }
         .slip-card {
-            width: 100%;
-            max-width: 290px;
+            width: 78mm;
+            max-width: 100%;
             border: 1px dashed #64748b;
-            border-radius: 8px;
-            padding: 12px 14px;
+            border-radius: 6px;
+            padding: 10px 12px;
             background: #ffffff;
         }
         .header {
             text-align: center;
             border-bottom: 1px dashed #94a3b8;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
             margin-bottom: 8px;
         }
-        .brand {
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            color: #475569;
-        }
         .title {
-            font-size: 13px;
-            font-weight: 900;
+            font-size: 12px;
+            font-weight: 800;
             letter-spacing: 0.5px;
             color: #0f172a;
-            margin-top: 1px;
         }
         .period {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 700;
             color: #2563eb;
-            margin-top: 2px;
+            margin-top: 1px;
         }
         .info-table {
             width: 100%;
-            font-size: 11px;
+            font-size: 10.5px;
             border-collapse: collapse;
             margin-bottom: 8px;
             border-bottom: 1px dashed #94a3b8;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
         }
         .info-table td {
-            padding: 2.5px 0;
+            padding: 2px 0;
             vertical-align: top;
         }
         .info-label {
-            width: 52px;
+            width: 54px;
             color: #64748b;
-            font-weight: 500;
+            font-weight: 600;
         }
         .info-sep {
             width: 8px;
@@ -733,25 +716,24 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 6px;
-            padding: 8px 10px;
-            margin-bottom: 10px;
+            padding: 6px 8px;
         }
         .recap-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 4px 0;
+            padding: 3.5px 0;
         }
         .recap-row:not(:last-child) {
             border-bottom: 1px dashed #cbd5e1;
         }
         .recap-label {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 600;
             color: #334155;
         }
         .recap-badge {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 800;
             padding: 2px 6px;
             border-radius: 4px;
@@ -764,51 +746,20 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
             color: #b91c1c;
             background: #fee2e2;
         }
-        .signatures {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 6px;
-            margin-bottom: 6px;
-        }
-        .sig-col {
-            width: 46%;
-            text-align: center;
-        }
-        .sig-title {
-            font-size: 9px;
-            font-weight: 600;
-            color: #475569;
-        }
-        .sig-space {
-            height: 32px;
-        }
-        .sig-line {
-            border-top: 1px solid #94a3b8;
-            padding-top: 2px;
-            font-size: 9.5px;
-            font-weight: 700;
-            color: #0f172a;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .footer {
-            text-align: center;
-            font-size: 8.5px;
-            color: #94a3b8;
-            border-top: 1px dashed #e2e8f0;
-            padding-top: 6px;
-            margin-top: 4px;
-        }
         @media print {
             body {
                 padding: 0;
                 margin: 0;
+                display: block;
             }
             .slip-card {
-                border: 1px solid #000;
-                max-width: 100%;
+                width: 78mm !important;
+                max-width: 78mm !important;
+                border: 1px dashed #334155 !important;
+                border-radius: 4px !important;
+                padding: 8px 10px !important;
                 page-break-inside: avoid;
+                margin: 0;
             }
         }
     </style>
@@ -816,7 +767,6 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
 <body>
     <div class="slip-card">
         <div class="header">
-            <div class="brand">RECORD SYSTEM</div>
             <div class="title">REKAP PRESENSI</div>
             <div class="period">${period}</div>
         </div>
@@ -828,7 +778,7 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
                 <td class="info-value">${name}</td>
             </tr>
             <tr>
-                <td class="info-label">Lokasi</td>
+                <td class="info-label">Counter</td>
                 <td class="info-sep">:</td>
                 <td class="info-value">${location}</td>
             </tr>
@@ -844,23 +794,6 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
                 <span class="recap-badge badge-tidak">${tidakMasuk} Hari</span>
             </div>
         </div>
-
-        <div class="signatures">
-            <div class="sig-col">
-                <div class="sig-title">Karyawan</div>
-                <div class="sig-space"></div>
-                <div class="sig-line">${name}</div>
-            </div>
-            <div class="sig-col">
-                <div class="sig-title">PIC / Penanggung Jawab</div>
-                <div class="sig-space"></div>
-                <div class="sig-line">( ................................... )</div>
-            </div>
-        </div>
-
-        <div class="footer">
-            Dicetak pada: ${nowFormatted}
-        </div>
     </div>
 </body>
 </html>`;
@@ -875,7 +808,7 @@ function printRekapKecil(name, location, period, masuk, tidakMasuk) {
             printIframe.contentWindow.focus();
             printIframe.contentWindow.print();
         } catch (err) {
-            const printWin = window.open('', '_blank', 'width=360,height=520');
+            const printWin = window.open('', '_blank', 'width=320,height=400');
             if (printWin) {
                 printWin.document.write(slipHtml);
                 printWin.document.close();
