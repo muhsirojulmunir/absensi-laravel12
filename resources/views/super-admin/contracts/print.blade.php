@@ -118,10 +118,11 @@
             box-sizing: border-box;
         }
 
-        /* Kop Surat Lebar Penuh Sesuai Kertas */
+        /* Kop Surat Lebar Penuh Sesuai Teks Dokumen */
         .kop-container {
             width: 100%;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
+            padding: 0;
             text-align: center;
         }
 
@@ -129,6 +130,8 @@
             width: 100%;
             height: auto;
             display: block;
+            margin: 0;
+            padding: 0;
         }
 
         /* Judul Dokumen */
@@ -292,9 +295,9 @@
         <strong>Kontrak Kerja:</strong> {{ $contract->employee_name }} &mdash; <span>No. {{ $contract->contract_number }}</span>
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
-        <span style="font-size: 12px; color: #94a3b8; margin-right: 6px;">
-            *Tips: Di dialog print, pilih ukuran kertas <strong>F4 / Folio</strong>
-        </span>
+        <div style="font-size: 11.5px; color: #cbd5e1; background: #1e293b; padding: 4px 10px; border-radius: 6px; border: 1px solid #334155; line-height: 1.4;">
+            💡 <strong>Hilangkan Header/Footer:</strong> Di print dialog, klik <em>More settings</em> lalu <u>uncheck</u> <strong>"Headers and footers"</strong> agar URL/tanggal tidak muncul.
+        </div>
         <a href="{{ route('super-admin.contracts.index') }}" class="btn-back">
             &larr; Kembali
         </a>
