@@ -105,7 +105,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [App\Http\Controllers\Karyawan\ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile/avatar', [App\Http\Controllers\Karyawan\ProfileController::class, 'destroyAvatar'])->name('profile.destroy-avatar');
+
+        // Employment Contracts (Kontrak Kerja)
+        Route::get('/contracts/{contract}/print', [App\Http\Controllers\SuperAdmin\EmploymentContractController::class, 'print'])->name('contracts.print');
+        Route::resource('contracts', App\Http\Controllers\SuperAdmin\EmploymentContractController::class);
     });
+
 
     Route::prefix('pic')->name('pic.')->group(function () {
         Route::get('/dashboard', [App\Http\Controllers\PIC\DashboardController::class, 'index'])->name('dashboard');
