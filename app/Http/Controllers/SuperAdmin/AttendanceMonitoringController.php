@@ -335,6 +335,80 @@ class AttendanceMonitoringController extends Controller
             ->with('success', "✅ Absen pulang manual untuk {$employee->name} berhasil dicatat" . ($isPulangCepat ? ' (Pulang Cepat).' : '.'));
     }
 
+    /**
+     * Atur Cuti / Izin Karyawan oleh Super Admin
+     * Membuat pengajuan cuti otomatis disetujui dan mengisi status Cuti di absensi.
+     */
+    public function manualLeave(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'user_id'    => 'required|exists:users,id',
+            'type'       => 'required|string|in:Cuti,Izin,Sakit',
+            'start_date' => 'required|date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
+            'reason'     => 'nullable|string|max:255',
+        ]);
+
+        $employee  = User::findOrFail($request->user_id);
+        $startDate = Carbon::parse($request->start_date)->startOfDay();
+        $endDate   = Carbon::parse($request->end_date)->startOfDay();
+        $type      = $request->type;
+        $reason    = $request->reason ? trim($request->reason) : "{$type} (Diatur Super Admin)";
+
+        DB::transaction(function () use ($employee, $startDate, $endDate, $type, $reason) {
+            // 1. Buat record LeaveRequest berstatus approved
+            LeaveRequest::create([
+                'user_id'          => $employee->id,
+                'type'             => $type,
+                'start_date'       => $startDate->toDateString(),
+                'end_date'         => $endDate->toDateString(),
+                'reason'           => $reason,
+                'status'           => 'approved',
+                'approved_by'      => Auth::id(),
+                'admin_message'    => 'Diatur langsung oleh Super Admin',
+                'admin_message_by' => Auth::id(),
+                'admin_message_at' => now(),
+            ]);
+
+            // 2. Buat atau update record Attendance untuk setiap hari dalam rentang tanggal
+            $cursor = $startDate->copy();
+            while ($cursor->lte($endDate)) {
+                $dateStr = $cursor->toDateString();
+
+                $attendance = Attendance::where('user_id', $employee->id)
+                    ->whereDate('date', $dateStr)
+                    ->first();
+
+                if ($attendance) {
+                    $attendance->update([
+                        'status'          => $type,
+                        'note'            => $reason,
+                        'check_in'        => null,
+                        'check_out'       => null,
+                        'is_pulang_cepat' => false,
+                    ]);
+                } else {
+                    Attendance::create([
+                        'user_id' => $employee->id,
+                        'date'    => $dateStr,
+                        'status'  => $type,
+                        'note'    => $reason,
+                    ]);
+                }
+
+                $cursor->addDay();
+            }
+        });
+
+        $dateFormatted = $startDate->equalTo($endDate)
+            ? $startDate->locale('id')->translatedFormat('d M Y')
+            : $startDate->locale('id')->translatedFormat('d M Y') . ' s/d ' . $endDate->locale('id')->translatedFormat('d M Y');
+
+        return redirect()
+            ->route('super-admin.attendance.index', ['date' => $startDate->toDateString()])
+            ->with('success', "✅ {$type} untuk {$employee->name} berhasil diatur pada {$dateFormatted}.");
+    }
+
     public function deletedBackups(Request $request): View
     {
         $query = DeletedAttendance::with(['deletedByUser'])
@@ -497,18 +571,28 @@ class AttendanceMonitoringController extends Controller
                             'label'      => $label,
                             'keterangan' => 'Sakit' . ($att->note ? ': ' . $att->note : ''),
                             'is_holiday' => false,
+                            'is_cuti'    => false,
                         ];
-                    } elseif (in_array($attStatus, ['Izin', 'Cuti'])) {
+                    } elseif (strcasecmp($attStatus, 'Cuti') === 0 || str_contains(strtolower($attStatus), 'cuti')) {
                         $tidakHadirList[] = [
                             'label'      => $label,
-                            'keterangan' => ($attStatus === 'Cuti' ? 'Cuti' : 'Izin') . ($att->note ? ': ' . $att->note : ''),
+                            'keterangan' => 'Cuti' . ($att->note ? ': ' . $att->note : ''),
                             'is_holiday' => false,
+                            'is_cuti'    => true,
+                        ];
+                    } elseif (strcasecmp($attStatus, 'Izin') === 0 || str_contains(strtolower($attStatus), 'izin')) {
+                        $tidakHadirList[] = [
+                            'label'      => $label,
+                            'keterangan' => 'Izin' . ($att->note ? ': ' . $att->note : ''),
+                            'is_holiday' => false,
+                            'is_cuti'    => false,
                         ];
                     } elseif (in_array($attStatus, ['Alpa', 'Tidak Hadir'])) {
                         $tidakHadirList[] = [
                             'label'      => $label,
                             'keterangan' => 'Tidak Hadir' . ($att->note ? ': ' . $att->note : ''),
                             'is_holiday' => false,
+                            'is_cuti'    => false,
                         ];
                     } else {
                         // Absensi masuk / terlambat / hadir riil
@@ -565,25 +649,36 @@ class AttendanceMonitoringController extends Controller
                         ];
                     }
                 } elseif ($leave) {
-                    // Pengajuan Izin / Libur / Sakit
+                    // Pengajuan Izin / Libur / Sakit / Cuti
                     $type = $leave->type;
+                    $typeLower = strtolower($type);
                     if (in_array($type, ['Libur', 'Libur (Day Off)'])) {
                         $tidakHadirList[] = [
                             'label'      => $label,
                             'keterangan' => 'Libur (Day Off)',
                             'is_holiday' => true,
+                            'is_cuti'    => false,
                         ];
                     } elseif ($type === 'Sakit') {
                         $tidakHadirList[] = [
                             'label'      => $label,
                             'keterangan' => 'Sakit' . ($leave->reason ? ': ' . $leave->reason : ''),
                             'is_holiday' => false,
+                            'is_cuti'    => false,
+                        ];
+                    } elseif (str_contains($typeLower, 'cuti')) {
+                        $tidakHadirList[] = [
+                            'label'      => $label,
+                            'keterangan' => 'Cuti' . ($leave->reason ? ': ' . $leave->reason : ''),
+                            'is_holiday' => false,
+                            'is_cuti'    => true,
                         ];
                     } else {
                         $tidakHadirList[] = [
                             'label'      => $label,
                             'keterangan' => 'Izin: ' . ($leave->reason ?? $type),
                             'is_holiday' => false,
+                            'is_cuti'    => false,
                         ];
                     }
                 } else {

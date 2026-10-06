@@ -7,6 +7,7 @@
     deleteLabel: '',
     showManualCheckinModal: false,
     showManualCheckoutModal: false,
+    showManualLeaveModal: false,
     showImportModal: false,
     openDelete(url, name, dateStr) {
         this.deleteUrl = url;
@@ -72,6 +73,11 @@
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg>
                     <span>Pulang</span>
                 </button>
+                <button type="button" @click="showManualLeaveModal = true"
+                    class="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm shadow-purple-500/10 active:scale-95 cursor-pointer uppercase tracking-wider">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span>Atur Cuti</span>
+                </button>
                 @endif
             </div>
         </div>
@@ -80,19 +86,19 @@
     <!-- Quick Stats Grid -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
         <div class="bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 p-5 rounded-2xl shadow-sm">
-            <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Karyawan Hadir</p>
+            <p class="text-[9px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest mb-1.5">Karyawan Hadir</p>
             <p class="text-2xl font-bold text-emerald-500 dark:text-emerald-400">{{ $attendances->where('status', 'Hadir')->count() }}</p>
         </div>
         <div class="bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 p-5 rounded-2xl shadow-sm">
-            <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Pulang Cepat</p>
+            <p class="text-[9px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest mb-1.5">Pulang Cepat</p>
             <p class="text-2xl font-bold text-amber-500 dark:text-amber-400">{{ $attendances->where('is_pulang_cepat', true)->count() }}</p>
         </div>
         <div class="bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 p-5 rounded-2xl shadow-sm">
-            <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Izin / Sakit</p>
-            <p class="text-2xl font-bold text-blue-500 dark:text-blue-400">{{ $attendances->whereIn('status', ['Izin', 'Sakit'])->count() }}</p>
+            <p class="text-[9px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest mb-1.5">Izin / Sakit / Cuti</p>
+            <p class="text-2xl font-bold text-blue-500 dark:text-blue-400">{{ $attendances->whereIn('status', ['Izin', 'Sakit', 'Cuti'])->count() }}</p>
         </div>
         <div class="bg-white dark:bg-dark-card border border-slate-200/50 dark:border-slate-800/80 p-5 rounded-2xl shadow-sm">
-            <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Total Aktivitas</p>
+            <p class="text-[9px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest mb-1.5">Total Aktivitas</p>
             <p class="text-2xl font-bold text-slate-800 dark:text-slate-100">{{ $attendances->count() }}</p>
         </div>
     </div>
@@ -165,6 +171,7 @@
                                         'Terlambat' => 'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/20',
                                         'Izin' => 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-900/20',
                                         'Sakit' => 'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/20',
+                                        'Cuti' => 'bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-900/20',
                                     ];
                                     $colorClass = $statusColors[$attendance->status] ?? 'bg-slate-50 text-slate-600 border-slate-200';
                                 @endphp
@@ -369,6 +376,83 @@
                     <button type="submit"
                         class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 cursor-pointer shadow-sm shadow-orange-500/10 flex-1">
                         Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Modal Atur Cuti / Izin Karyawan oleh Super Admin --}}
+    <div x-show="showManualLeaveModal" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" @click="showManualLeaveModal = false"></div>
+        <div class="relative bg-white dark:bg-dark-card rounded-2xl shadow-xl border border-slate-200/60 dark:border-slate-800/80 w-full max-w-md overflow-hidden z-10 max-h-[90vh] flex flex-col">
+            <div class="px-6 py-4.5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-purple-50/50 dark:bg-purple-950/20">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-300">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-wider">Atur Cuti Karyawan</h3>
+                        <p class="text-[10px] text-slate-400 dark:text-slate-550 font-semibold tracking-wide">Pengaturan cuti langsung oleh Super Admin</p>
+                    </div>
+                </div>
+                <button @click="showManualLeaveModal = false" class="text-slate-400 hover:text-slate-650 dark:hover:text-white bg-slate-100 dark:bg-slate-900 p-1.5 rounded-lg transition-colors cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form action="{{ route('super-admin.attendance.manual-leave') }}" method="POST" class="p-6 overflow-y-auto space-y-4" onsubmit="return confirm('Apakah Anda yakin ingin menetapkan cuti/dispensasi ini untuk karyawan terpilih?')">
+                @csrf
+                <div class="bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-900/30 rounded-xl p-3.5 text-[11px] text-purple-900 dark:text-purple-300 leading-relaxed font-medium">
+                    💡 Data cuti akan <strong>langsung disetujui (Approved)</strong>, otomatis tercatat di pengajuan cuti serta muncul dengan status <strong>Cuti</strong> pada log harian dan <strong>rekap absensi bulanan</strong>.
+                </div>
+                
+                <div class="space-y-1.5">
+                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest">Karyawan</label>
+                    <select name="user_id" required>
+                        <option value="">-- Pilih Karyawan --</option>
+                        @foreach($employees as $emp)
+                            <option value="{{ $emp->id }}">
+                                {{ $emp->name }} — {{ $emp->role->name }}{{ $emp->division ? ' (' . $emp->division->name . ')' : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest">Jenis Dispensasi</label>
+                    <select name="type" required>
+                        <option value="Cuti" selected>Cuti</option>
+                        <option value="Izin">Izin</option>
+                        <option value="Sakit">Sakit</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest">Dari Tanggal</label>
+                        <input type="date" name="start_date" value="{{ $date }}" required>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest">Sampai Tanggal</label>
+                        <input type="date" name="end_date" value="{{ $date }}" required>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest">Keterangan / Alasan Cuti</label>
+                    <input type="text" name="reason" placeholder="Contoh: Cuti Tahunan, keperluan keluarga..." required>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" @click="showManualLeaveModal = false"
+                        class="btn-premium-secondary py-3 px-4 text-xs uppercase tracking-widest flex-1">
+                        Batal
+                    </button>
+                    <button type="submit"
+                        class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 cursor-pointer shadow-sm shadow-purple-500/10 flex-1">
+                        Simpan Cuti
                     </button>
                 </div>
             </form>

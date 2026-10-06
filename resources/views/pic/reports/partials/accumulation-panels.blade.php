@@ -82,15 +82,13 @@
                     @endforeach
                 </div>
             @endif
-        </div>
-
-        {{-- ==================== KOLOM 3 (KANAN): TIDAK HADIR / LIBUR ==================== --}}
+        </div>        {{-- ==================== KOLOM 3 (KANAN): TIDAK HADIR / LIBUR / CUTI ==================== --}}
         <div class="bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/90 dark:border-slate-700/80 shadow-xs overflow-hidden flex flex-col">
             <div class="px-3.5 py-2.5 bg-red-500/10 dark:bg-red-950/40 border-b border-red-500/20 dark:border-red-900/40 flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <span class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></span>
                     <span class="text-xs font-bold text-red-800 dark:text-red-300 uppercase tracking-wide">
-                        Tidak Hadir / Libur &mdash; {{ $tidakCount }} Hari
+                        Tidak Hadir / Libur / Cuti &mdash; {{ $tidakCount }} Hari
                     </span>
                 </div>
                 <span class="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 text-[11px] font-extrabold rounded-md {{ $tidakCount > 0 ? 'bg-red-600 text-white shadow-xs' : 'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-500/20' }}">
@@ -98,16 +96,22 @@
                 </span>
             </div>
             @if($tidakCount === 0)
-                <p class="text-xs text-slate-400 dark:text-slate-500 text-center py-6 italic px-3">Tidak ada hari libur / tidak hadir</p>
+                <p class="text-xs text-slate-400 dark:text-slate-500 text-center py-6 italic px-3">Tidak ada hari libur / cuti / tidak hadir</p>
             @else
                 <div class="p-3 divide-y divide-slate-100 dark:divide-slate-700/60">
                     @foreach($tidakHadirList as $index => $item)
+                        @php
+                            $isHoliday = !empty($item['is_holiday']);
+                            $isCuti = !empty($item['is_cuti']) || \Illuminate\Support\Str::startsWith($item['keterangan'] ?? '', 'Cuti');
+                            $bulletColor = $isHoliday ? 'bg-slate-400' : ($isCuti ? 'bg-purple-500' : 'bg-red-500');
+                            $textColor = $isHoliday ? 'text-slate-500 dark:text-slate-400' : ($isCuti ? 'text-purple-600 dark:text-purple-400 font-semibold' : 'text-red-600 dark:text-red-400 font-medium');
+                        @endphp
                         <div x-show="showAll || {{ $index }} < 5"
                              class="py-2.5 first:pt-0 last:pb-0 flex items-start gap-2.5 text-xs">
-                            <span class="mt-1 w-1.5 h-1.5 rounded-full {{ !empty($item['is_holiday']) ? 'bg-slate-400' : 'bg-red-500' }} flex-shrink-0"></span>
+                            <span class="mt-1 w-1.5 h-1.5 rounded-full {{ $bulletColor }} flex-shrink-0"></span>
                             <div class="min-w-0">
                                 <p class="font-semibold text-slate-900 dark:text-slate-100 leading-tight">{{ $item['label'] }}</p>
-                                <p class="{{ !empty($item['is_holiday']) ? 'text-slate-500 dark:text-slate-400' : 'text-red-600 dark:text-red-400 font-medium' }} text-[11px] mt-0.5">{{ $item['keterangan'] }}</p>
+                                <p class="{{ $textColor }} text-[11px] mt-0.5">{{ $item['keterangan'] }}</p>
                             </div>
                         </div>
                     @endforeach

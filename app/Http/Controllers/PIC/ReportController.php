@@ -195,19 +195,30 @@ class ReportController extends Controller
                         'label'      => $label,
                         'keterangan' => 'Sakit' . ($att->note ? ': ' . $att->note : ''),
                         'is_holiday' => false,
+                        'is_cuti'    => false,
                     ];
-                } elseif (in_array($attStatus, ['Izin', 'Cuti'])) {
+                } elseif (strcasecmp($attStatus, 'Cuti') === 0 || str_contains(strtolower($attStatus), 'cuti')) {
                     $totalLeave++;
                     $tidakHadirList[] = [
                         'label'      => $label,
-                        'keterangan' => ($attStatus === 'Cuti' ? 'Cuti' : 'Izin') . ($att->note ? ': ' . $att->note : ''),
+                        'keterangan' => 'Cuti' . ($att->note ? ': ' . $att->note : ''),
                         'is_holiday' => false,
+                        'is_cuti'    => true,
+                    ];
+                } elseif (strcasecmp($attStatus, 'Izin') === 0 || str_contains(strtolower($attStatus), 'izin')) {
+                    $totalLeave++;
+                    $tidakHadirList[] = [
+                        'label'      => $label,
+                        'keterangan' => 'Izin' . ($att->note ? ': ' . $att->note : ''),
+                        'is_holiday' => false,
+                        'is_cuti'    => false,
                     ];
                 } elseif (in_array($attStatus, ['Alpa', 'Tidak Hadir'])) {
                     $tidakHadirList[] = [
                         'label'      => $label,
                         'keterangan' => 'Tidak Hadir' . ($att->note ? ': ' . $att->note : ''),
                         'is_holiday' => false,
+                        'is_cuti'    => false,
                     ];
                 } else {
                     // Absensi masuk / hadir / terlambat riil
@@ -270,18 +281,29 @@ class ReportController extends Controller
                 }
             } elseif ($leave) {
                 $type = $leave->type;
+                $typeLower = strtolower($type);
                 if ($type === 'Sakit') {
                     $totalSick++;
                     $tidakHadirList[] = [
                         'label'      => $label,
                         'keterangan' => 'Sakit' . ($leave->reason ? ': ' . $leave->reason : ''),
                         'is_holiday' => false,
+                        'is_cuti'    => false,
                     ];
                 } elseif (in_array($type, ['Libur', 'Libur (Day Off)'])) {
                     $tidakHadirList[] = [
                         'label'      => $label,
                         'keterangan' => 'Libur (Day Off)',
                         'is_holiday' => true,
+                        'is_cuti'    => false,
+                    ];
+                } elseif (str_contains($typeLower, 'cuti')) {
+                    $totalLeave++;
+                    $tidakHadirList[] = [
+                        'label'      => $label,
+                        'keterangan' => 'Cuti' . ($leave->reason ? ': ' . $leave->reason : ''),
+                        'is_holiday' => false,
+                        'is_cuti'    => true,
                     ];
                 } else {
                     $totalLeave++;
@@ -289,6 +311,7 @@ class ReportController extends Controller
                         'label'      => $label,
                         'keterangan' => 'Izin: ' . ($leave->reason ?? $type),
                         'is_holiday' => false,
+                        'is_cuti'    => false,
                     ];
                 }
             } else {

@@ -80,14 +80,14 @@
             </div>
         </div>
 
-        {{-- Total Tidak Hadir / Libur --}}
+        {{-- Total Tidak Hadir / Libur / Cuti --}}
         <div class="rounded-2xl p-4 bg-gradient-to-br from-red-600 to-red-800 text-white shadow-sm border border-red-500/30">
             <div class="flex items-center gap-3">
                 <div class="p-2.5 bg-white/15 rounded-xl flex-shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
                 <div>
-                    <p class="text-[11px] font-semibold text-red-200 uppercase tracking-wider">Total Libur / Tdk Hadir</p>
+                    <p class="text-[11px] font-semibold text-red-200 uppercase tracking-wider">Total Libur / Cuti / Tdk Hadir</p>
                     <p class="text-2xl font-black">{{ $totalTidakHadir }}</p>
                 </div>
             </div>
@@ -132,7 +132,7 @@
                             <th class="px-4 py-3.5 text-slate-600 dark:text-slate-300 min-w-[220px]">Nama Karyawan</th>
                             <th class="px-4 py-3.5 text-center text-emerald-600 dark:text-emerald-400 w-32">✓ Masuk</th>
                             <th class="px-4 py-3.5 text-center text-amber-600 dark:text-amber-400 w-32">⏰ Lupa Absen</th>
-                            <th class="px-4 py-3.5 text-center text-red-600 dark:text-red-400 w-36">✗ Tidak Hadir / Libur</th>
+                            <th class="px-4 py-3.5 text-center text-red-600 dark:text-red-400 w-36">✗ Tidak Hadir / Libur / Cuti</th>
                             <th class="px-4 py-3.5 text-center text-slate-500 dark:text-slate-400 w-24">Detail</th>
                         </tr>
                     </thead>
