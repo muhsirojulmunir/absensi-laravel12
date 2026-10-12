@@ -51,6 +51,7 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => 'required',
+            'nickname' => 'nullable|string|max:255',
             'username' => 'required|unique:users',
             'password' => 'required|min:8',
             'role_id' => 'required|exists:roles,id',
@@ -65,6 +66,7 @@ class UserController extends Controller
 
         User::create([
             'name' => $request->name,
+            'nickname' => $request->nickname,
             'username' => $request->username,
             'email' => $request->email, // Optional, can be null
             'password' => Hash::make($request->password),
@@ -95,6 +97,7 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => 'required',
+            'nickname' => 'nullable|string|max:255',
             'username' => 'required|unique:users,username,' . $user->id,
             'role_id' => 'required|exists:roles,id',
             'division_id' => 'nullable|exists:divisions,id',
@@ -103,7 +106,7 @@ class UserController extends Controller
             'additional_location_ids.*' => 'exists:locations,id',
         ]);
 
-        $data = $request->only(['name', 'username', 'email', 'role_id', 'division_id', 'location_id', 'employee_id', 'phone', 'address', 'position', 'birth_place', 'birth_date']);
+        $data = $request->only(['name', 'nickname', 'username', 'email', 'role_id', 'division_id', 'location_id', 'employee_id', 'phone', 'address', 'position', 'birth_place', 'birth_date']);
         
         $data['additional_location_ids'] = array_values(array_filter($request->additional_location_ids ?? []));
 

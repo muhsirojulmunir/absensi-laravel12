@@ -21,6 +21,8 @@ class Attendance extends Model
         'check_out',
         'date',
         'status',
+        'is_locked',
+        'locked_by',
         'is_pulang_cepat',
         'lat',
         'long',

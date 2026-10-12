@@ -139,8 +139,21 @@
                                         @endif
                                     </div>
                                     <div>
-                                        <div class="text-xs font-bold text-slate-800 dark:text-white">{{ $attendance->user?->name ?? 'User Tidak Ditemukan' }}</div>
-                                        <div class="text-[9px] text-slate-400 dark:text-slate-550 font-bold uppercase tracking-wider">{{ $attendance->user?->division?->name ?? 'Tanpa Divisi' }}</div>
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="text-xs font-bold text-slate-800 dark:text-white">{{ $attendance->user?->name ?? 'User Tidak Ditemukan' }}</span>
+                                            @if($attendance->is_locked)
+                                                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20" title="Dilindungi (Terkunci oleh {{ $attendance->locked_by ?? 'Super Admin' }})">
+                                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                    Terkunci
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <div class="flex items-center gap-2 mt-0.5">
+                                            <span class="text-[9px] text-slate-400 dark:text-slate-550 font-bold uppercase tracking-wider">{{ $attendance->user?->division?->name ?? 'Tanpa Divisi' }}</span>
+                                            @if($attendance->user?->nickname)
+                                                <span class="text-[9px] text-indigo-500/90 dark:text-indigo-400 font-medium">({{ $attendance->user->nickname }})</span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -635,21 +648,29 @@
 
                                     {{-- Status Validasi --}}
                                     <td class="py-2 px-3">
-                                        <template x-if="row.is_valid">
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300/40">
-                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                                                <span>Valid</span>
-                                            </span>
-                                        </template>
-                                        <template x-if="!row.is_valid">
-                                            <div class="inline-flex flex-col items-start gap-0.5">
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-400 border border-rose-300/40">
-                                                    <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                                    <span>Perlu Diperbaiki</span>
+                                        <div class="flex flex-col items-start gap-1">
+                                            <template x-if="row.is_valid && !row.is_locked">
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300/40">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                                    <span>Valid</span>
                                                 </span>
-                                                <span class="text-[10px] text-rose-600 dark:text-rose-400 line-clamp-1 max-w-[150px]" :title="row.error_message" x-text="row.error_message"></span>
-                                            </div>
-                                        </template>
+                                            </template>
+                                            <template x-if="row.is_locked">
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-400 border border-amber-300/40" title="Data tanggal ini sudah dikunci Super Admin (Akan dilewati agar tidak tertimpa)">
+                                                    <svg class="w-3 h-3 text-amber-600 dark:text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                    <span>Dilindungi 🔒</span>
+                                                </span>
+                                            </template>
+                                            <template x-if="!row.is_valid">
+                                                <div class="inline-flex flex-col items-start gap-0.5">
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-400 border border-rose-300/40">
+                                                        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                                        <span>Perlu Diperbaiki</span>
+                                                    </span>
+                                                    <span class="text-[10px] text-rose-600 dark:text-rose-400 line-clamp-1 max-w-[150px]" :title="row.error_message" x-text="row.error_message"></span>
+                                                </div>
+                                            </template>
+                                        </div>
                                     </td>
 
                                     {{-- Nama Karyawan --}}
@@ -667,7 +688,7 @@
                                             </select>
                                             <template x-if="row.raw_name">
                                                 <p class="text-[9.5px] text-slate-400 dark:text-slate-500 truncate" title="Nama di Excel">
-                                                    Excel: <span class="font-mono text-slate-600 dark:text-slate-300" x-text="row.raw_name"></span>
+                                                    Excel: <span class="font-mono text-slate-600 dark:text-slate-300 font-bold" x-text="row.raw_name"></span>
                                                 </p>
                                             </template>
                                         </div>

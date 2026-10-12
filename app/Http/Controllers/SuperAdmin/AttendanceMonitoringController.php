@@ -220,6 +220,8 @@ class AttendanceMonitoringController extends Controller
                 'lateness_minutes' => $latenessMinutes,
                 'is_pulang_cepat'  => false,
                 'note'             => $request->note ?? 'Absen Manual oleh Admin',
+                'is_locked'        => true,
+                'locked_by'        => 'Super Admin',
                 'lat'              => 0,
                 'long'             => 0,
             ]);
@@ -233,6 +235,8 @@ class AttendanceMonitoringController extends Controller
                 'lateness_minutes' => $latenessMinutes,
                 'is_pulang_cepat'  => false,
                 'note'             => $request->note ?? 'Absen Manual oleh Admin',
+                'is_locked'        => true,
+                'locked_by'        => 'Super Admin',
                 'lat'              => 0,
                 'long'             => 0,
             ]);
@@ -328,6 +332,8 @@ class AttendanceMonitoringController extends Controller
             'check_out'       => $request->check_out . ':00',
             'is_pulang_cepat' => $isPulangCepat,
             'status'          => 'Hadir',
+            'is_locked'       => true,
+            'locked_by'       => 'Super Admin',
             'note'            => $newNote,
         ]);
 
@@ -387,13 +393,17 @@ class AttendanceMonitoringController extends Controller
                         'check_in'        => null,
                         'check_out'       => null,
                         'is_pulang_cepat' => false,
+                        'is_locked'       => true,
+                        'locked_by'       => 'Super Admin',
                     ]);
                 } else {
                     Attendance::create([
-                        'user_id' => $employee->id,
-                        'date'    => $dateStr,
-                        'status'  => $type,
-                        'note'    => $reason,
+                        'user_id'   => $employee->id,
+                        'date'      => $dateStr,
+                        'status'    => $type,
+                        'note'      => $reason,
+                        'is_locked' => true,
+                        'locked_by' => 'Super Admin',
                     ]);
                 }
 
@@ -1021,7 +1031,8 @@ class AttendanceMonitoringController extends Controller
             ->get()
             ->sortBy('name');
 
-        $userMap = [];
+        $userMap  = [];
+        $aliasMap = [];
         foreach ($users as $u) {
             $userMap[strtolower(trim((string) $u->name))] = $u;
             if (!empty($u->username)) {
@@ -1030,22 +1041,71 @@ class AttendanceMonitoringController extends Controller
             if (!empty($u->email)) {
                 $userMap[strtolower(trim((string) $u->email))] = $u;
             }
+            if (!empty($u->nickname)) {
+                $aliases = preg_split('/[,;|]/', strtolower(trim((string) $u->nickname)));
+                foreach ($aliases as $alias) {
+                    $aliasClean = trim($alias);
+                    if (!empty($aliasClean)) {
+                        $aliasMap[$aliasClean] = $u;
+                    }
+                }
+            }
         }
 
-        $findUser = function (string $nameQuery) use ($userMap, $users) {
+        $findUser = function (string $nameQuery) use ($userMap, $aliasMap, $users) {
             $clean = strtolower(preg_replace('/\s+/', ' ', trim($nameQuery)));
             if (empty($clean)) {
                 return null;
             }
+
+            // 1. Cocokkan persis dengan nama lengkap / username / email
             if (isset($userMap[$clean])) {
                 return $userMap[$clean];
             }
-            foreach ($users as $u) {
-                $uName = strtolower(trim((string) $u->name));
-                if ($uName === $clean || str_starts_with($uName, $clean . ' ') || str_contains($uName, $clean)) {
+
+            // 2. Cocokkan persis dengan alias / nama panggilan (misal: "rio" -> Muhammad Rio Pratama)
+            if (isset($aliasMap[$clean])) {
+                return $aliasMap[$clean];
+            }
+
+            // 3. Cocokkan jika alias ada di dalam query (atau sebaliknya)
+            foreach ($aliasMap as $aliasKey => $u) {
+                if ($aliasKey === $clean || str_starts_with($clean, $aliasKey . ' ') || str_contains($clean, $aliasKey)) {
                     return $u;
                 }
             }
+
+            // 4. Pencocokan Cerdas Kata (Word Token Matching)
+            // Misalnya jika PIC Ramayana menulis "Rio", cari karyawan yang salah satu kata di namanya adalah "rio"
+            $candidates = [];
+            foreach ($users as $u) {
+                $uName = strtolower(trim((string) $u->name));
+                $uWords = array_filter(explode(' ', $uName), fn($w) => strlen($w) >= 2);
+                $isRamayana = ($u->role?->slug === 'karyawan_ramayana') || str_contains(strtolower($u->division?->name ?? ''), 'ramayana');
+
+                // Jika query satu kata persis cocok dengan salah satu kata di nama karyawan
+                if (in_array($clean, $uWords, true)) {
+                    $candidates[] = ['user' => $u, 'score' => $isRamayana ? 100 : 80];
+                    continue;
+                }
+
+                // Jika nama karyawan berawalan dari kata query
+                if ($uName === $clean || str_starts_with($uName, $clean . ' ')) {
+                    $candidates[] = ['user' => $u, 'score' => $isRamayana ? 95 : 75];
+                    continue;
+                }
+
+                // Substring
+                if (str_contains($uName, $clean) && strlen($clean) >= 3) {
+                    $candidates[] = ['user' => $u, 'score' => $isRamayana ? 70 : 50];
+                }
+            }
+
+            if (!empty($candidates)) {
+                usort($candidates, fn($a, $b) => $b['score'] <=> $a['score']);
+                return $candidates[0]['user'];
+            }
+
             return null;
         };
 
@@ -1059,6 +1119,15 @@ class AttendanceMonitoringController extends Controller
                 'label'    => "{$u->name} ({$dept})",
             ];
         })->values();
+
+        // Ambil data absensi yang sudah dikunci oleh Super Admin untuk deteksi proteksi di preview
+        $lockedMap = Attendance::where('is_locked', true)
+            ->get(['user_id', 'date'])
+            ->mapWithKeys(function ($att) {
+                $d = $att->date instanceof Carbon ? $att->date->toDateString() : explode(' ', (string) $att->date)[0];
+                return [((int) $att->user_id) . '_' . $d => true];
+            })
+            ->all();
 
         $currentEmployee = null;
         $parsedRows      = [];
@@ -1137,6 +1206,11 @@ class AttendanceMonitoringController extends Controller
                 ? trim((string) $row[$colCatatan])
                 : 'Import Massal Absensi';
 
+            $isRowLocked = false;
+            if ($matchedUserId && $targetDate) {
+                $isRowLocked = isset($lockedMap[((int) $matchedUserId) . '_' . $targetDate]);
+            }
+
             // Evaluasi validitas baris
             $errors = [];
             if (empty($matchedUserId)) {
@@ -1163,6 +1237,7 @@ class AttendanceMonitoringController extends Controller
                 'check_out'         => $checkOutFormatted ? substr($checkOutFormatted, 0, 5) : '',
                 'status'            => $status,
                 'note'              => $noteRaw,
+                'is_locked'         => $isRowLocked,
                 'is_valid'          => empty($errors),
                 'error_message'     => !empty($errors) ? implode('; ', $errors) : null,
             ];
@@ -1194,7 +1269,8 @@ class AttendanceMonitoringController extends Controller
             ], 422);
         }
 
-        $importedCount = 0;
+        $importedCount      = 0;
+        $skippedLockedCount = 0;
         $users = User::with(['role', 'division'])->get()->keyBy('id');
         $validStatuses = ['Hadir', 'Terlambat', 'Izin', 'Sakit', 'Cuti'];
 
@@ -1211,6 +1287,28 @@ class AttendanceMonitoringController extends Controller
                 $targetDate = $this->parseImportDate($row['date'] ?? null);
                 if (!$targetDate) {
                     continue; // Skip jika tanggal tidak valid
+                }
+
+                // Proteksi Kunci: Jangan timpa data yang sudah diverifikasi / dikunci Super Admin
+                $existing = Attendance::where('user_id', $employee->id)
+                    ->whereDate('date', $targetDate)
+                    ->first();
+
+                if ($existing && $existing->is_locked) {
+                    $skippedLockedCount++;
+                    continue; // Dilindungi, lewati baris ini
+                }
+
+                // Auto-Remember: Jika nama di Excel adalah nama panggilan / alias baru, simpan ke database
+                $rawName = trim((string) ($row['raw_name'] ?? ''));
+                if (!empty($rawName) && strcasecmp($rawName, $employee->name) !== 0 && strlen($rawName) >= 2) {
+                    $currentNickname = (string) ($employee->nickname ?? '');
+                    $existingAliases = array_map('trim', array_map('strtolower', preg_split('/[,;|]/', $currentNickname)));
+                    if (!in_array(strtolower($rawName), $existingAliases, true)) {
+                        $newNickname = empty($currentNickname) ? $rawName : ($currentNickname . ', ' . $rawName);
+                        $employee->update(['nickname' => $newNickname]);
+                        $employee->nickname = $newNickname; // sync in-memory
+                    }
                 }
 
                 $checkInFormatted  = $this->parseImportTime($row['check_in'] ?? null);
@@ -1299,10 +1397,16 @@ class AttendanceMonitoringController extends Controller
                 }
             }
 
+            $message = "✅ Berhasil meng-import {$importedCount} data absensi.";
+            if ($skippedLockedCount > 0) {
+                $message .= " ({$skippedLockedCount} data dilindungi & dilewati karena berstatus terkunci oleh Super Admin).";
+            }
+
             return response()->json([
-                'success' => true,
-                'message' => "✅ Berhasil meng-import {$importedCount} data absensi.",
-                'count'   => $importedCount,
+                'success'        => true,
+                'message'        => $message,
+                'count'          => $importedCount,
+                'skipped_locked' => $skippedLockedCount,
             ]);
 
         } catch (\Throwable $e) {
@@ -1376,9 +1480,10 @@ class AttendanceMonitoringController extends Controller
         if ($colStatus === null) $colStatus = 4;
         if ($colCatatan === null) $colCatatan = 5;
 
-        // Ambil seluruh karyawan untuk pencocokan nama/username/email
+        // Ambil seluruh karyawan untuk pencocokan nama/username/email/alias
         $users   = User::with(['role', 'division'])->get();
         $userMap = [];
+        $aliasMap = [];
         foreach ($users as $u) {
             $userMap[strtolower(trim((string) $u->name))] = $u;
             if (!empty($u->username)) {
@@ -1387,35 +1492,75 @@ class AttendanceMonitoringController extends Controller
             if (!empty($u->email)) {
                 $userMap[strtolower(trim((string) $u->email))] = $u;
             }
+            if (!empty($u->nickname)) {
+                $aliases = preg_split('/[,;|]/', strtolower(trim((string) $u->nickname)));
+                foreach ($aliases as $alias) {
+                    $aliasClean = trim($alias);
+                    if (!empty($aliasClean)) {
+                        $aliasMap[$aliasClean] = $u;
+                    }
+                }
+            }
         }
 
-        // Fungsi pencocokan user yang toleran terhadap spasi / awalan nama
-        $findUser = function (string $nameQuery) use ($userMap, $users) {
+        // Fungsi pencocokan user cerdas (alias, kata panggilan, dan nama lengkap)
+        $findUser = function (string $nameQuery) use ($userMap, $aliasMap, $users) {
             $clean = strtolower(preg_replace('/\s+/', ' ', trim($nameQuery)));
             if (empty($clean)) {
                 return null;
             }
 
-            // Exact match
+            // Exact match nama/email/username
             if (isset($userMap[$clean])) {
                 return $userMap[$clean];
             }
 
-            // Loose match (awalan nama atau kecocokan tanpa spasi ganda)
-            foreach ($users as $u) {
-                $uName = strtolower(trim((string) $u->name));
-                if ($uName === $clean || str_starts_with($uName, $clean . ' ') || str_contains($uName, $clean)) {
+            // Exact match alias/nickname
+            if (isset($aliasMap[$clean])) {
+                return $aliasMap[$clean];
+            }
+
+            foreach ($aliasMap as $aliasKey => $u) {
+                if ($aliasKey === $clean || str_starts_with($clean, $aliasKey . ' ') || str_contains($clean, $aliasKey)) {
                     return $u;
                 }
+            }
+
+            // Word token match (misal: "Rio" dicocokkan ke "Muhammad Rio Pratama")
+            $candidates = [];
+            foreach ($users as $u) {
+                $uName = strtolower(trim((string) $u->name));
+                $uWords = array_filter(explode(' ', $uName), fn($w) => strlen($w) >= 2);
+                $isRamayana = ($u->role?->slug === 'karyawan_ramayana') || str_contains(strtolower($u->division?->name ?? ''), 'ramayana');
+
+                if (in_array($clean, $uWords, true)) {
+                    $candidates[] = ['user' => $u, 'score' => $isRamayana ? 100 : 80];
+                    continue;
+                }
+
+                if ($uName === $clean || str_starts_with($uName, $clean . ' ')) {
+                    $candidates[] = ['user' => $u, 'score' => $isRamayana ? 95 : 75];
+                    continue;
+                }
+
+                if (str_contains($uName, $clean) && strlen($clean) >= 3) {
+                    $candidates[] = ['user' => $u, 'score' => $isRamayana ? 70 : 50];
+                }
+            }
+
+            if (!empty($candidates)) {
+                usort($candidates, fn($a, $b) => $b['score'] <=> $a['score']);
+                return $candidates[0]['user'];
             }
 
             return null;
         };
 
-        $currentEmployee = null;
-        $importedCount   = 0;
-        $skippedCount    = 0;
-        $skippedDetails  = [];
+        $currentEmployee    = null;
+        $importedCount      = 0;
+        $skippedCount       = 0;
+        $skippedLockedCount = 0;
+        $skippedDetails     = [];
 
         for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
             $row = $rows[$i];
@@ -1455,6 +1600,16 @@ class AttendanceMonitoringController extends Controller
                 $matched = $findUser($cellNama);
                 if ($matched instanceof User) {
                     $currentEmployee = $matched;
+                    // Auto-remember alias jika beda dengan nama asli
+                    if (strcasecmp($cellNama, $matched->name) !== 0 && strlen($cellNama) >= 2) {
+                        $currNick = (string) ($matched->nickname ?? '');
+                        $existAliases = array_map('trim', array_map('strtolower', preg_split('/[,;|]/', $currNick)));
+                        if (!in_array(strtolower($cellNama), $existAliases, true)) {
+                            $newNick = empty($currNick) ? $cellNama : ($currNick . ', ' . $cellNama);
+                            $matched->update(['nickname' => $newNick]);
+                            $matched->nickname = $newNick;
+                        }
+                    }
                 } else {
                     $currentEmployee = false; // Tandai nama tidak ditemukan
                     $skippedCount++;
@@ -1486,6 +1641,16 @@ class AttendanceMonitoringController extends Controller
                 continue;
             }
 
+            // Proteksi Kunci: Jangan timpa data yang sudah diverifikasi / dikunci Super Admin
+            $existing = Attendance::where('user_id', $employee->id)
+                ->whereDate('date', $targetDate)
+                ->first();
+
+            if ($existing && $existing->is_locked) {
+                $skippedLockedCount++;
+                continue; // Dilindungi, jangan ditimpa
+            }
+
             // 5. Parsing Jam Masuk (Mendukung HH:MM, HH,MM koma, HH.MM titik, Serial Excel)
             $checkInRaw       = isset($row[$colCheckIn]) ? trim((string) $row[$colCheckIn]) : '';
             $checkInFormatted = $this->parseImportTime($checkInRaw);
@@ -1501,7 +1666,7 @@ class AttendanceMonitoringController extends Controller
 
             // 7. Status — Jika kolom Status kosong, otomatis = 'Hadir'
             $statusRaw     = isset($row[$colStatus]) ? trim((string) $row[$colStatus]) : '';
-            $validStatuses = ['Hadir', 'Terlambat', 'Izin', 'Sakit'];
+            $validStatuses = ['Hadir', 'Terlambat', 'Izin', 'Sakit', 'Cuti'];
             $status        = 'Hadir'; // Default: Hadir
             if (!empty($statusRaw)) {
                 foreach ($validStatuses as $vs) {
@@ -1519,7 +1684,7 @@ class AttendanceMonitoringController extends Controller
 
             // 9. Hitung Keterlambatan
             $latenessMinutes = 0;
-            if ($checkInFormatted && !in_array($status, ['Izin', 'Sakit'])) {
+            if ($checkInFormatted && !in_array($status, ['Izin', 'Sakit', 'Cuti'])) {
                 $userDivision     = $employee->division ? strtolower(trim((string) $employee->division->name)) : '';
                 $isLiveStreaming  = str_contains($userDivision, 'live streaming');
                 $isSalesMarketing = str_contains($userDivision, 'sales marketing');
@@ -1574,8 +1739,11 @@ class AttendanceMonitoringController extends Controller
         }
 
         $msg = "✅ Berhasil meng-import {$importedCount} data absensi.";
+        if ($skippedLockedCount > 0) {
+            $msg .= " ({$skippedLockedCount} data dilindungi & dilewati karena berstatus terkunci oleh Super Admin).";
+        }
         if ($skippedCount > 0) {
-            $msg .= " ({$skippedCount} baris dilewati karena karyawan tidak terdaftar atau format tanggal tidak valid: " . implode(', ', $skippedDetails) . ")";
+            $msg .= " ({$skippedCount} baris dilewati: " . implode(', ', $skippedDetails) . ")";
         }
 
         // Simpan bulan import terakhir ke session agar halaman rekap otomatis menampilkan bulan yang baru di-import

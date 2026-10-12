@@ -72,6 +72,16 @@
                         </div>
 
                         <div>
+                            <div class="flex items-center justify-between mb-1.5 pl-0.5">
+                                <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Panggilan / Alias Excel</label>
+                                <span class="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">Auto-Detect Import</span>
+                            </div>
+                            <input type="text" name="nickname" value="{{ old('nickname', $user->nickname) }}" placeholder="Contoh: rio, rio p, yanti (pisahkan dengan koma)"
+                                   class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none transition-all">
+                            <p class="text-[10.5px] text-slate-400 mt-1 pl-0.5">Jika PIC menulis nama panggilan ini di file Excel, sistem otomatis mendeteksi ke akun ini.</p>
+                        </div>
+
+                        <div>
                             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 pl-0.5">Nama Pengguna (Username)</label>
                             <input type="text" name="username" value="{{ old('username', $user->username) }}" required
                                    class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none transition-all">
