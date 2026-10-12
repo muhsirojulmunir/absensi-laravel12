@@ -150,7 +150,7 @@
                     </a>
                 @else
                     <a href="{{ route('super-admin.attendance.index') }}"
-                       class="flex items-center rounded-lg transition-all duration-200 {{ request()->routeIs('super-admin.attendance.*') ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
+                       class="flex items-center rounded-lg transition-all duration-200 {{ (request()->routeIs('super-admin.attendance.*') && !request()->routeIs('super-admin.attendance.rekap-bulanan') && !request()->routeIs('super-admin.attendance.payment-history')) ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200' }}"
                        :class="collapsed ? 'justify-center px-2 py-2.5' : 'space-x-2.5 px-3 py-2.5'"
                        title="Monitor Absensi">
                         <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>

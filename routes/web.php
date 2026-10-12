@@ -77,6 +77,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/attendance/manual-checkout', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'manualCheckout'])->name('attendance.manual-checkout');
         Route::post('/attendance/manual-leave', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'manualLeave'])->name('attendance.manual-leave');
         Route::get('/attendance/import-template', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'downloadTemplate'])->name('attendance.import-template');
+        Route::post('/attendance/import-preview', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'importPreview'])->name('attendance.import-preview');
+        Route::post('/attendance/import-confirm', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'importConfirm'])->name('attendance.import-confirm');
         Route::post('/attendance/import', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'import'])->name('attendance.import');
         Route::get('/attendance/payment-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'paymentHistory'])->name('attendance.payment-history');
         Route::get('/attendance/rekap-bulanan', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'rekapBulanan'])->name('attendance.rekap-bulanan');

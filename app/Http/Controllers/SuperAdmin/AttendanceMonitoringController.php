@@ -10,6 +10,7 @@ use App\Models\LeaveRequest;
 use App\Models\Setting;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -948,7 +949,373 @@ class AttendanceMonitoringController extends Controller
     }
 
     /**
-     * Import data absensi massal dari Excel / CSV
+     * Preview dan validasi data absensi dari Excel / CSV sebelum di-import
+     */
+    public function importPreview(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
+        ]);
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+        $ext  = $file->getClientOriginalExtension();
+
+        try {
+            $rows = \App\Services\ExcelImportReader::readRows($path, $ext);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membaca file Excel/CSV: ' . $e->getMessage(),
+            ], 422);
+        }
+
+        if (empty($rows) || count($rows) < 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File Excel/CSV kosong atau tidak memiliki data.',
+            ], 422);
+        }
+
+        // Deteksi kolom dari baris header
+        $headerRowIndex = null;
+        $colNama        = null;
+        $colTanggal     = null;
+        $colCheckIn     = null;
+        $colCheckOut    = null;
+        $colStatus      = null;
+        $colCatatan     = null;
+
+        foreach ($rows as $index => $row) {
+            $rowStr = implode(' ', array_map('strtolower', array_map('strval', $row)));
+            if (str_contains($rowStr, 'template import')) {
+                continue;
+            }
+
+            if (str_contains($rowStr, 'nama') || str_contains($rowStr, 'karyawan') || str_contains($rowStr, 'tanggal') || str_contains($rowStr, 'masuk')) {
+                $headerRowIndex = $index;
+                foreach ($row as $colIdx => $val) {
+                    $v = strtolower(trim((string) $val));
+                    if (str_contains($v, 'nama') || str_contains($v, 'karyawan')) $colNama = $colIdx;
+                    elseif (str_contains($v, 'tanggal') || str_contains($v, 'date')) $colTanggal = $colIdx;
+                    elseif (str_contains($v, 'masuk') || str_contains($v, 'check_in') || str_contains($v, 'check in')) $colCheckIn = $colIdx;
+                    elseif (str_contains($v, 'pulang') || str_contains($v, 'check_out') || str_contains($v, 'check out')) $colCheckOut = $colIdx;
+                    elseif (str_contains($v, 'status')) $colStatus = $colIdx;
+                    elseif (str_contains($v, 'catatan') || str_contains($v, 'note')) $colCatatan = $colIdx;
+                }
+                break;
+            }
+        }
+
+        if ($headerRowIndex === null) $headerRowIndex = 0;
+        if ($colNama === null) $colNama = 0;
+        if ($colTanggal === null) $colTanggal = 1;
+        if ($colCheckIn === null) $colCheckIn = 2;
+        if ($colCheckOut === null) $colCheckOut = 3;
+        if ($colStatus === null) $colStatus = 4;
+        if ($colCatatan === null) $colCatatan = 5;
+
+        // Ambil seluruh user aktif untuk dropdown koreksi dan auto-matching
+        $users = User::where('is_active', true)
+            ->with(['role', 'division', 'location'])
+            ->get()
+            ->sortBy('name');
+
+        $userMap = [];
+        foreach ($users as $u) {
+            $userMap[strtolower(trim((string) $u->name))] = $u;
+            if (!empty($u->username)) {
+                $userMap[strtolower(trim((string) $u->username))] = $u;
+            }
+            if (!empty($u->email)) {
+                $userMap[strtolower(trim((string) $u->email))] = $u;
+            }
+        }
+
+        $findUser = function (string $nameQuery) use ($userMap, $users) {
+            $clean = strtolower(preg_replace('/\s+/', ' ', trim($nameQuery)));
+            if (empty($clean)) {
+                return null;
+            }
+            if (isset($userMap[$clean])) {
+                return $userMap[$clean];
+            }
+            foreach ($users as $u) {
+                $uName = strtolower(trim((string) $u->name));
+                if ($uName === $clean || str_starts_with($uName, $clean . ' ') || str_contains($uName, $clean)) {
+                    return $u;
+                }
+            }
+            return null;
+        };
+
+        $employeeList = $users->map(function ($u) {
+            $dept = $u->division?->name ?? ($u->role?->name ?? '-');
+            return [
+                'id'       => $u->id,
+                'name'     => $u->name,
+                'dept'     => $dept,
+                'role'     => $u->role?->slug ?? '',
+                'label'    => "{$u->name} ({$dept})",
+            ];
+        })->values();
+
+        $currentEmployee = null;
+        $parsedRows      = [];
+
+        for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
+            $row = $rows[$i];
+
+            // 1. Cek apakah seluruh baris kosong
+            $isRowEmpty = true;
+            foreach ($row as $cell) {
+                if ($cell !== null && trim((string) $cell) !== '') {
+                    $isRowEmpty = false;
+                    break;
+                }
+            }
+            if ($isRowEmpty) {
+                continue;
+            }
+
+            // 2. Abaikan baris panduan/contoh di template
+            $rowAllText = strtolower(implode(' ', array_map('strval', $row)));
+            if (
+                str_contains($rowAllText, 'nama lengkap') ||
+                str_contains($rowAllText, 'sesuai sistem') ||
+                str_contains($rowAllText, 'cukup di baris pertama') ||
+                str_contains($rowAllText, 'format:') ||
+                str_contains($rowAllText, 'format :') ||
+                str_contains($rowAllText, 'template import') ||
+                str_contains($rowAllText, 'dd/mm/yyyy') ||
+                str_contains($rowAllText, 'yyyy-mm-dd') ||
+                str_contains($rowAllText, 'hh:mm')
+            ) {
+                continue;
+            }
+
+            // 3. Cek Nama Karyawan di baris ini
+            $cellNama = isset($row[$colNama]) ? trim((string) $row[$colNama]) : '';
+            if (!empty($cellNama)) {
+                $matched = $findUser($cellNama);
+                if ($matched instanceof User) {
+                    $currentEmployee = $matched;
+                } else {
+                    $currentEmployee = null;
+                }
+            }
+
+            $rawNameDisplay = !empty($cellNama) ? $cellNama : ($currentEmployee ? $currentEmployee->name : '');
+            $matchedUserId  = $currentEmployee ? $currentEmployee->id : null;
+
+            // 4. Parsing Tanggal
+            $tanggalRaw = isset($row[$colTanggal]) ? trim((string) $row[$colTanggal]) : '';
+            $targetDate = $this->parseImportDate($tanggalRaw);
+
+            // 5. Parsing Jam Masuk & Pulang
+            $checkInRaw       = isset($row[$colCheckIn]) ? trim((string) $row[$colCheckIn]) : '';
+            $checkInFormatted = $this->parseImportTime($checkInRaw);
+
+            $checkOutRaw       = isset($row[$colCheckOut]) ? trim((string) $row[$colCheckOut]) : '';
+            $checkOutFormatted = $this->parseImportTime($checkOutRaw);
+
+            // 6. Status
+            $statusRaw     = isset($row[$colStatus]) ? trim((string) $row[$colStatus]) : '';
+            $validStatuses = ['Hadir', 'Terlambat', 'Izin', 'Sakit', 'Cuti'];
+            $status        = 'Hadir';
+            if (!empty($statusRaw)) {
+                foreach ($validStatuses as $vs) {
+                    if (strcasecmp($statusRaw, $vs) === 0) {
+                        $status = $vs;
+                        break;
+                    }
+                }
+            }
+
+            // 7. Catatan
+            $noteRaw = isset($row[$colCatatan]) && !empty(trim((string) $row[$colCatatan]))
+                ? trim((string) $row[$colCatatan])
+                : 'Import Massal Absensi';
+
+            // Evaluasi validitas baris
+            $errors = [];
+            if (empty($matchedUserId)) {
+                $errors[] = !empty($rawNameDisplay) 
+                    ? "Karyawan '{$rawNameDisplay}' tidak terdaftar" 
+                    : "Nama karyawan belum dipilih";
+            }
+            if (empty($targetDate)) {
+                $errors[] = !empty($tanggalRaw) 
+                    ? "Tanggal '{$tanggalRaw}' tidak valid" 
+                    : "Tanggal kosong";
+            }
+            if (empty($checkInFormatted) && empty($checkOutFormatted) && !in_array($status, ['Izin', 'Sakit', 'Cuti'])) {
+                $errors[] = "Jam masuk dan jam pulang keduanya kosong";
+            }
+
+            $parsedRows[] = [
+                'id'                => $i,
+                'row_number'        => $i + 1,
+                'raw_name'          => $rawNameDisplay,
+                'user_id'           => $matchedUserId,
+                'date'              => $targetDate ?: ($tanggalRaw ?: date('Y-m-d')),
+                'check_in'          => $checkInFormatted ? substr($checkInFormatted, 0, 5) : '',
+                'check_out'         => $checkOutFormatted ? substr($checkOutFormatted, 0, 5) : '',
+                'status'            => $status,
+                'note'              => $noteRaw,
+                'is_valid'          => empty($errors),
+                'error_message'     => !empty($errors) ? implode('; ', $errors) : null,
+            ];
+        }
+
+        $validCount   = count(array_filter($parsedRows, fn($r) => $r['is_valid']));
+        $invalidCount = count($parsedRows) - $validCount;
+
+        return response()->json([
+            'success'       => true,
+            'total'         => count($parsedRows),
+            'valid_count'   => $validCount,
+            'invalid_count' => $invalidCount,
+            'rows'          => $parsedRows,
+            'employees'     => $employeeList,
+        ]);
+    }
+
+    /**
+     * Konfirmasi dan simpan data absensi hasil edit preview ke database
+     */
+    public function importConfirm(Request $request): JsonResponse
+    {
+        $rowsData = $request->input('rows');
+        if (!is_array($rowsData) || empty($rowsData)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada data absensi yang dikirim untuk di-import.',
+            ], 422);
+        }
+
+        $importedCount = 0;
+        $users = User::with(['role', 'division'])->get()->keyBy('id');
+        $validStatuses = ['Hadir', 'Terlambat', 'Izin', 'Sakit', 'Cuti'];
+
+        DB::beginTransaction();
+        try {
+            foreach ($rowsData as $row) {
+                $userId = isset($row['user_id']) ? (int) $row['user_id'] : null;
+                if (!$userId || !isset($users[$userId])) {
+                    continue; // Skip jika karyawan tidak valid
+                }
+
+                $employee = $users[$userId];
+
+                $targetDate = $this->parseImportDate($row['date'] ?? null);
+                if (!$targetDate) {
+                    continue; // Skip jika tanggal tidak valid
+                }
+
+                $checkInFormatted  = $this->parseImportTime($row['check_in'] ?? null);
+                $checkOutFormatted = $this->parseImportTime($row['check_out'] ?? null);
+
+                $statusRaw = trim((string) ($row['status'] ?? 'Hadir'));
+                $status    = 'Hadir';
+                foreach ($validStatuses as $vs) {
+                    if (strcasecmp($statusRaw, $vs) === 0) {
+                        $status = $vs;
+                        break;
+                    }
+                }
+
+                // Jika jam masuk & pulang kosong dan bukan izin/sakit/cuti, skip
+                if (empty($checkInFormatted) && empty($checkOutFormatted) && !in_array($status, ['Izin', 'Sakit', 'Cuti'])) {
+                    continue;
+                }
+
+                $noteRaw = !empty(trim((string) ($row['note'] ?? '')))
+                    ? trim((string) $row['note'])
+                    : 'Import Massal Absensi';
+
+                // Hitung Keterlambatan
+                $latenessMinutes = 0;
+                if ($checkInFormatted && !in_array($status, ['Izin', 'Sakit', 'Cuti'])) {
+                    $userDivision     = $employee->division ? strtolower(trim((string) $employee->division->name)) : '';
+                    $isLiveStreaming  = str_contains($userDivision, 'live streaming');
+                    $isSalesMarketing = str_contains($userDivision, 'sales marketing');
+
+                    if (!$isLiveStreaming && !$isSalesMarketing) {
+                        $checkInTime   = Carbon::parse($targetDate . ' ' . $checkInFormatted);
+                        $lateThreshold = Carbon::parse($targetDate . ' 10:00:00');
+                        if ($checkInTime->greaterThanOrEqualTo($lateThreshold)) {
+                            $latenessMinutes = (int) $lateThreshold->diffInMinutes($checkInTime);
+                            $status          = 'Terlambat';
+                        }
+                    }
+                }
+
+                // Hitung Is Pulang Cepat
+                $isPulangCepat = false;
+                if ($checkOutFormatted && $checkInFormatted) {
+                    $userDivision  = $employee->division ? strtolower(trim((string) $employee->division->name)) : '';
+                    $checkInTime   = Carbon::parse($targetDate . ' ' . $checkInFormatted);
+                    $checkOutTime  = Carbon::parse($targetDate . ' ' . $checkOutFormatted);
+                    $minutesWorked = (int) $checkInTime->diffInMinutes($checkOutTime);
+
+                    if ($employee->role && $employee->role->slug === 'karyawan_ramayana') {
+                        $isPulangCepat = $minutesWorked < (7 * 60);
+                    } elseif (str_contains($userDivision, 'gudang')) {
+                        $isPulangCepat = $checkOutFormatted < '18:00:00';
+                    } else {
+                        $isPulangCepat = $minutesWorked < (8 * 60);
+                    }
+                }
+
+                Attendance::updateOrCreate(
+                    [
+                        'user_id' => $employee->id,
+                        'date'    => $targetDate,
+                    ],
+                    [
+                        'check_in'         => $checkInFormatted,
+                        'check_out'        => $checkOutFormatted,
+                        'status'           => $status,
+                        'lateness_minutes' => $latenessMinutes,
+                        'is_pulang_cepat'  => $isPulangCepat,
+                        'note'             => $noteRaw,
+                        'lat'              => 0,
+                        'long'             => 0,
+                        'check_in_method'  => 'manual',
+                        'check_out_method' => 'manual',
+                    ]
+                );
+
+                $importedCount++;
+            }
+
+            DB::commit();
+
+            if ($importedCount > 0) {
+                $lastDate = Attendance::where('note', 'like', '%Import%')->orderByDesc('date')->value('date');
+                if ($lastDate) {
+                    session(['imported_month' => Carbon::parse($lastDate)->format('Y-m')]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "✅ Berhasil meng-import {$importedCount} data absensi.",
+                'count'   => $importedCount,
+            ]);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyimpan data absensi: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Import data absensi massal dari Excel / CSV (Direct fallback)
      */
     public function import(Request $request): RedirectResponse
     {
