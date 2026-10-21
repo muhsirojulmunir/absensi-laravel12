@@ -486,8 +486,20 @@ class AttendanceMonitoringController extends Controller
      */
     public function rekapBulanan(Request $request): View
     {
-        // Default ke bulan yang baru di-import jika ada, atau bulan ini
-        $month = $request->query('month', session('imported_month', Carbon::now()->format('Y-m')));
+        // Default ke bulan yang baru di-import jika ada, atau bulan ini (bersihkan jika ada nilai masa depan yang korup)
+        $sessionMonth = session('imported_month');
+        if ($sessionMonth) {
+            try {
+                if (Carbon::parse($sessionMonth . '-01')->year > (int) date('Y')) {
+                    $sessionMonth = null;
+                    session()->forget('imported_month');
+                }
+            } catch (\Throwable $e) {
+                $sessionMonth = null;
+                session()->forget('imported_month');
+            }
+        }
+        $month = $request->query('month', $sessionMonth ?: Carbon::now()->format('Y-m'));
         $start = Carbon::parse($month . '-01')->startOfDay();
         $end   = $start->copy()->endOfMonth()->endOfDay();
         $today = Carbon::today();
@@ -756,24 +768,48 @@ class AttendanceMonitoringController extends Controller
             } catch (\Throwable $e) {}
         }
 
+        $currentYear = (int) date('Y');
+
         // 2. Format YYYY-MM-DD atau YYYY/MM/DD atau YYYY.MM.DD
         if (preg_match('/^(\d{4})[-\/\.](\d{1,2})[-\/\.](\d{1,2})$/', $raw, $m)) {
-            return sprintf('%04d-%02d-%02d', (int) $m[1], (int) $m[2], (int) $m[3]);
+            $year  = (int) $m[1];
+            $month = (int) $m[2];
+            $day   = (int) $m[3];
+            if ($year > $currentYear) {
+                $year = $currentYear;
+            }
+            return sprintf('%04d-%02d-%02d', $year, $month, $day);
         }
 
         // 3. Format DD-MM-YYYY atau DD/MM/YYYY atau DD.MM.YYYY (Standar Indonesia)
         if (preg_match('/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{4})$/', $raw, $m)) {
-            return sprintf('%04d-%02d-%02d', (int) $m[3], (int) $m[2], (int) $m[1]);
+            $year  = (int) $m[3];
+            $month = (int) $m[2];
+            $day   = (int) $m[1];
+            if ($year > $currentYear) {
+                $year = $currentYear;
+            }
+            return sprintf('%04d-%02d-%02d', $year, $month, $day);
         }
 
         // 4. Format DD-MM-YY atau DD/MM/YY atau DD.MM.YY
         if (preg_match('/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2})$/', $raw, $m)) {
-            return sprintf('%04d-%02d-%02d', 2000 + (int) $m[3], (int) $m[2], (int) $m[1]);
+            $year  = 2000 + (int) $m[3];
+            $month = (int) $m[2];
+            $day   = (int) $m[1];
+            if ($year > $currentYear) {
+                $year = $currentYear;
+            }
+            return sprintf('%04d-%02d-%02d', $year, $month, $day);
         }
 
         // 5. Fallback via Carbon
         try {
-            return Carbon::parse($raw)->toDateString();
+            $parsed = Carbon::parse($raw);
+            if ($parsed->year > $currentYear) {
+                $parsed->year($currentYear);
+            }
+            return $parsed->toDateString();
         } catch (\Throwable $e) {
             return null;
         }
@@ -1385,16 +1421,22 @@ class AttendanceMonitoringController extends Controller
                     ]
                 );
 
+                $importedDates[] = $targetDate;
                 $importedCount++;
             }
 
             DB::commit();
 
-            if ($importedCount > 0) {
-                $lastDate = Attendance::where('note', 'like', '%Import%')->orderByDesc('date')->value('date');
-                if ($lastDate) {
-                    session(['imported_month' => Carbon::parse($lastDate)->format('Y-m')]);
-                }
+            $firstImportedDate  = null;
+            $latestImportedDate = null;
+            $importedMonth      = null;
+
+            if (!empty($importedDates)) {
+                sort($importedDates);
+                $firstImportedDate  = reset($importedDates);
+                $latestImportedDate = end($importedDates);
+                $importedMonth      = Carbon::parse($latestImportedDate)->format('Y-m');
+                session(['imported_month' => $importedMonth]);
             }
 
             $message = "✅ Berhasil meng-import {$importedCount} data absensi.";
@@ -1407,6 +1449,11 @@ class AttendanceMonitoringController extends Controller
                 'message'        => $message,
                 'count'          => $importedCount,
                 'skipped_locked' => $skippedLockedCount,
+                'target_date'    => $firstImportedDate,
+                'imported_month' => $importedMonth,
+                'redirect_url'   => $firstImportedDate
+                    ? route('super-admin.attendance.index', ['date' => $firstImportedDate])
+                    : route('super-admin.attendance.index'),
             ]);
 
         } catch (\Throwable $e) {
@@ -1735,7 +1782,8 @@ class AttendanceMonitoringController extends Controller
                 ]
             );
 
-            $importedCount++;
+                $importedDates[] = $targetDate;
+                $importedCount++;
         }
 
         $msg = "✅ Berhasil meng-import {$importedCount} data absensi.";
@@ -1747,14 +1795,16 @@ class AttendanceMonitoringController extends Controller
         }
 
         // Simpan bulan import terakhir ke session agar halaman rekap otomatis menampilkan bulan yang baru di-import
-        if ($importedCount > 0) {
-            $allImported = \App\Models\Attendance::whereIn('user_id', $users->pluck('id'))
-                ->where('note', 'like', '%Import%')
-                ->orderByDesc('date')
-                ->value('date');
-            if ($allImported) {
-                session(['imported_month' => \Carbon\Carbon::parse($allImported)->format('Y-m')]);
-            }
+        $firstImportedDate = null;
+        if (!empty($importedDates)) {
+            sort($importedDates);
+            $firstImportedDate  = reset($importedDates);
+            $latestImportedDate = end($importedDates);
+            session(['imported_month' => Carbon::parse($latestImportedDate)->format('Y-m')]);
+        }
+
+        if ($firstImportedDate) {
+            return redirect()->route('super-admin.attendance.index', ['date' => $firstImportedDate])->with('success', $msg);
         }
 
         return back()->with('success', $msg);

@@ -919,6 +919,11 @@ function importAttendanceManager() {
             }
             if (!row.date || !row.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
                 errors.push('Tanggal tidak valid (YYYY-MM-DD)');
+            } else {
+                const todayStr = new Date().toISOString().split('T')[0];
+                if (row.date > todayStr) {
+                    errors.push('Tanggal tidak boleh di masa depan (melebihi hari ini)');
+                }
             }
             const hasCheckIn = row.check_in && row.check_in.trim() !== '';
             const hasCheckOut = row.check_out && row.check_out.trim() !== '';
@@ -971,7 +976,11 @@ function importAttendanceManager() {
                 }
 
                 alert(data.message || 'Data absensi berhasil di-import!');
-                window.location.reload();
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.reload();
+                }
             } catch (err) {
                 this.step = 'preview';
                 alert('Gagal: ' + (err.message || 'Terjadi kesalahan sistem.'));
