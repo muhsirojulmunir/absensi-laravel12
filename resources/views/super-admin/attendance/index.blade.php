@@ -871,6 +871,24 @@
                                         </span>
                                     </template>
                                 </div>
+
+                                {{-- Daftar Karyawan Terkait --}}
+                                <template x-if="batch.employee_names && batch.employee_names.length > 0">
+                                    <div class="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Karyawan:</span>
+                                        <template x-for="name in batch.employee_names" :key="name">
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
+                                                <svg class="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                                <span x-text="name"></span>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <template x-if="batch.note">
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 italic" x-text="batch.note"></p>
+                                </template>
+
                                 <div class="text-[11px] text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
                                     <span>Di-import: <strong class="text-slate-600 dark:text-slate-400" x-text="batch.created_at"></strong></span>
                                     <span>•</span>

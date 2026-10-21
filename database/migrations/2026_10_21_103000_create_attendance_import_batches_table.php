@@ -12,6 +12,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('file_name')->nullable();
+            $table->json('employee_names')->nullable();
+            $table->text('note')->nullable();
             $table->integer('imported_count')->default(0);
             $table->string('status', 30)->default('active'); // active, reverted
             $table->json('created_ids')->nullable();

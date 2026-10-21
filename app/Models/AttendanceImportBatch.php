@@ -9,6 +9,8 @@ class AttendanceImportBatch extends Model
     protected $fillable = [
         'user_id',
         'file_name',
+        'employee_names',
+        'note',
         'imported_count',
         'status',
         'created_ids',
@@ -20,6 +22,7 @@ class AttendanceImportBatch extends Model
     protected function casts(): array
     {
         return [
+            'employee_names' => 'array',
             'created_ids' => 'array',
             'updated_snapshots' => 'array',
             'reverted_at' => 'datetime',

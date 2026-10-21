@@ -1446,9 +1446,14 @@ class AttendanceMonitoringController extends Controller
 
             // Simpan Riwayat Batch Import untuk Fitur Undo / Rollback
             if ($importedCount > 0) {
+                $employeeNames = collect($rows)->pluck('user_id')->unique()->map(function ($uid) use ($users) {
+                    return $users->get($uid)?->name;
+                })->filter()->values()->toArray();
+
                 \App\Models\AttendanceImportBatch::create([
                     'user_id'           => Auth::id(),
                     'file_name'         => $request->input('file_name') ?: 'Import Excel Absensi',
+                    'employee_names'    => $employeeNames,
                     'imported_count'    => $importedCount,
                     'status'            => 'active',
                     'created_ids'       => $createdIds,
@@ -1506,9 +1511,41 @@ class AttendanceMonitoringController extends Controller
             ->take(20)
             ->get()
             ->map(function ($b) {
+                $employeeNames = $b->employee_names ?? [];
+
+                // Fallback jika belum terisi di kolom employee_names
+                if (empty($employeeNames)) {
+                    if (!empty($b->created_ids)) {
+                        $empFromCreated = Attendance::whereIn('id', $b->created_ids)
+                            ->with('user:id,name')
+                            ->get()
+                            ->pluck('user.name')
+                            ->filter()
+                            ->unique()
+                            ->values()
+                            ->toArray();
+                        $employeeNames = array_merge($employeeNames, $empFromCreated);
+                    }
+                    if (!empty($b->updated_snapshots)) {
+                        $snapIds = array_column($b->updated_snapshots, 'id');
+                        $empFromSnap = Attendance::whereIn('id', $snapIds)
+                            ->with('user:id,name')
+                            ->get()
+                            ->pluck('user.name')
+                            ->filter()
+                            ->unique()
+                            ->values()
+                            ->toArray();
+                        $employeeNames = array_merge($employeeNames, $empFromSnap);
+                    }
+                    $employeeNames = array_values(array_unique($employeeNames));
+                }
+
                 return [
                     'id'             => $b->id,
                     'file_name'      => $b->file_name ?: 'Import Excel Absensi',
+                    'employee_names' => $employeeNames,
+                    'note'           => $b->note,
                     'imported_count' => $b->imported_count,
                     'status'         => $b->status,
                     'created_at'     => $b->created_at ? $b->created_at->translatedFormat('d M Y, H:i') : '-',
@@ -1565,9 +1602,16 @@ class AttendanceMonitoringController extends Controller
 
             DB::commit();
 
+            $msg = "✅ Berhasil membatalkan import.";
+            if ($deletedCount > 0 || $restoredCount > 0) {
+                $msg .= " ({$deletedCount} data baru dihapus, {$restoredCount} data lama dipulihkan)";
+            } else {
+                $msg .= " (Data absensi telah dipulihkan ke kondisi semula)";
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => "✅ Berhasil membatalkan import: {$deletedCount} data baru dihapus, {$restoredCount} data lama dipulihkan.",
+                'message' => $msg,
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
