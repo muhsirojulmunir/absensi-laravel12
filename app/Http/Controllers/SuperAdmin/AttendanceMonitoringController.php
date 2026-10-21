@@ -1446,7 +1446,7 @@ class AttendanceMonitoringController extends Controller
 
             // Simpan Riwayat Batch Import untuk Fitur Undo / Rollback
             if ($importedCount > 0) {
-                $employeeNames = collect($rows)->pluck('user_id')->unique()->map(function ($uid) use ($users) {
+                $employeeNames = collect($rowsData)->pluck('user_id')->unique()->map(function ($uid) use ($users) {
                     return $users->get($uid)?->name;
                 })->filter()->values()->toArray();
 
