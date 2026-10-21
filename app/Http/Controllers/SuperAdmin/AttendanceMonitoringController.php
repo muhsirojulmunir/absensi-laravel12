@@ -1307,6 +1307,9 @@ class AttendanceMonitoringController extends Controller
 
         $importedCount      = 0;
         $skippedLockedCount = 0;
+        $importedDates      = [];
+        $createdIds         = [];
+        $updatedSnapshots   = [];
         $users = User::with(['role', 'division'])->get()->keyBy('id');
         $validStatuses = ['Hadir', 'Terlambat', 'Izin', 'Sakit', 'Cuti'];
 
@@ -1333,6 +1336,18 @@ class AttendanceMonitoringController extends Controller
                 if ($existing && $existing->is_locked) {
                     $skippedLockedCount++;
                     continue; // Dilindungi, lewati baris ini
+                }
+
+                // Snapshot data sebelum ditimpa (untuk fitur Undo / Rollback)
+                if ($existing) {
+                    $updatedSnapshots[] = [
+                        'id'   => $existing->id,
+                        'data' => $existing->only([
+                            'check_in', 'check_out', 'status', 'lateness_minutes',
+                            'is_pulang_cepat', 'note', 'lat', 'long',
+                            'check_in_method', 'check_out_method'
+                        ]),
+                    ];
                 }
 
                 // Auto-Remember: Jika nama di Excel adalah nama panggilan / alias baru, simpan ke database
@@ -1402,7 +1417,7 @@ class AttendanceMonitoringController extends Controller
                     }
                 }
 
-                Attendance::updateOrCreate(
+                $record = Attendance::updateOrCreate(
                     [
                         'user_id' => $employee->id,
                         'date'    => $targetDate,
@@ -1421,8 +1436,24 @@ class AttendanceMonitoringController extends Controller
                     ]
                 );
 
+                if (!$existing && $record) {
+                    $createdIds[] = $record->id;
+                }
+
                 $importedDates[] = $targetDate;
                 $importedCount++;
+            }
+
+            // Simpan Riwayat Batch Import untuk Fitur Undo / Rollback
+            if ($importedCount > 0) {
+                \App\Models\AttendanceImportBatch::create([
+                    'user_id'           => Auth::id(),
+                    'file_name'         => $request->input('file_name') ?: 'Import Excel Absensi',
+                    'imported_count'    => $importedCount,
+                    'status'            => 'active',
+                    'created_ids'       => $createdIds,
+                    'updated_snapshots' => $updatedSnapshots,
+                ]);
             }
 
             DB::commit();
@@ -1461,6 +1492,88 @@ class AttendanceMonitoringController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menyimpan data absensi: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Mengambil daftar riwayat batch import untuk modal Undo / Rollback
+     */
+    public function importBatches(): JsonResponse
+    {
+        $batches = \App\Models\AttendanceImportBatch::with(['user', 'revertedByUser'])
+            ->latest()
+            ->take(20)
+            ->get()
+            ->map(function ($b) {
+                return [
+                    'id'             => $b->id,
+                    'file_name'      => $b->file_name ?: 'Import Excel Absensi',
+                    'imported_count' => $b->imported_count,
+                    'status'         => $b->status,
+                    'created_at'     => $b->created_at ? $b->created_at->translatedFormat('d M Y, H:i') : '-',
+                    'user_name'      => $b->user?->name ?? 'Super Admin',
+                    'reverted_at'    => $b->reverted_at ? $b->reverted_at->translatedFormat('d M Y, H:i') : null,
+                    'reverted_by'    => $b->revertedByUser?->name,
+                    'can_revert'     => $b->status === 'active',
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'batches' => $batches,
+        ]);
+    }
+
+    /**
+     * Membatalkan / Rollback hasil batch import (Undo)
+     */
+    public function revertImportBatch(\App\Models\AttendanceImportBatch $batch): JsonResponse
+    {
+        if ($batch->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Batch import ini sudah pernah dibatalkan sebelumnya.',
+            ], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $deletedCount  = 0;
+            $restoredCount = 0;
+
+            // 1. Hapus data yang dibuat baru pada batch ini
+            if (!empty($batch->created_ids)) {
+                $deletedCount = Attendance::whereIn('id', $batch->created_ids)->delete();
+            }
+
+            // 2. Pulihkan data yang sempat tertimpa ke nilai sebelumnya
+            if (!empty($batch->updated_snapshots)) {
+                foreach ($batch->updated_snapshots as $snap) {
+                    if (isset($snap['id']) && !empty($snap['data'])) {
+                        Attendance::where('id', $snap['id'])->update($snap['data']);
+                        $restoredCount++;
+                    }
+                }
+            }
+
+            $batch->update([
+                'status'      => 'reverted',
+                'reverted_at' => now(),
+                'reverted_by' => Auth::id(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "✅ Berhasil membatalkan import: {$deletedCount} data baru dihapus, {$restoredCount} data lama dipulihkan.",
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membatalkan import: ' . $e->getMessage(),
             ], 500);
         }
     }

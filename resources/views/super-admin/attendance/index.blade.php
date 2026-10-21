@@ -62,6 +62,12 @@
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                     <span>Import Absen</span>
                 </button>
+                <button type="button" @click="$dispatch('open-undo-import-modal')"
+                    class="inline-flex items-center gap-1.5 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer uppercase tracking-wider"
+                    title="Riwayat Import & Batalkan / Kembalikan Data (Undo)">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2m0 0l-4-4m4 4l4-4M3 10l4-4m-4 4l4 4"/></svg>
+                    <span>Riwayat & Undo</span>
+                </button>
                 @if(isset($employees))
                 <button type="button" @click="showManualCheckinModal = true"
                     class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm shadow-emerald-500/10 active:scale-95 cursor-pointer uppercase tracking-wider">
@@ -789,6 +795,125 @@
     </div>
 </div>
 
+    {{-- Modal Riwayat Import & Batalkan / Undo --}}
+    <div x-data="undoImportManager()" 
+         @open-undo-import-modal.window="openModal()"
+         x-show="showModal" 
+         x-cloak 
+         style="display: none;" 
+         class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+        
+        {{-- Backdrop --}}
+        <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity" @click="close()"></div>
+        
+        {{-- Modal Box --}}
+        <div class="relative bg-white dark:bg-dark-card rounded-2xl shadow-2xl border border-slate-200/80 dark:border-slate-800 transition-all duration-300 z-10 overflow-hidden flex flex-col w-full max-w-3xl max-h-[90vh]">
+            
+            {{-- Header --}}
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/40 flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2m0 0l-4-4m4 4l4-4M3 10l4-4m-4 4l4 4"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-wider">Riwayat & Batalkan Import (Undo)</h3>
+                        <p class="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Batalkan import massal dan kembalikan data yang tertimpa dengan 1 klik.</p>
+                    </div>
+                </div>
+                <button type="button" @click="close()" 
+                        class="text-slate-400 hover:text-slate-650 dark:hover:text-white bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 p-2 rounded-xl transition-colors cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            {{-- Content --}}
+            <div class="p-6 overflow-y-auto space-y-4 flex-1">
+                {{-- Alert info --}}
+                <div class="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2.5 text-xs text-amber-700 dark:text-amber-400 font-medium">
+                    <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <span>
+                        <strong>Cara kerja fitur Undo:</strong> Saat Anda membatalkan suatu batch import, seluruh record kehadiran baru pada batch tersebut akan dihapus, dan record absensi yang sebelumnya tertimpa akan dipulihkan secara otomatis.
+                    </span>
+                </div>
+
+                {{-- Loading State --}}
+                <div x-show="loading" class="py-12 text-center space-y-3">
+                    <div class="w-8 h-8 rounded-full border-3 border-rose-200 dark:border-rose-900/40 animate-spin border-t-rose-600 mx-auto"></div>
+                    <p class="text-xs text-slate-400">Memuat riwayat import...</p>
+                </div>
+
+                {{-- Empty State --}}
+                <div x-show="!loading && batches.length === 0" class="py-12 text-center space-y-2">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </div>
+                    <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300">Belum Ada Riwayat Import</h4>
+                    <p class="text-xs text-slate-400">Setiap kali Anda melakukan import absen, riwayat batch akan tercatat di sini.</p>
+                </div>
+
+                {{-- Batches List --}}
+                <div x-show="!loading && batches.length > 0" class="space-y-3">
+                    <template x-for="batch in batches" :key="batch.id">
+                        <div class="border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 transition-all bg-white dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-xs text-slate-800 dark:text-slate-200" x-text="batch.file_name"></span>
+                                    <template x-if="batch.status === 'active'">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+                                            Aktif
+                                        </span>
+                                    </template>
+                                    <template x-if="batch.status === 'reverted'">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                            Dibatalkan (Undone)
+                                        </span>
+                                    </template>
+                                </div>
+                                <div class="text-[11px] text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <span>Di-import: <strong class="text-slate-600 dark:text-slate-400" x-text="batch.created_at"></strong></span>
+                                    <span>•</span>
+                                    <span>Oleh: <strong class="text-slate-600 dark:text-slate-400" x-text="batch.user_name"></strong></span>
+                                    <span>•</span>
+                                    <span>Total: <strong class="text-indigo-600 dark:text-indigo-400" x-text="batch.imported_count + ' data'"></strong></span>
+                                </div>
+                                <template x-if="batch.status === 'reverted' && batch.reverted_at">
+                                    <div class="text-[10.5px] text-rose-500/80 font-medium pt-0.5">
+                                        Dibatalkan pada <span x-text="batch.reverted_at"></span> oleh <span x-text="batch.reverted_by || 'Super Admin'"></span>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div class="flex-shrink-0">
+                                <template x-if="batch.can_revert">
+                                    <button type="button" @click="revertBatch(batch)" :disabled="revertingId === batch.id"
+                                            class="inline-flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2m0 0l-4-4m4 4l4-4M3 10l4-4m-4 4l4 4"/></svg>
+                                        <span x-text="revertingId === batch.id ? 'Membatalkan...' : 'Batalkan Import (Undo)'"></span>
+                                    </button>
+                                </template>
+                                <template x-if="!batch.can_revert">
+                                    <span class="text-xs text-slate-400 italic">Sudah Dibatalkan</span>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            {{-- Footer --}}
+            <div class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/40 flex-shrink-0">
+                <span class="text-xs text-slate-400">Menampilkan 20 riwayat import terakhir</span>
+                <button type="button" @click="close()" 
+                        class="btn-premium-secondary py-2 px-4 text-xs uppercase tracking-widest">
+                    Tutup
+                </button>
+            </div>
+
+        </div>
+    </div>
+
 <script>
 function importAttendanceManager() {
     return {
@@ -966,7 +1091,8 @@ function importAttendanceManager() {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
                     body: JSON.stringify({
-                        rows: validRows
+                        rows: validRows,
+                        file_name: this.fileName
                     })
                 });
 
@@ -984,6 +1110,69 @@ function importAttendanceManager() {
             } catch (err) {
                 this.step = 'preview';
                 alert('Gagal: ' + (err.message || 'Terjadi kesalahan sistem.'));
+            }
+        }
+    };
+}
+
+function undoImportManager() {
+    return {
+        showModal: false,
+        loading: false,
+        batches: [],
+        revertingId: null,
+
+        openModal() {
+            this.showModal = true;
+            this.fetchBatches();
+        },
+
+        close() {
+            this.showModal = false;
+        },
+
+        async fetchBatches() {
+            this.loading = true;
+            try {
+                const res = await fetch("{{ route('super-admin.attendance.import-batches') }}", {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.batches = data.batches || [];
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async revertBatch(batch) {
+            const ok = confirm(`PERINGATAN:\n\nApakah Anda yakin ingin membatalkan import '${batch.file_name}' (${batch.imported_count} data)?\n\nSemua data baru yang dibuat pada import ini akan DIHAPUS, dan data yang tertimpa akan DIKEMBALIKAN ke nilai semula.`);
+            if (!ok) return;
+
+            this.revertingId = batch.id;
+            try {
+                const url = "{{ route('super-admin.attendance.import-batches.revert', ['batch' => '__BATCH_ID__']) }}".replace('__BATCH_ID__', batch.id);
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Gagal membatalkan import.');
+                }
+                alert(data.message);
+                window.location.reload();
+            } catch (err) {
+                alert('Gagal: ' + (err.message || 'Terjadi kesalahan sistem.'));
+            } finally {
+                this.revertingId = null;
             }
         }
     };

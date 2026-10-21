@@ -80,6 +80,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/attendance/import-preview', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'importPreview'])->name('attendance.import-preview');
         Route::post('/attendance/import-confirm', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'importConfirm'])->name('attendance.import-confirm');
         Route::post('/attendance/import', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'import'])->name('attendance.import');
+        Route::get('/attendance/import-batches', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'importBatches'])->name('attendance.import-batches');
+        Route::post('/attendance/import-batches/{batch}/revert', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'revertImportBatch'])->name('attendance.import-batches.revert');
         Route::get('/attendance/payment-history', [App\Http\Controllers\HRD\AttendanceMonitoringController::class, 'paymentHistory'])->name('attendance.payment-history');
         Route::get('/attendance/rekap-bulanan', [App\Http\Controllers\SuperAdmin\AttendanceMonitoringController::class, 'rekapBulanan'])->name('attendance.rekap-bulanan');
 
