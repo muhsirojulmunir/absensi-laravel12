@@ -149,13 +149,16 @@ class UserController extends Controller
 
     public function showBulkEmailForm()
     {
-        $employees = User::whereHas('role', function ($q) {
-            $q->whereIn('slug', ['karyawan', 'karyawan_ramayana']);
-        })
-        ->where('is_active', true)
-        ->with(['latestBulkEmailLog.sender', 'role'])
-        ->orderBy('name')
-        ->get();
+        $employees = User::where('is_active', true)
+            ->where(function ($q) {
+                $q->whereDoesntHave('role')
+                  ->orWhereHas('role', function ($r) {
+                      $r->where('slug', '!=', 'super-admin');
+                  });
+            })
+            ->with(['latestBulkEmailLog.sender', 'role'])
+            ->orderBy('name')
+            ->get();
 
         $recentLogs = \App\Models\BulkEmailLog::with(['user', 'sender'])
             ->orderByDesc('created_at')
@@ -218,9 +221,19 @@ class UserController extends Controller
             $user = User::with('role')
                 ->where('email', $input)
                 ->orWhere('username', $input)
+                ->orWhere('name', $input)
                 ->first();
 
             if ($user) {
+                // Jika password kosong, otomatis gunakan tanggal lahir format Tahun-Bulan-Tanggal (Y-m-d)
+                if (empty($password) && !empty($user->birth_date)) {
+                    try {
+                        $password = \Carbon\Carbon::parse($user->birth_date)->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $password = substr((string)$user->birth_date, 0, 10);
+                    }
+                }
+
                 $results[] = [
                     'found' => true,
                     'user_id' => $user->id,

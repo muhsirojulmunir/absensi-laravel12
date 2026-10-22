@@ -4,13 +4,25 @@
 
 @php
     $employeesJson = $employees->map(function($emp) {
+        $rawBirthDate = $emp->birth_date;
+        $birthDateFormatted = null;
+        if ($rawBirthDate) {
+            try {
+                $birthDateFormatted = \Carbon\Carbon::parse($rawBirthDate)->format('Y-m-d');
+            } catch (\Exception $e) {
+                $birthDateFormatted = substr((string)$rawBirthDate, 0, 10);
+            }
+        }
+
         return [
             'id' => $emp->id,
             'name' => $emp->name,
             'role_name' => $emp->role->name ?? '-',
             'username' => $emp->username,
-            'email' => $emp->email ?? 'Belum ada Email',
+            'email' => $emp->email,
+            'display_email' => $emp->email ?: 'Belum ada Email',
             'has_email' => !empty($emp->email),
+            'birth_date' => $birthDateFormatted,
             'status' => !$emp->latestBulkEmailLog ? 'not_sent' : ($emp->latestBulkEmailLog->status === 'success' ? 'sent' : 'failed'),
             'error_message' => $emp->latestBulkEmailLog->error_message ?? null,
             'sent_at' => $emp->latestBulkEmailLog ? $emp->latestBulkEmailLog->created_at->translatedFormat('d M Y, H:i') : '-',
@@ -125,6 +137,146 @@
             </div>
         </template>
 
+        {{-- Card Pencarian & Pengisian Otomatis Pengguna --}}
+        <div class="bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/20 rounded-2xl shadow-sm border border-indigo-150/70 dark:border-indigo-900/40 p-6 sm:p-7 space-y-5" x-show="!results">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-600/20 shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            Pencarian & Pengisian Otomatis Pengguna
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">Auto-Fill</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                            Cari nama pengguna (misal: <strong>Alexander</strong>), klik untuk otomatis mengisi isian email & password dari tanggal lahir (<strong>Tahun-Bulan-Tanggal</strong>).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Bar with Instant Autocomplete Dropdown -->
+            <div class="relative" @click.outside="showUserDropdown = false">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 pl-0.5">
+                    Cari Pengguna
+                </label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-indigo-500 dark:text-indigo-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.637 10.637z"></path>
+                        </svg>
+                    </div>
+                    <input type="text" 
+                           x-model="quickUserSearch" 
+                           @focus="showUserDropdown = true" 
+                           @input="showUserDropdown = true" 
+                           @keydown.escape="showUserDropdown = false"
+                           placeholder="Ketik nama karyawan (misal: Alexander), email, atau username..."
+                           class="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-950 border border-indigo-200 dark:border-indigo-900/60 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-xs transition-all">
+                    
+                    <button type="button" 
+                            x-show="quickUserSearch" 
+                            @click="quickUserSearch = ''; showUserDropdown = false" 
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Autocomplete Floating Dropdown -->
+                <div x-show="showUserDropdown && quickUserSearchResults.length > 0" 
+                     x-transition:enter="transition ease-out duration-150"
+                     x-transition:enter-start="opacity-0 translate-y-1"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-100"
+                     x-transition:leave-start="opacity-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 translate-y-1"
+                     class="absolute z-50 left-0 right-0 mt-2 bg-white dark:bg-slate-950 rounded-xl shadow-xl border border-slate-200 dark:border-slate-850 max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-850"
+                     x-cloak>
+                    <template x-for="emp in quickUserSearchResults" :key="emp.id">
+                        <div @click="selectUser(emp)" 
+                             class="p-3.5 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 cursor-pointer transition-colors flex items-center justify-between gap-3 group">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center shrink-0 uppercase group-hover:bg-indigo-600 group-hover:text-white transition-colors"
+                                     x-text="emp.name.substring(0, 2)">
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold text-slate-900 dark:text-white truncate" x-text="emp.name"></span>
+                                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" x-text="emp.role_name"></span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-2 mt-0.5">
+                                        <span class="font-mono text-slate-700 dark:text-slate-350" x-text="emp.display_email"></span>
+                                        <span class="text-slate-400">|</span>
+                                        <span class="font-mono text-slate-600 dark:text-slate-400" x-text="'@' + emp.username"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <template x-if="emp.birth_date">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 font-mono text-[11px] font-bold">
+                                        🎂 <span x-text="emp.birth_date"></span>
+                                    </span>
+                                </template>
+                                <template x-if="!emp.birth_date">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/40 font-medium">
+                                        Tgl Lahir Kosong
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Auto-filled Fields (Isian Email & Isian Password) -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end pt-1">
+                <div class="md:col-span-5 space-y-1">
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 pl-0.5">
+                        Isian Email / Username
+                    </label>
+                    <input type="text" x-model="quickEmail" 
+                           placeholder="alexander@domain.com atau username"
+                           class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="md:col-span-4 space-y-1">
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 pl-0.5 flex items-center justify-between">
+                        <span>Isian Password (Tahun-Bulan-Tanggal)</span>
+                    </label>
+                    <input type="text" x-model="quickPassword" 
+                           placeholder="YYYY-MM-DD (cth: 1995-12-30)"
+                           class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="md:col-span-3">
+                    <button type="button" 
+                            @click="addQuickCredentialToText()" 
+                            :disabled="!quickEmail.trim() || !quickPassword.trim()"
+                            class="w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 dark:disabled:text-slate-600 rounded-xl font-bold text-xs shadow-md shadow-indigo-900/10 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
+                        </svg>
+                        <span>Masukkan Baris</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Notification Toast / Auto-added info -->
+            <template x-if="quickNotification">
+                <div class="text-xs px-3.5 py-2.5 rounded-xl border flex items-center justify-between gap-2"
+                     :class="quickNotification.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300' : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300'">
+                    <div class="flex items-center gap-2">
+                        <span x-text="quickNotification.type === 'success' ? '✅' : '⚠️'"></span>
+                        <span x-html="quickNotification.message"></span>
+                    </div>
+                    <button type="button" @click="quickNotification = null" class="opacity-60 hover:opacity-100 text-sm font-bold">&times;</button>
+                </div>
+            </template>
+        </div>
+
         {{-- Main Input Card --}}
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800 overflow-hidden" x-show="!results">
             <div class="p-6 sm:p-8 space-y-6">
@@ -142,7 +294,15 @@
                 </div>
 
                 <div class="space-y-1.5">
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 pl-0.5">Teks Mentah Kredensial</label>
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 pl-0.5">Teks Mentah Kredensial</label>
+                        <button type="button" 
+                                x-show="rawText.trim()" 
+                                @click="if(confirm('Kosongkan teks kredensial?')) { rawText = ''; quickNotification = null; }" 
+                                class="text-[11px] text-rose-500 hover:text-rose-600 dark:text-rose-400 font-semibold transition-colors">
+                            Kosongkan Teks
+                        </button>
+                    </div>
                     <textarea x-model="rawText" rows="8" 
                               class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 transition-all text-xs text-slate-900 dark:text-white font-mono leading-relaxed" 
                               placeholder="Tempelkan data notepad Anda di sini..."></textarea>
@@ -369,6 +529,7 @@
                         <th class="px-6 py-4">Status Terakhir</th>
                         <th class="px-6 py-4">Tanggal Pengiriman</th>
                         <th class="px-6 py-4">Pengirim (Admin)</th>
+                        <th class="px-6 py-4 text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-850 text-sm">
@@ -380,7 +541,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="font-mono text-xs text-slate-700 dark:text-slate-300 font-bold" x-text="emp.username"></div>
-                                <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5" x-text="emp.email"></div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5" x-text="emp.display_email"></div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <template x-if="emp.status === 'sent'">
@@ -405,12 +566,21 @@
                             </td>
                             <td class="px-6 py-4 text-xs font-medium text-slate-600 dark:text-slate-400" x-text="emp.sent_at"></td>
                             <td class="px-6 py-4 text-xs font-semibold text-slate-700 dark:text-slate-350" x-text="emp.sender_name"></td>
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                                <button type="button" @click="quickAddFromTable(emp)" 
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 font-bold text-xs border border-indigo-200/60 dark:border-indigo-800/60 transition-all shadow-xs cursor-pointer">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
+                                    </svg>
+                                    Pilih
+                                </button>
+                            </td>
                         </tr>
                     </template>
                     
                     <template x-if="filteredEmployees.length === 0">
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-xs text-slate-450">
+                            <td colspan="6" class="px-6 py-12 text-center text-xs text-slate-450">
                                 Tidak ada data karyawan aktif.
                             </td>
                         </tr>
@@ -539,6 +709,13 @@ document.addEventListener('alpine:init', () => {
         employeePage: 1,
         employeePerPage: 10,
         
+        // Quick User Search & Auto-Fill state
+        quickUserSearch: '',
+        showUserDropdown: false,
+        quickEmail: '',
+        quickPassword: '',
+        quickNotification: null,
+        
         init() {
             this.$watch('employeeSearch', () => this.employeePage = 1);
             this.$watch('statusFilter', () => this.employeePage = 1);
@@ -549,13 +726,25 @@ document.addEventListener('alpine:init', () => {
                 const searchLower = this.employeeSearch.toLowerCase();
                 const matchesSearch = this.employeeSearch === '' || 
                     (emp.name && emp.name.toLowerCase().includes(searchLower)) || 
-                    (emp.email && emp.email.toLowerCase().includes(searchLower)) || 
+                    (emp.display_email && emp.display_email.toLowerCase().includes(searchLower)) || 
                     (emp.username && emp.username.toLowerCase().includes(searchLower));
                 
                 const matchesStatus = this.statusFilter === 'all' || emp.status === this.statusFilter;
                 
                 return matchesSearch && matchesStatus;
             });
+        },
+        
+        get quickUserSearchResults() {
+            if (!this.quickUserSearch || !this.quickUserSearch.trim()) {
+                return this.employeesList.slice(0, 8);
+            }
+            const searchLower = this.quickUserSearch.toLowerCase().trim();
+            return this.employeesList.filter(emp => {
+                return (emp.name && emp.name.toLowerCase().includes(searchLower)) ||
+                       (emp.email && emp.email.toLowerCase().includes(searchLower)) ||
+                       (emp.username && emp.username.toLowerCase().includes(searchLower));
+            }).slice(0, 15);
         },
         
         get paginatedEmployees() {
@@ -664,6 +853,69 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 this.isLoading = false;
             }
+        },
+
+        selectUser(emp) {
+            // Isi otomatis email (prioritaskan email, fallback ke username)
+            this.quickEmail = emp.email || emp.username || '';
+            
+            // Isi otomatis password dari tanggal lahir (format Tahun-Bulan-Tanggal: YYYY-MM-DD)
+            this.quickPassword = emp.birth_date || '';
+            
+            this.showUserDropdown = false;
+            this.quickUserSearch = emp.name;
+            
+            // Langsung masukkan baris kredensial ke textarea
+            this.addQuickCredentialToText(emp);
+        },
+
+        addQuickCredentialToText(emp = null) {
+            const emailVal = this.quickEmail.trim();
+            const passVal = this.quickPassword.trim();
+            
+            if (!emailVal) {
+                this.quickNotification = {
+                    type: 'warning',
+                    message: 'Email atau username tidak boleh kosong.'
+                };
+                return;
+            }
+            
+            const newLine = `${emailVal}, ${passVal}`;
+            
+            if (this.rawText.trim()) {
+                const lines = this.rawText.split('\n');
+                const alreadyExists = lines.some(l => l.toLowerCase().includes(emailVal.toLowerCase()));
+                if (alreadyExists) {
+                    this.quickNotification = {
+                        type: 'warning',
+                        message: `Pengguna <strong>${emp ? emp.name : emailVal}</strong> sudah ada di dalam daftar teks kredensial.`
+                    };
+                    return;
+                }
+                this.rawText = this.rawText.trim() + '\n' + newLine;
+            } else {
+                this.rawText = newLine;
+            }
+            
+            const empName = emp ? emp.name : emailVal;
+            if (!passVal) {
+                this.quickNotification = {
+                    type: 'warning',
+                    message: `Pengguna <strong>${empName}</strong> dimasukkan ke daftar, tapi <em>tanggal lahir belum terisi di database</em>. Silakan lengkapi password manual.`
+                };
+            } else {
+                this.quickNotification = {
+                    type: 'success',
+                    message: `Berhasil menambahkan <strong>${empName}</strong>! Email: <code>${emailVal}</code>, Password: <code>${passVal}</code> (Tahun-Bulan-Tanggal).`
+                };
+            }
+        },
+
+        quickAddFromTable(emp) {
+            this.activeTab = 'send';
+            this.selectUser(emp);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }));
 });
