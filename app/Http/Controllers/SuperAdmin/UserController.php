@@ -80,6 +80,9 @@ class UserController extends Controller
             'position' => $request->position,
             'birth_place' => $request->birth_place,
             'birth_date' => $request->birth_date,
+            'emergency_name' => $request->emergency_name,
+            'emergency_phone' => $request->emergency_phone,
+            'emergency_relation' => $request->emergency_relation,
         ]);
 
         return redirect()->route('super-admin.users.index')->with('success', 'User created successfully.');
@@ -106,7 +109,7 @@ class UserController extends Controller
             'additional_location_ids.*' => 'exists:locations,id',
         ]);
 
-        $data = $request->only(['name', 'nickname', 'username', 'email', 'role_id', 'division_id', 'location_id', 'employee_id', 'phone', 'address', 'position', 'birth_place', 'birth_date']);
+        $data = $request->only(['name', 'nickname', 'username', 'email', 'role_id', 'division_id', 'location_id', 'employee_id', 'phone', 'address', 'position', 'birth_place', 'birth_date', 'emergency_name', 'emergency_phone', 'emergency_relation']);
         
         $data['additional_location_ids'] = array_values(array_filter($request->additional_location_ids ?? []));
 

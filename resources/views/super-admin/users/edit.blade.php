@@ -220,6 +220,47 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Emergency Contact Section --}}
+            <div class="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-800/60">
+                <div class="flex items-center space-x-2 pb-2">
+                    <div class="w-1.5 h-4 bg-rose-500 rounded-full"></div>
+                    <h2 class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Kontak Darurat</h2>
+                </div>
+                <p class="text-[11px] text-slate-400 -mt-3">Informasi kontak yang bisa dihubungi jika terjadi keadaan darurat pada karyawan ini.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 pl-0.5">
+                            Nama Kontak Darurat
+                        </label>
+                        <input type="text" name="emergency_name" value="{{ old('emergency_name', $user->emergency_name) }}"
+                               placeholder="Contoh: Budi Santoso"
+                               class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-rose-400 focus:border-rose-400 focus:bg-white dark:focus:bg-slate-900 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 pl-0.5">
+                            Nomor Telepon Darurat
+                        </label>
+                        <input type="text" name="emergency_phone" value="{{ old('emergency_phone', $user->emergency_phone) }}"
+                               placeholder="Contoh: 08123456789"
+                               class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-rose-400 focus:border-rose-400 focus:bg-white dark:focus:bg-slate-900 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 pl-0.5">
+                            Hubungan dengan Karyawan
+                        </label>
+                        <select name="emergency_relation"
+                                class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-rose-400 focus:border-rose-400 focus:bg-white dark:focus:bg-slate-900 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none transition-all cursor-pointer">
+                            <option value="" class="dark:bg-slate-950">-- Pilih Hubungan --</option>
+                            @php $currentRelation = old('emergency_relation', $user->emergency_relation); @endphp
+                            @foreach(['Orang Tua', 'Ayah', 'Ibu', 'Suami', 'Istri', 'Kakak', 'Adik', 'Saudara', 'Anak', 'Kerabat', 'Teman', 'Lainnya'] as $rel)
+                                <option value="{{ $rel }}" {{ $currentRelation === $rel ? 'selected' : '' }} class="dark:bg-slate-950">{{ $rel }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Form Footer Actions -->
